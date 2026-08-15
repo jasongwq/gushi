@@ -57,8 +57,17 @@ export const useLearningStore = defineStore('learning', () => {
 
   function toggleUnproficient(poemId: string, value?: boolean) {
     const record = getOrCreateRecord(poemId)
-    record.unproficient = value ?? !record.unproficient
+    const newValue = value ?? !record.unproficient
+    record.unproficient = newValue
     record.unproficientCorrectStreak = 0
+
+    // Sync wrong book entries for this poem
+    for (const entry of data.value.wrongBook) {
+      if (entry.poemId === poemId) {
+        entry.unproficient = newValue
+      }
+    }
+
     persist()
   }
 
