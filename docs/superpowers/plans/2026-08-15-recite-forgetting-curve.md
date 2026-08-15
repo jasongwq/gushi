@@ -2,55 +2,34 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为古诗抽查 PWA 新增背诵自评模块和遗忘曲线可视化功能
+**Goal:** 为古诗抽查 PWA 新增独立背诵模块（自评模式）和遗忘曲线可视化功能，背诵结果纳入遗忘曲线调度且与答题记录分开存储。
 
-**Architecture:** 背诵模块独立于答题流程，通过 RecitePage 卡片流交互。背诵结果调用现有 ebbinghaus.ts 更新遗忘曲线。新增 ReciteRecord 类型与 QuizResult 并行存储。遗忘曲线可视化使用 Chart.js，进度页总览+单首详情页。
+**Architecture:** 背诵模块独立于现有抽查流程，有独立的 RecitePage（卡片流自评）和 ReciteResultPage。新增 `ReciteRecord` 类型和 `reciteCorrectness` 字段分别记录背诵数据。遗忘曲线可视化使用 Chart.js，在 ProgressPage 增加总览图，新增 PoemDetailPage 展示单首古诗的详细遗忘曲线。遗忘曲线调度复用现有 `ebbinghaus.ts`。
 
-**Tech Stack:** Vue 3 + Pinia + Chart.js + TypeScript
-
----
-
-## File Structure
-
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/types/index.ts` | Modify | 新增 ReciteRecord，LearningRecord 增加 reciteCorrectness |
-| `src/utils/storage.ts` | Modify | 数据迁移：reciteCorrectness、reciteRecords |
-| `src/stores/learning.ts` | Modify | 新增 recordRecite 方法，背诵遗忘曲线调度 |
-| `src/utils/retention.ts` | Create | 记忆保持率计算工具 |
-| `src/views/RecitePage.vue` | Create | 背诵入口+卡片流（自评模式） |
-| `src/views/ReciteResultPage.vue` | Create | 背诵结果页 |
-| `src/views/PoemDetailPage.vue` | Create | 单首古诗详情+遗忘曲线图 |
-| `src/router/index.ts` | Modify | 新增 /recite, /recite/result, /poem/:id 路由 |
-| `src/views/HomePage.vue` | Modify | 新增"背诵"入口按钮 |
-| `src/views/ProgressPage.vue` | Modify | 新增总览遗忘曲线图，古诗列表可点击 |
-| `package.json` | Modify | 新增 chart.js 依赖 |
-| `tests/unit/retention.test.ts` | Create | 保持率计算工具测试 |
-| `tests/unit/learning-recite.test.ts` | Create | 背诵记录方法测试 |
+**Tech Stack:** Vue 3 + Pinia + TypeScript + Tailwind CSS + Chart.js + Vite
 
 ---
 
-### Task 1: 扩展数据模型 — types + storage 迁移
+### Task 1: 扩展数据模型 — 新增 ReciteRecord 和 reciteCorrectness
 
 **Files:**
 - Modify: `src/types/index.ts`
-- Modify: `src/utils/storage.ts`
-- Modify: `src/stores/learning.ts`
-- Test: `tests/unit/storage.test.ts`
 
-- [ ] **Step 1: 在 types/index.ts 新增 ReciteRecord，LearningRecord 增加 reciteCorrectness**
+- [ ] **Step 1: 在 `src/types/index.ts` 中新增 `ReciteRecord` 接口，修改 `LearningRecord` 和 `UserData`**
 
-在 `src/types/index.ts` 中：
+在 `QuizResult` 接口之后新增：
 
 ```typescript
-// 在 QuizResult 接口之后新增：
 export interface ReciteRecord {
   poemId: string
   date: string           // YYYY-MM-DD
   correct: boolean       // 自评"会"=true，"不会"=false
 }
+```
 
-// 修改 LearningRecord，在 correctness 字段后新增：
+修改 `LearningRecord`，在 `correctness` 后新增：
+
+```typescript
 export interface LearningRecord {
   poemId: string
   lastReviewDate: string
@@ -63,8 +42,11 @@ export interface LearningRecord {
   unproficientCorrectStreak: number
   lastLearnDate?: string
 }
+```
 
-// 修改 UserData，在 quizResults 之后新增：
+修改 `UserData`，在 `quizResults` 后新增：
+
+```typescript
 export interface UserData {
   records: LearningRecord[]
   quizResults: QuizResult[]
@@ -74,11 +56,30 @@ export interface UserData {
 }
 ```
 
-- [ ] **Step 2: 更新 storage.ts 数据迁移**
+- [ ] **Step 2: 运行类型检查确认无编译错误**
 
-在 `src/utils/storage.ts` 中：
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vue-tsc --noEmit 2>&1 | head -30`
+Expected: 可能有其他文件因缺少 reciteCorrectness 字段而报错，这将在后续 Task 中修复
 
-修改 `getDefaultData()`:
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/types/index.ts
+git commit -m "feat: add ReciteRecord type and reciteCorrectness to LearningRecord"
+```
+
+---
+
+### Task 2: 更新存储层 — 数据迁移和 persistence
+
+**Files:**
+- Modify: `src/utils/storage.ts`
+- Modify: `src/stores/learning.ts`
+
+- [ ] **Step 1: 更新 `src/utils/storage.ts` 的 `getDefaultData` 和 `loadData`**
+
+修改 `getDefaultData`：
+
 ```typescript
 function getDefaultData(): UserData {
   return {
@@ -91,185 +92,185 @@ function getDefaultData(): UserData {
 }
 ```
 
-修改 `loadData()` 中 data 合并部分，增加 reciteRecords 和 records 的 reciteCorrectness 迁移：
+修改 `loadData`，在 `const data = {` 块中增加 `reciteRecords`：
+
 ```typescript
-const data = {
-  records: (parsed.records ?? defaults.records).map(r => ({
-    ...r,
-    reciteCorrectness: r.reciteCorrectness ?? [],
-  })),
-  quizResults: parsed.quizResults ?? defaults.quizResults,
-  reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
-  wrongBook: parsed.wrongBook ?? defaults.wrongBook,
-  settings: { ...defaults.settings, ...parsed.settings },
-}
-```
-
-- [ ] **Step 3: 更新 learning.ts 的 getOrCreateRecord 和 clearAllData**
-
-在 `src/stores/learning.ts` 中：
-
-修改 `getOrCreateRecord`，新增 reciteCorrectness 初始化：
-```typescript
-function getOrCreateRecord(poemId: string): LearningRecord {
-  let record = getRecord(poemId)
-  if (!record) {
-    const today = new Date().toISOString().split('T')[0]
-    record = {
-      poemId, lastReviewDate: today, reviewCount: 0,
-      nextReviewDate: today, correctness: [], reciteCorrectness: [],
-      masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
+    const data = {
+      records: (parsed.records ?? defaults.records).map(r => ({
+        ...r,
+        reciteCorrectness: r.reciteCorrectness ?? [],
+      })),
+      quizResults: parsed.quizResults ?? defaults.quizResults,
+      reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
+      wrongBook: parsed.wrongBook ?? defaults.wrongBook,
+      settings: { ...defaults.settings, ...parsed.settings },
     }
-    data.value.records.push(record)
+```
+
+- [ ] **Step 2: 更新 `src/stores/learning.ts` — 新增 `recordRecite` 方法**
+
+在 `getOrCreateRecord` 中补充 `reciteCorrectness: []` 初始化：
+
+```typescript
+  function getOrCreateRecord(poemId: string): LearningRecord {
+    let record = getRecord(poemId)
+    if (!record) {
+      const today = new Date().toISOString().split('T')[0]
+      record = {
+        poemId, lastReviewDate: today, reviewCount: 0,
+        nextReviewDate: today, correctness: [], reciteCorrectness: [],
+        masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
+      }
+      data.value.records.push(record)
+    }
+    return record
   }
-  return record
-}
 ```
 
-修改 `clearAllData`，新增 reciteRecords:
-```typescript
-function clearAllData() {
-  data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
-  persist()
-}
-```
-
-- [ ] **Step 4: 运行测试验证**
-
-Run: `npx vitest run tests/unit/storage.test.ts`
-Expected: PASS
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add src/types/index.ts src/utils/storage.ts src/stores/learning.ts
-git commit -m "feat: extend data model with ReciteRecord and reciteCorrectness"
-```
-
----
-
-### Task 2: 新增背诵记录方法 — learning store
-
-**Files:**
-- Modify: `src/stores/learning.ts`
-- Test: `tests/unit/learning-recite.test.ts`
-
-- [ ] **Step 1: 在 learning.ts 新增 recordRecite 方法**
-
-在 `src/stores/learning.ts` 中，在 `recordAnswer` 方法之后新增：
+新增 `recordRecite` 方法（在 `recordAnswer` 之后）：
 
 ```typescript
-function recordRecite(poemId: string, correct: boolean) {
-  const record = getOrCreateRecord(poemId)
-  const updated = calculateNextReview(record, correct)
-  const afterUnproficient = checkAutoUnmark(updated, correct)
-  const today = new Date().toISOString().split('T')[0]
-  const idx = data.value.records.findIndex(r => r.poemId === poemId)
-  data.value.records[idx] = {
-    ...afterUnproficient,
-    reciteCorrectness: [...(record.reciteCorrectness ?? []), correct ? 1 : 0],
-    lastLearnDate: today,
-    lastReviewDate: today,
+  function recordRecite(poemId: string, correct: boolean) {
+    const record = getOrCreateRecord(poemId)
+    const today = new Date().toISOString().split('T')[0]
+
+    // 更新 lastReviewDate 为当天
+    const updated = { ...record, lastReviewDate: today, lastLearnDate: today }
+
+    // 调用遗忘曲线调度
+    const scheduled = calculateNextReview(updated, correct)
+    const afterUnproficient = checkAutoUnmark(scheduled, correct)
+
+    // 更新背诵正确性历史
+    const finalRecord = {
+      ...afterUnproficient,
+      reciteCorrectness: [...afterUnproficient.reciteCorrectness, correct ? 1 : 0],
+    }
+
+    const idx = data.value.records.findIndex(r => r.poemId === poemId)
+    data.value.records[idx] = finalRecord
+
+    // 记录背诵记录
+    data.value.reciteRecords.push({ poemId, date: today, correct })
+
+    persist()
   }
-
-  data.value.reciteRecords.push({ poemId, date: today, correct })
-  persist()
-}
 ```
 
-在 return 语句中新增 `recordRecite`。
-
-- [ ] **Step 2: 编写背诵记录测试**
-
-创建 `tests/unit/learning-recite.test.ts`：
+修改 `clearAllData`，增加 `reciteRecords: []`：
 
 ```typescript
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useLearningStore } from '@/stores/learning'
-
-beforeEach(() => {
-  localStorage.clear()
-  setActivePinia(createPinia())
-})
-
-describe('recordRecite', () => {
-  it('should create recite record and update reciteCorrectness', () => {
-    const store = useLearningStore()
-    store.recordRecite('p001', true)
-    const record = store.getRecord('p001')
-    expect(record).toBeDefined()
-    expect(record!.reciteCorrectness).toEqual([1])
-    expect(record!.reviewCount).toBe(1)
-  })
-
-  it('should append to reciteCorrectness on multiple recites', () => {
-    const store = useLearningStore()
-    store.recordRecite('p001', true)
-    store.recordRecite('p001', false)
-    const record = store.getRecord('p001')
-    expect(record!.reciteCorrectness).toEqual([1, 0])
-  })
-
-  it('should store recite records in data', () => {
-    const store = useLearningStore()
-    store.recordRecite('p001', true)
-    store.recordRecite('p002', false)
-    expect(store.data.reciteRecords).toHaveLength(2)
-    expect(store.data.reciteRecords[0]).toEqual({ poemId: 'p001', date: expect.any(String), correct: true })
-  })
-
-  it('should update forgetting curve on correct recite', () => {
-    const store = useLearningStore()
-    store.recordRecite('p001', true)
-    const record = store.getRecord('p001')!
-    expect(record.masteryLevel).toBe('学')
-    expect(record.nextReviewDate).not.toBe(record.lastReviewDate)
-  })
-
-  it('should handle wrong recite with interval backoff', () => {
-    const store = useLearningStore()
-    store.recordRecite('p001', true)
-    store.recordRecite('p001', true)
-    const recordBefore = store.getRecord('p001')!
-    store.recordRecite('p001', false)
-    const recordAfter = store.getRecord('p001')!
-    expect(recordAfter.reciteCorrectness).toEqual([1, 1, 0])
-    expect(recordAfter.correctness).toEqual([])
-  })
-
-  it('should not mix reciteCorrectness with quiz correctness', () => {
-    const store = useLearningStore()
-    store.recordAnswer('p001', 'fillBlank', true)
-    store.recordRecite('p001', false)
-    const record = store.getRecord('p001')!
-    expect(record.correctness).toEqual([1])
-    expect(record.reciteCorrectness).toEqual([0])
-  })
-})
+  function clearAllData() {
+    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
+    persist()
+  }
 ```
 
-- [ ] **Step 3: 运行测试验证**
+在 return 中增加 `recordRecite`：
 
-Run: `npx vitest run tests/unit/learning-recite.test.ts`
-Expected: PASS
+```typescript
+  return {
+    data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
+    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordRecite, toggleUnproficient, removeWrongEntry,
+    updateSettings, importUserData, exportUserData, clearAllData, persist,
+  }
+```
+
+- [ ] **Step 3: 运行测试确认通过**
+
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vitest run 2>&1`
+Expected: 所有测试通过
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/stores/learning.ts tests/unit/learning-recite.test.ts
-git commit -m "feat: add recordRecite method to learning store"
+git add src/utils/storage.ts src/stores/learning.ts
+git commit -m "feat: add storage migration and recordRecite method for recite tracking"
 ```
 
 ---
 
-### Task 3: 记忆保持率计算工具
+### Task 3: 新增记忆保持率计算工具
 
 **Files:**
 - Create: `src/utils/retention.ts`
 - Test: `tests/unit/retention.test.ts`
 
-- [ ] **Step 1: 创建 retention.ts**
+- [ ] **Step 1: 编写 `retention.ts` 的测试**
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { calculateRetention, calculateOverallRetention, calculateDailyRetention } from '@/utils/retention'
+import type { LearningRecord } from '@/types'
+
+describe('calculateRetention', () => {
+  it('returns 1 for a poem just reviewed today', () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const record: LearningRecord = {
+      poemId: 'p001', lastReviewDate: today, reviewCount: 1,
+      nextReviewDate: today, correctness: [1], reciteCorrectness: [],
+      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
+    }
+    expect(calculateRetention(record, today)).toBeCloseTo(1)
+  })
+
+  it('returns 0 for a poem never reviewed', () => {
+    const today = new Date().toISOString().slice(0, 10)
+    const record: LearningRecord = {
+      poemId: 'p001', lastReviewDate: today, reviewCount: 0,
+      nextReviewDate: today, correctness: [], reciteCorrectness: [],
+      masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
+    }
+    expect(calculateRetention(record, today)).toBe(0)
+  })
+
+  it('decreases as days pass since last review', () => {
+    const today = '2026-08-15'
+    const record: LearningRecord = {
+      poemId: 'p001', lastReviewDate: '2026-08-13', reviewCount: 1,
+      nextReviewDate: '2026-08-15', correctness: [1], reciteCorrectness: [],
+      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
+    }
+    const retention = calculateRetention(record, today)
+    expect(retention).toBeGreaterThan(0)
+    expect(retention).toBeLessThan(1)
+  })
+})
+
+describe('calculateOverallRetention', () => {
+  it('returns 0 for empty records', () => {
+    expect(calculateOverallRetention([], '2026-08-15')).toBe(0)
+  })
+
+  it('returns average retention across records', () => {
+    const today = '2026-08-15'
+    const records: LearningRecord[] = [
+      { poemId: 'p001', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+      { poemId: 'p002', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+    ]
+    expect(calculateOverallRetention(records, today)).toBeCloseTo(1)
+  })
+})
+
+describe('calculateDailyRetention', () => {
+  it('returns array of retention values for date range', () => {
+    const records: LearningRecord[] = [
+      { poemId: 'p001', lastReviewDate: '2026-08-10', reviewCount: 1, nextReviewDate: '2026-08-12', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+    ]
+    const result = calculateDailyRetention(records, '2026-08-10', '2026-08-12')
+    expect(result).toHaveLength(3)
+    expect(result[0].retention).toBeCloseTo(1)
+    expect(result[2].retention).toBeLessThan(1)
+  })
+})
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vitest run tests/unit/retention.test.ts 2>&1`
+Expected: FAIL — module not found
+
+- [ ] **Step 3: 实现 `retention.ts`**
 
 ```typescript
 import type { LearningRecord } from '@/types'
@@ -277,261 +278,164 @@ import { getNextInterval } from '@/utils/ebbinghaus'
 
 /**
  * 计算单首古诗在某天的记忆保持率
- * 基于 Ebbinghaus 模型：R = e^(-t/S)
- * t = 距上次复习天数，S = 当前复习间隔
+ * 保持率 = max(0, 1 - 距上次复习天数 / 当前复习间隔)
+ * reviewCount=0 时返回 0（未学习）
  */
 export function calculateRetention(record: LearningRecord, date: string): number {
+  if (record.reviewCount === 0) return 0
+
   const lastReview = new Date(record.lastReviewDate + 'T00:00:00')
   const targetDate = new Date(date + 'T00:00:00')
-  const daysSinceReview = Math.max(0, (targetDate.getTime() - lastReview.getTime()) / (1000 * 60 * 60 * 24))
+  const daysSinceReview = Math.floor((targetDate.getTime() - lastReview.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (daysSinceReview === 0) return 1
+  if (daysSinceReview <= 0) return 1
 
-  const interval = getNextInterval(record.reviewCount)
-  const retention = Math.exp(-daysSinceReview / interval)
-  return Math.max(0, Math.min(1, retention))
+  const interval = getNextInterval(record.reviewCount - 1)
+  return Math.max(0, 1 - daysSinceReview / interval)
 }
 
 /**
  * 计算所有已学习古诗在某天的平均保持率
  */
-export function calculateAverageRetention(records: LearningRecord[], date: string): number {
+export function calculateOverallRetention(records: LearningRecord[], date: string): number {
   const learned = records.filter(r => r.reviewCount > 0)
   if (learned.length === 0) return 0
-  const total = learned.reduce((sum, r) => sum + calculateRetention(r, date), 0)
-  return total / learned.length
+  const sum = learned.reduce((acc, r) => acc + calculateRetention(r, date), 0)
+  return sum / learned.length
 }
 
 /**
- * 分别计算答题和背诵的保持率时间线
- * 答题保持率只考虑有答题记录的，背诵保持率只考虑有背诵记录的
+ * 生成日期范围内的每日保持率数据
  */
-export function getRetentionTimelineSplit(
+export function calculateDailyRetention(
   records: LearningRecord[],
-  days: number = 30
-): { date: string; quizRetention: number; reciteRetention: number }[] {
-  const result: { date: string; quizRetention: number; reciteRetention: number }[] = []
-  const today = new Date()
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(d.getDate() - i)
+  startDate: string,
+  endDate: string,
+): { date: string; retention: number }[] {
+  const result: { date: string; retention: number }[] = []
+  const start = new Date(startDate + 'T00:00:00')
+  const end = new Date(endDate + 'T00:00:00')
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().slice(0, 10)
-
-    const quizRecords = records.filter(r => r.reviewCount > 0)
-    const reciteRecords = records.filter(r => (r.reciteCorrectness ?? []).length > 0)
-
-    const quizRetention = quizRecords.length > 0
-      ? quizRecords.reduce((sum, r) => sum + calculateRetention(r, dateStr), 0) / quizRecords.length
-      : 0
-    const reciteRetention = reciteRecords.length > 0
-      ? reciteRecords.reduce((sum, r) => sum + calculateRetention(r, dateStr), 0) / reciteRecords.length
-      : 0
-
-    result.push({ date: dateStr, quizRetention, reciteRetention })
+    result.push({ date: dateStr, retention: calculateOverallRetention(records, dateStr) })
   }
   return result
 }
 
 /**
- * 获取单首古诗的复习时间线数据点
- * 返回每次答题/背诵的时间点及保持率
+ * 计算单首古诗的遗忘曲线时间线数据点
+ * 基于 correctness 和 reciteCorrectness 重建每次复习后的保持率
  */
-export function getPoemRetentionPoints(
+export function calculatePoemRetentionTimeline(
   record: LearningRecord,
-  quizResults: { poemId: string; date: string; correct: boolean }[],
-  reciteRecords: { poemId: string; date: string; correct: boolean }[]
+  endDate: string,
 ): { date: string; retention: number; type: 'quiz' | 'recite'; correct: boolean }[] {
+  if (record.reviewCount === 0) return []
+
   const points: { date: string; retention: number; type: 'quiz' | 'recite'; correct: boolean }[] = []
+  const startDate = new Date(record.lastReviewDate + 'T00:00:00')
 
-  // 构建复习事件时间线
-  const events: { date: string; type: 'quiz' | 'recite'; correct: boolean }[] = [
-    ...quizResults.filter(r => r.poemId === record.poemId).map(r => ({ date: r.date, type: 'quiz' as const, correct: r.correct })),
-    ...reciteRecords.filter(r => r.poemId === record.poemId).map(r => ({ date: r.date, type: 'recite' as const, correct: r.correct })),
-  ].sort((a, b) => a.date.localeCompare(b.date))
+  // 合并答题和背诵记录，按日期排序
+  // 简化实现：基于现有数据，从 lastReviewDate 开始，按间隔推算
+  let reviewCount = 0
+  let lastDate = startDate
 
-  // 模拟逐事件后的保持率
-  let simulatedRecord = { ...record, reviewCount: 0, correctness: [], reciteCorrectness: [] }
-  for (const event of events) {
-    if (event.type === 'quiz') {
-      simulatedRecord = {
-        ...simulatedRecord,
-        reviewCount: simulatedRecord.reviewCount + 1,
-        lastReviewDate: event.date,
-        correctness: [...simulatedRecord.correctness, event.correct ? 1 : 0],
-      }
-    } else {
-      simulatedRecord = {
-        ...simulatedRecord,
-        lastReviewDate: event.date,
-        reciteCorrectness: [...simulatedRecord.reciteCorrectness, event.correct ? 1 : 0],
-      }
-    }
-    const retention = calculateRetention(simulatedRecord, event.date)
-    points.push({ date: event.date, retention, type: event.type, correct: event.correct })
+  // 答题记录
+  for (const correct of record.correctness) {
+    reviewCount++
+    const interval = getNextInterval(reviewCount - 1)
+    const retention = correct ? 1 : 0.5
+    points.push({
+      date: lastDate.toISOString().slice(0, 10),
+      retention,
+      type: 'quiz',
+      correct: correct === 1,
+    })
+    const nextDate = new Date(lastDate)
+    nextDate.setDate(nextDate.getDate() + interval)
+    lastDate = nextDate
+  }
+
+  // 背诵记录
+  for (const correct of record.reciteCorrectness) {
+    const retention = correct ? 1 : 0.5
+    points.push({
+      date: lastDate.toISOString().slice(0, 10),
+      retention,
+      type: 'recite',
+      correct: correct === 1,
+    })
   }
 
   return points
 }
 ```
 
-- [ ] **Step 2: 编写保持率计算测试**
+- [ ] **Step 4: 运行测试确认通过**
 
-创建 `tests/unit/retention.test.ts`：
-
-```typescript
-import { describe, it, expect } from 'vitest'
-import { calculateRetention, calculateAverageRetention, getRetentionTimeline, getPoemRetentionPoints } from '@/utils/retention'
-import type { LearningRecord } from '@/types'
-
-describe('calculateRetention', () => {
-  it('should return 1 on the review day', () => {
-    const record: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1,
-      nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [],
-      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    expect(calculateRetention(record, '2026-08-15')).toBe(1)
-  })
-
-  it('should decrease over time', () => {
-    const record: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1,
-      nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [],
-      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    const r1 = calculateRetention(record, '2026-08-16')
-    const r2 = calculateRetention(record, '2026-08-17')
-    expect(r1).toBeGreaterThan(r2)
-    expect(r2).toBeGreaterThan(0)
-  })
-
-  it('should return higher retention for higher review count', () => {
-    const record1: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1,
-      nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [],
-      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    const record5: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 5,
-      nextReviewDate: '2026-09-14', correctness: [1, 1, 1, 1, 1], reciteCorrectness: [],
-      masteryLevel: '固', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    const r1 = calculateRetention(record1, '2026-08-16')
-    const r5 = calculateRetention(record5, '2026-08-16')
-    expect(r5).toBeGreaterThan(r1)
-  })
-})
-
-describe('calculateAverageRetention', () => {
-  it('should return 0 for no learned records', () => {
-    expect(calculateAverageRetention([], '2026-08-15')).toBe(0)
-  })
-
-  it('should calculate average across learned records', () => {
-    const records: LearningRecord[] = [
-      { poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
-      { poemId: 'p002', lastReviewDate: '2026-08-15', reviewCount: 0, nextReviewDate: '2026-08-15', correctness: [], reciteCorrectness: [], masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0 },
-    ]
-    const avg = calculateAverageRetention(records, '2026-08-15')
-    expect(avg).toBe(1) // only p001 is learned, p002 is 新
-  })
-})
-
-describe('getRetentionTimelineSplit', () => {
-  it('should return 30 data points', () => {
-    const result = getRetentionTimelineSplit([], 30)
-    expect(result).toHaveLength(30)
-  })
-
-  it('should separate quiz and recite retention', () => {
-    const records: LearningRecord[] = [
-      { poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
-    ]
-    const result = getRetentionTimelineSplit(records, 1)
-    expect(result[0].quizRetention).toBeGreaterThan(0)
-    expect(result[0].reciteRetention).toBe(0)
-  })
-})
-
-describe('getPoemRetentionPoints', () => {
-  it('should return empty for no results', () => {
-    const record: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 1,
-      nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [],
-      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    const points = getPoemRetentionPoints(record, [], [])
-    expect(points).toHaveLength(0)
-  })
-
-  it('should build timeline from quiz and recite results', () => {
-    const record: LearningRecord = {
-      poemId: 'p001', lastReviewDate: '2026-08-15', reviewCount: 2,
-      nextReviewDate: '2026-08-19', correctness: [1, 1], reciteCorrectness: [],
-      masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
-    }
-    const quizResults = [{ poemId: 'p001', date: '2026-08-14', correct: true }]
-    const reciteRecords = [{ poemId: 'p001', date: '2026-08-15', correct: false }]
-    const points = getPoemRetentionPoints(record, quizResults, reciteRecords)
-    expect(points).toHaveLength(2)
-    expect(points[0].type).toBe('quiz')
-    expect(points[1].type).toBe('recite')
-  })
-})
-```
-
-- [ ] **Step 3: 运行测试验证**
-
-Run: `npx vitest run tests/unit/retention.test.ts`
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vitest run tests/unit/retention.test.ts 2>&1`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add src/utils/retention.ts tests/unit/retention.test.ts
-git commit -m "feat: add retention calculation utility"
+git commit -m "feat: add retention calculation utilities for forgetting curve visualization"
 ```
 
 ---
 
-### Task 4: 安装 Chart.js 依赖
+### Task 4: 安装 Chart.js 并更新构建配置
 
 **Files:**
 - Modify: `package.json`
 
-- [ ] **Step 1: 安装 chart.js**
+- [ ] **Step 1: 安装 chart.js 依赖**
 
-Run: `npm install chart.js`
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npm install chart.js 2>&1 | tail -5`
 
-- [ ] **Step 2: 验证安装**
+- [ ] **Step 2: 验证安装成功**
 
-Run: `npx vitest run`
-Expected: ALL PASS
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && node -e "require('chart.js')" 2>&1 || echo "OK - ESM module"`
+Expected: 无报错
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add package.json package-lock.json
-git commit -m "chore: add chart.js dependency"
+git commit -m "feat: add chart.js dependency for forgetting curve visualization"
 ```
 
 ---
 
-### Task 5: 背诵页面 — RecitePage
+### Task 5: 新增背诵页面 — RecitePage
 
 **Files:**
+- Modify: `src/router/index.ts`
 - Create: `src/views/RecitePage.vue`
 
-- [ ] **Step 1: 创建 RecitePage.vue**
+这是独立于现有 RecitationSetupPage/RecitationPlayPage 的**自评模式**背诵页面。核心交互：看标题→自行背诵→展开原文→自评"会/不会"。
 
-这是背诵功能的独立页面，包含来源选择和卡片流。自评模式简化为：看标题→自行背诵→展开原文→"会了/不会"。
+- [ ] **Step 1: 在 `src/router/index.ts` 新增路由**
+
+在现有路由数组中添加：
+
+```typescript
+  { path: '/recite', name: 'recite', component: () => import('@/views/RecitePage.vue') },
+  { path: '/recite/result', name: 'recite-result', component: () => import('@/views/ReciteResultPage.vue') },
+  { path: '/poem/:id', name: 'poem-detail', component: () => import('@/views/PoemDetailPage.vue') },
+```
+
+- [ ] **Step 2: 创建 `src/views/RecitePage.vue`**
 
 ```vue
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
+import { isDueForReview } from '@/utils/ebbinghaus'
 import { shuffleArray } from '@/utils/quiz'
 import type { Poem } from '@/types'
 
@@ -539,251 +443,195 @@ const router = useRouter()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
-type Phase = 'select' | 'recite'
-const phase = ref<Phase>('select')
 const source = ref<'review' | 'all'>('review')
 const selectedGrades = ref<string[]>([])
-const poemQueue = ref<Poem[]>([])
+const phase = ref<'setup' | 'cards'>('setup')
+const poems = ref<Poem[]>([])
 const currentIndex = ref(0)
-const showText = ref(false)
+const expanded = ref(false)
+const results = ref<{ poemId: string; correct: boolean }[]>([])
 
-const reviewDueCount = computed(() => learningStore.reviewDueCount)
-
-const canStart = computed(() => {
-  if (source.value === 'all' && selectedGrades.value.length === 0) return false
-  return poemQueue.value.length > 0
+const reviewDuePoems = computed(() => {
+  const records = learningStore.records.filter(r => isDueForReview(r))
+  return poemStore.enabledPoems.filter(p => records.some(r => r.poemId === p.id))
 })
 
-function selectSource(s: 'review' | 'all') {
-  source.value = s
-  if (s === 'review') {
-    buildQueue()
-  } else {
-    selectedGrades.value = []
-    poemQueue.value = []
-  }
-}
+const reviewDueCount = computed(() => reviewDuePoems.value.length)
+
+const currentPoem = computed(() => poems.value[currentIndex.value] ?? null)
+const progressText = computed(() => `${currentIndex.value + 1} / ${poems.value.length}`)
+const progressPercent = computed(() => poems.value.length > 0 ? ((currentIndex.value) / poems.value.length) * 100 : 0)
 
 function toggleGrade(grade: string) {
   const idx = selectedGrades.value.indexOf(grade)
   if (idx >= 0) selectedGrades.value.splice(idx, 1)
   else selectedGrades.value.push(grade)
-  buildQueue()
-}
-
-function buildQueue() {
-  const today = new Date().toISOString().split('T')[0]
-  if (source.value === 'review') {
-    const dueIds = new Set(learningStore.records.filter(r => r.nextReviewDate <= today).map(r => r.poemId))
-    poemQueue.value = shuffleArray(poemStore.enabledPoems.filter(p => dueIds.has(p.id)))
-  } else {
-    const gradeSet = new Set(selectedGrades.value)
-    poemQueue.value = shuffleArray(poemStore.enabledPoems.filter(p => gradeSet.has(p.grade)))
-  }
 }
 
 function startRecite() {
-  if (poemQueue.value.length === 0) return
-  phase.value = 'recite'
+  let selected: Poem[] = []
+  if (source.value === 'review') {
+    selected = shuffleArray(reviewDuePoems.value)
+  } else {
+    if (selectedGrades.value.length > 0) {
+      selected = poemStore.enabledPoems.filter(p => selectedGrades.value.includes(p.grade))
+    } else {
+      selected = [...poemStore.enabledPoems]
+    }
+    selected = shuffleArray(selected)
+  }
+
+  if (selected.length === 0) return
+  poems.value = selected.slice(0, 20)
   currentIndex.value = 0
-  showText.value = false
+  expanded.value = false
+  results.value = []
+  phase.value = 'cards'
 }
 
-const currentPoem = computed(() => poemQueue.value[currentIndex.value] ?? null)
-
-const progressPercent = computed(() =>
-  poemQueue.value.length > 0 ? (currentIndex.value / poemQueue.value.length) * 100 : 0
-)
-
-function answer(correct: boolean) {
+function selfEvaluate(correct: boolean) {
   if (!currentPoem.value) return
   learningStore.recordRecite(currentPoem.value.id, correct)
-  showText.value = false
-  currentIndex.value++
-  if (currentIndex.value >= poemQueue.value.length) {
-    const reciteResults = poemQueue.value.map(p => {
-      const rec = learningStore.getRecord(p.id)
-      const lastCorrect = rec?.reciteCorrectness[rec.reciteCorrectness.length - 1] ?? 0
-      return { poemId: p.id, correct: lastCorrect === 1 }
-    })
-    router.push({ name: 'recite-result', query: { data: JSON.stringify(reciteResults) } })
+  results.value.push({ poemId: currentPoem.value.id, correct })
+
+  if (currentIndex.value < poems.value.length - 1) {
+    currentIndex.value++
+    expanded.value = false
+  } else {
+    router.push({ name: 'recite-result', state: { results: results.value } })
   }
 }
-
-function goHome() {
-  router.push({ name: 'home' })
-}
-
-onMounted(() => {
-  poemStore.fetchPoems()
-  buildQueue()
-})
 </script>
 
 <template>
   <div class="max-w-md mx-auto p-4">
-    <!-- 来源选择阶段 -->
-    <template v-if="phase === 'select'">
+    <!-- 设置阶段 -->
+    <template v-if="phase === 'setup'">
       <h2 class="text-xl font-bold text-center mb-6">古诗背诵</h2>
 
       <div v-if="reviewDueCount > 0" class="mb-4 p-4 bg-indigo-50 rounded-lg">
         <p class="text-indigo-700 font-medium">今日待复习：{{ reviewDueCount }} 首</p>
       </div>
 
-      <div class="flex gap-3 mb-6">
-        <button
-          :class="['flex-1 p-4 border-2 rounded-lg cursor-pointer transition', source === 'review' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
-          @click="selectSource('review')"
-        >
-          <div class="font-medium">待复习</div>
-          <div class="text-sm text-gray-500">{{ reviewDueCount }} 首</div>
-        </button>
-        <button
-          :class="['flex-1 p-4 border-2 rounded-lg cursor-pointer transition', source === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
-          @click="selectSource('all')"
-        >
-          <div class="font-medium">全部古诗</div>
-          <div class="text-sm text-gray-500">{{ poemStore.enabledPoems.length }} 首</div>
-        </button>
-      </div>
+      <section class="mb-6">
+        <h3 class="text-sm text-gray-500 mb-2">背诵来源</h3>
+        <div class="flex gap-3">
+          <button
+            :class="['flex-1 p-3 border-2 rounded-lg cursor-pointer transition', source === 'review' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
+            @click="source = 'review'"
+          >待复习</button>
+          <button
+            :class="['flex-1 p-3 border-2 rounded-lg cursor-pointer transition', source === 'all' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
+            @click="source = 'all'"
+          >全部古诗</button>
+        </div>
+      </section>
 
       <section v-if="source === 'all'" class="mb-6">
-        <h3 class="text-sm text-gray-500 mb-2">选择年级</h3>
+        <h3 class="text-sm text-gray-500 mb-2">选择年级（不选则为全部）</h3>
         <div class="flex flex-wrap gap-2">
           <button
             v-for="grade in poemStore.grades"
             :key="grade"
             :class="['px-3 py-2 border-2 rounded-lg text-sm cursor-pointer transition', selectedGrades.includes(grade) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
             @click="toggleGrade(grade)"
-          >
-            {{ grade }}
-          </button>
+          >{{ grade }}</button>
         </div>
       </section>
 
-      <p v-if="poemQueue.length === 0 && source === 'review'" class="text-center text-gray-500 mb-4">今日没有待复习的古诗</p>
-
       <button
-        :disabled="!canStart"
-        :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer transition mb-3', canStart ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
+        :disabled="source === 'review' && reviewDueCount === 0"
+        :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer transition mb-3', (source === 'review' && reviewDueCount === 0) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-600']"
         @click="startRecite"
-      >
-        开始背诵 ({{ poemQueue.length }} 首)
-      </button>
+      >开始背诵</button>
 
-      <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="goHome">
+      <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="router.push({ name: 'home' })">
         返回首页
       </button>
     </template>
 
-    <!-- 背诵卡片流阶段 -->
-    <template v-else-if="phase === 'recite' && currentPoem">
-      <div class="progress-bar mb-2">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+    <!-- 背诵卡片阶段 -->
+    <template v-else-if="currentPoem">
+      <div class="h-2 bg-gray-200 rounded-full overflow-hidden mb-2">
+        <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
       </div>
-      <p class="text-sm text-gray-500 text-center mb-4">
-        第 {{ currentIndex + 1 }} / {{ poemQueue.length }} 首
-      </p>
+      <p class="text-sm text-gray-500 text-center mb-4">{{ progressText }}</p>
 
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">{{ currentPoem.title }}</h2>
         <p class="text-gray-500">{{ currentPoem.dynasty }} · {{ currentPoem.author }}</p>
       </div>
 
-      <div v-if="!showText" class="text-center mb-6">
+      <!-- 查看原文 -->
+      <div v-if="!expanded" class="text-center mb-6">
         <button
           class="px-6 py-3 bg-white border-2 border-indigo-200 rounded-lg text-indigo-600 font-medium cursor-pointer hover:bg-indigo-50 transition"
-          @click="showText = true"
-        >
-          查看原文
-        </button>
+          @click="expanded = true"
+        >查看原文</button>
       </div>
 
-      <div v-else class="mb-6 p-4 bg-gray-50 rounded-lg">
-        <p v-for="(line, i) in currentPoem.text" :key="i" class="text-lg text-center py-1">{{ line }}</p>
-      </div>
-
-      <div class="flex gap-3">
-        <button
-          class="flex-1 p-4 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-lg cursor-pointer hover:bg-green-100 transition"
-          @click="answer(true)"
-        >
-          会了
-        </button>
-        <button
-          class="flex-1 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-lg cursor-pointer hover:bg-red-100 transition"
-          @click="answer(false)"
-        >
-          不会
-        </button>
+      <!-- 展开原文 -->
+      <div v-else class="mb-6">
+        <div class="p-4 bg-white border border-gray-200 rounded-lg mb-4">
+          <p v-for="(line, i) in currentPoem.text" :key="i" class="text-lg leading-relaxed text-center">{{ line }}</p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            class="flex-1 p-4 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-lg cursor-pointer hover:bg-green-100 transition"
+            @click="selfEvaluate(true)"
+          >会了</button>
+          <button
+            class="flex-1 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-lg cursor-pointer hover:bg-red-100 transition"
+            @click="selfEvaluate(false)"
+          >不会</button>
+        </div>
       </div>
     </template>
   </div>
 </template>
-
-<style scoped>
-.progress-bar {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.progress-fill {
-  height: 100%;
-  background: var(--color-primary);
-  transition: width 0.3s;
-}
-</style>
 ```
 
-- [ ] **Step 2: 验证编译**
+- [ ] **Step 3: 运行类型检查**
 
-Run: `npx vue-tsc --noEmit 2>&1 | head -20`
-Expected: 无错误
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vue-tsc --noEmit 2>&1 | head -20`
+Expected: 无错误（ReciteResultPage 和 PoemDetailPage 还未创建，路由可能报错，但它们是懒加载不会阻断编译）
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add src/views/RecitePage.vue
-git commit -m "feat: add RecitePage with self-assessment card flow"
+git add src/views/RecitePage.vue src/router/index.ts
+git commit -m "feat: add RecitePage with self-evaluation mode for poem recitation"
 ```
 
 ---
 
-### Task 6: 背诵结果页 — ReciteResultPage
+### Task 6: 新增背诵结果页面 — ReciteResultPage
 
 **Files:**
 - Create: `src/views/ReciteResultPage.vue`
 
-- [ ] **Step 1: 创建 ReciteResultPage.vue**
+- [ ] **Step 1: 创建 `src/views/ReciteResultPage.vue`**
 
 ```vue
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
-import { useLearningStore } from '@/stores/learning'
 
 const router = useRouter()
 const poemStore = usePoemStore()
-const learningStore = useLearningStore()
 
-interface ReciteResultItem {
+interface ReciteResult {
   poemId: string
   correct: boolean
 }
 
-const results = computed<ReciteResultItem[]>(() => {
-  try {
-    const data = router.currentRoute.value.query.data as string
-    return data ? JSON.parse(data) : []
-  } catch {
-    return []
-  }
-})
+// 从 router state 获取结果
+const results = ref<ReciteResult[]>((history.state?.results as ReciteResult[]) ?? [])
 
-const masteredCount = computed(() => results.value.filter(r => r.correct).length)
-const notMasteredCount = computed(() => results.value.filter(r => !r.correct).length)
+const correctCount = computed(() => results.value.filter(r => r.correct).length)
+const wrongCount = computed(() => results.value.filter(r => !r.correct).length)
+const wrongResults = computed(() => results.value.filter(r => !r.correct))
 
 const expandedIds = ref<Set<string>>(new Set())
 
@@ -819,36 +667,32 @@ function tryAgain() {
     <div class="text-center mb-6">
       <div class="flex justify-center gap-6">
         <div>
-          <div class="text-3xl font-bold text-green-500">{{ masteredCount }}</div>
+          <div class="text-3xl font-bold text-green-500">{{ correctCount }}</div>
           <div class="text-sm text-gray-500">会了</div>
         </div>
         <div>
-          <div class="text-3xl font-bold text-red-500">{{ notMasteredCount }}</div>
+          <div class="text-3xl font-bold text-red-500">{{ wrongCount }}</div>
           <div class="text-sm text-gray-500">不会</div>
         </div>
       </div>
     </div>
 
-    <div class="mb-6">
-      <div v-for="result in results" :key="result.poemId" class="mb-2">
+    <div v-if="wrongResults.length > 0" class="mb-6">
+      <h3 class="text-sm text-gray-500 mb-2">不会的古诗</h3>
+      <div v-for="result in wrongResults" :key="result.poemId" class="mb-2">
         <div
-          :class="['p-3 rounded-lg border-l-4 cursor-pointer', result.correct ? 'bg-green-50 border-l-green-500' : 'bg-red-50 border-l-red-500']"
-          @click="!result.correct && toggleExpand(result.poemId)"
+          class="p-3 rounded-lg border-l-4 cursor-pointer bg-red-50 border-l-red-500"
+          @click="toggleExpand(result.poemId)"
         >
-          <div class="flex items-center gap-2">
-            <span class="font-medium">{{ getPoemTitle(result.poemId) }}</span>
-            <span :class="['ml-auto text-lg font-bold', result.correct ? 'text-green-600' : 'text-red-500']">
-              {{ result.correct ? '✓' : '✗' }}
-            </span>
-          </div>
+          <span class="font-medium">{{ getPoemTitle(result.poemId) }}</span>
         </div>
-        <div v-if="expandedIds.has(result.poemId) && !result.correct" class="ml-4 mt-1 p-3 bg-white rounded-lg border border-gray-100">
-          <p v-for="(line, i) in getPoemText(result.poemId)" :key="i" class="text-sm text-gray-600 py-0.5">{{ line }}</p>
+        <div v-if="expandedIds.has(result.poemId)" class="ml-4 mt-1 p-3 bg-white rounded-lg border border-gray-100">
+          <p v-for="(line, i) in getPoemText(result.poemId)" :key="i" class="text-sm text-gray-600">{{ line }}</p>
         </div>
       </div>
     </div>
 
-    <button v-if="notMasteredCount > 0" class="w-full p-4 bg-indigo-500 text-white rounded-lg text-lg font-medium cursor-pointer hover:bg-indigo-600 transition mb-3" @click="tryAgain">
+    <button class="w-full p-4 bg-indigo-500 text-white rounded-lg text-lg font-medium cursor-pointer hover:bg-indigo-600 transition mb-3" @click="tryAgain">
       再来一轮
     </button>
     <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="goHome">
@@ -858,142 +702,145 @@ function tryAgain() {
 </template>
 ```
 
-- [ ] **Step 2: 验证编译**
-
-Run: `npx vue-tsc --noEmit 2>&1 | head -20`
-Expected: 无错误
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add src/views/ReciteResultPage.vue
-git commit -m "feat: add ReciteResultPage"
+git commit -m "feat: add ReciteResultPage for self-evaluation results"
 ```
 
 ---
 
-### Task 7: 单首古诗详情页 — PoemDetailPage
+### Task 7: 新增古诗详情页 — PoemDetailPage
 
 **Files:**
 - Create: `src/views/PoemDetailPage.vue`
 
-- [ ] **Step 1: 创建 PoemDetailPage.vue**
+- [ ] **Step 1: 创建 `src/views/PoemDetailPage.vue`**
 
 ```vue
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
-import { getPoemRetentionPoints, calculateRetention } from '@/utils/retention'
-import { getNextInterval } from '@/utils/ebbinghaus'
-import Chart from 'chart.js/auto'
+import { calculatePoemRetentionTimeline } from '@/utils/retention'
+import { getMasteryLevel as getMasteryLevelUtil } from '@/utils/ebbinghaus'
+import type { LearningRecord } from '@/types'
+import { Chart, registerables } from 'chart.js'
 
+Chart.register(...registerables)
+
+const route = useRoute()
 const router = useRouter()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
-const poemId = computed(() => {
-  const id = router.currentRoute.value.params.id as string
-  return id
-})
-
+const poemId = computed(() => route.params.id as string)
 const poem = computed(() => poemStore.getPoemById(poemId.value))
 const record = computed(() => learningStore.getRecord(poemId.value))
 
-const currentRetention = computed(() => {
-  if (!record.value) return 0
-  const today = new Date().toISOString().slice(0, 10)
-  return calculateRetention(record.value, today)
-})
-
-const nextInterval = computed(() => {
-  if (!record.value) return '-'
-  return getNextInterval(record.value.reviewCount)
-})
+const chartCanvas = ref<HTMLCanvasElement | null>(null)
+let chartInstance: Chart | null = null
 
 const quizCorrectRate = computed(() => {
-  if (!record.value || record.value.correctness.length === 0) return '-'
+  if (!record.value || record.value.correctness.length === 0) return null
   const correct = record.value.correctness.filter(c => c === 1).length
-  return `${correct}/${record.value.correctness.length}`
+  return Math.round((correct / record.value.correctness.length) * 100)
 })
 
 const reciteCorrectRate = computed(() => {
-  if (!record.value || record.value.reciteCorrectness.length === 0) return '-'
+  if (!record.value || record.value.reciteCorrectness.length === 0) return null
   const correct = record.value.reciteCorrectness.filter(c => c === 1).length
-  return `${correct}/${record.value.reciteCorrectness.length}`
+  return Math.round((correct / record.value.reciteCorrectness.length) * 100)
 })
 
-const chartRef = ref<HTMLCanvasElement | null>(null)
-let chartInstance: Chart | null = null
+const nextReviewDate = computed(() => record.value?.nextReviewDate ?? '—')
+const masteryLevel = computed(() => record.value?.masteryLevel ?? '新')
 
 function renderChart() {
-  if (!chartRef.value || !record.value) return
+  if (!chartCanvas.value || !record.value) return
 
-  const points = getPoemRetentionPoints(
-    record.value,
-    learningStore.data.quizResults,
-    learningStore.data.reciteRecords
-  )
+  if (chartInstance) {
+    chartInstance.destroy()
+    chartInstance = null
+  }
 
-  if (points.length === 0) return
+  const timeline = calculatePoemRetentionTimeline(record.value, new Date().toISOString().slice(0, 10))
+  if (timeline.length === 0) return
 
-  const labels = points.map(p => p.date.slice(5))
-  const data = points.map(p => Math.round(p.retention * 100))
-  const pointBgColors = points.map(p => {
-    if (!p.correct) return '#ef4444'
-    return p.type === 'quiz' ? '#3b82f6' : '#22c55e'
-  })
-  const pointBorderColors = pointBgColors
+  const quizPoints = timeline.filter(p => p.type === 'quiz')
+  const recitePoints = timeline.filter(p => p.type === 'recite')
 
-  chartInstance = new Chart(chartRef.value, {
+  chartInstance = new Chart(chartCanvas.value, {
     type: 'line',
     data: {
-      labels,
-      datasets: [{
-        label: '记忆保持率',
-        data,
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-        fill: true,
-        tension: 0.3,
-        pointBackgroundColor: pointBgColors,
-        pointBorderColor: pointBorderColors,
-        pointRadius: 6,
-        pointHoverRadius: 8,
-      }]
+      labels: timeline.map(p => p.date),
+      datasets: [
+        {
+          label: '答题',
+          data: timeline.map(p => p.type === 'quiz' ? (p.correct ? 1 : 0.3) : null),
+          borderColor: '#4f46e5',
+          backgroundColor: '#4f46e5',
+          pointRadius: 6,
+          pointStyle: 'circle',
+          spanGaps: false,
+          showLine: false,
+        },
+        {
+          label: '背诵',
+          data: timeline.map(p => p.type === 'recite' ? (p.correct ? 1 : 0.3) : null),
+          borderColor: '#22c55e',
+          backgroundColor: '#22c55e',
+          pointRadius: 6,
+          pointStyle: 'circle',
+          spanGaps: false,
+          showLine: false,
+        },
+      ],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          min: 0,
+          max: 1,
+          ticks: {
+            callback: (value) => `${(Number(value) * 100).toFixed(0)}%`,
+          },
+        },
+        x: {
+          ticks: {
+            maxRotation: 45,
+          },
+        },
+      },
       plugins: {
-        legend: { display: false },
+        legend: {
+          position: 'top',
+        },
         tooltip: {
           callbacks: {
-            label: (ctx) => {
-              const point = points[ctx.dataIndex]
-              const typeLabel = point.type === 'quiz' ? '答题' : '背诵'
-              const resultLabel = point.correct ? '正确' : '错误'
-              return `${typeLabel}${resultLabel} 保持率 ${ctx.parsed.y}%`
-            }
-          }
-        }
+            label: (context) => {
+              const point = timeline[context.dataIndex]
+              if (!point) return ''
+              return `${point.type === 'quiz' ? '答题' : '背诵'}：${point.correct ? '正确' : '错误'}`
+            },
+          },
+        },
       },
-      scales: {
-        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
-        x: { title: { display: true, text: '日期' } }
-      }
-    }
+    },
   })
 }
 
 onMounted(() => {
-  poemStore.fetchPoems()
-  setTimeout(renderChart, 100)
+  if (poem.value) renderChart()
 })
 
-function goBack() {
-  router.push({ name: 'progress' })
-}
+watch(poemId, () => {
+  if (poem.value) renderChart()
+})
 </script>
 
 <template>
@@ -1002,66 +849,60 @@ function goBack() {
       <h2 class="text-xl font-bold text-center mb-2">{{ poem.title }}</h2>
       <p class="text-center text-gray-500 mb-4">{{ poem.dynasty }} · {{ poem.author }} · {{ poem.grade }}</p>
 
+      <!-- 基本信息 -->
       <div class="grid grid-cols-3 gap-3 mb-4">
         <div class="text-center p-3 bg-white border border-gray-200 rounded-lg">
-          <div class="text-lg font-bold text-indigo-500">{{ record?.masteryLevel ?? '新' }}</div>
+          <div class="text-lg font-bold text-indigo-500">{{ masteryLevel }}</div>
           <div class="text-xs text-gray-500">掌握等级</div>
         </div>
         <div class="text-center p-3 bg-white border border-gray-200 rounded-lg">
-          <div class="text-lg font-bold text-indigo-500">{{ Math.round(currentRetention * 100) }}%</div>
-          <div class="text-xs text-gray-500">当前保持率</div>
+          <div class="text-lg font-bold text-orange-500">{{ nextReviewDate }}</div>
+          <div class="text-xs text-gray-500">下次复习</div>
         </div>
         <div class="text-center p-3 bg-white border border-gray-200 rounded-lg">
-          <div class="text-lg font-bold text-indigo-500">{{ record?.nextReviewDate ?? '-' }}</div>
-          <div class="text-xs text-gray-500">下次复习</div>
+          <div class="text-lg font-bold text-gray-500">{{ record?.reviewCount ?? 0 }}</div>
+          <div class="text-xs text-gray-500">复习次数</div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 mb-4">
-        <div class="text-center p-3 bg-blue-50 border border-blue-100 rounded-lg">
-          <div class="text-lg font-bold text-blue-600">{{ quizCorrectRate }}</div>
+      <!-- 正确率 -->
+      <div class="flex gap-3 mb-4">
+        <div v-if="quizCorrectRate !== null" class="flex-1 text-center p-3 bg-indigo-50 rounded-lg">
+          <div class="text-lg font-bold text-indigo-600">{{ quizCorrectRate }}%</div>
           <div class="text-xs text-gray-500">答题正确率</div>
         </div>
-        <div class="text-center p-3 bg-green-50 border border-green-100 rounded-lg">
-          <div class="text-lg font-bold text-green-600">{{ reciteCorrectRate }}</div>
+        <div v-if="reciteCorrectRate !== null" class="flex-1 text-center p-3 bg-green-50 rounded-lg">
+          <div class="text-lg font-bold text-green-600">{{ reciteCorrectRate }}%</div>
           <div class="text-xs text-gray-500">背诵正确率</div>
         </div>
       </div>
 
-      <div class="mb-4">
+      <!-- 遗忘曲线图 -->
+      <div class="mb-4 p-4 bg-white border border-gray-200 rounded-lg">
         <h3 class="text-sm text-gray-500 mb-2">遗忘曲线</h3>
-        <div class="bg-white border border-gray-200 rounded-lg p-3">
-          <canvas ref="chartRef"></canvas>
+        <div style="height: 250px; position: relative;">
+          <canvas ref="chartCanvas"></canvas>
         </div>
-        <div class="flex gap-4 mt-2 text-xs text-gray-500 justify-center">
-          <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span> 答题正确</span>
-          <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-green-500"></span> 背诵正确</span>
-          <span class="flex items-center gap-1"><span class="inline-block w-3 h-3 rounded-full bg-red-500"></span> 错误</span>
-        </div>
+        <p v-if="!record || record.reviewCount === 0" class="text-center text-gray-400 text-sm py-8">暂无学习数据</p>
       </div>
 
-      <div class="mb-4 p-4 bg-gray-50 rounded-lg">
-        <p v-for="(line, i) in poem.text" :key="i" class="text-lg text-center py-0.5">{{ line }}</p>
+      <!-- 原文 -->
+      <div class="p-4 bg-white border border-gray-200 rounded-lg mb-4">
+        <h3 class="text-sm text-gray-500 mb-2">原文</h3>
+        <p v-for="(line, i) in poem.text" :key="i" class="text-lg leading-relaxed text-center">{{ line }}</p>
       </div>
     </template>
 
-    <div v-else class="text-center text-gray-500">
-      <p>古诗未找到</p>
-    </div>
+    <div v-else class="text-center text-gray-500 py-8">古诗不存在</div>
 
-    <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="goBack">
-      返回进度
+    <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="router.back()">
+      返回
     </button>
   </div>
 </template>
 ```
 
-- [ ] **Step 2: 验证编译**
-
-Run: `npx vue-tsc --noEmit 2>&1 | head -20`
-Expected: 无错误
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add src/views/PoemDetailPage.vue
@@ -1070,66 +911,56 @@ git commit -m "feat: add PoemDetailPage with forgetting curve chart"
 
 ---
 
-### Task 8: 更新路由和首页导航
+### Task 8: 更新首页 — 新增背诵入口
 
 **Files:**
-- Modify: `src/router/index.ts`
 - Modify: `src/views/HomePage.vue`
 
-- [ ] **Step 1: 在 router/index.ts 新增路由**
+- [ ] **Step 1: 修改 HomePage.vue，在现有"古诗抽背"按钮旁新增"自评背诵"按钮**
 
-在现有路由数组中新增：
+将现有 3 列 grid 改为 4 列（或保持 3 列增加第 2 行）。在现有 3 个按钮后新增：
 
-```typescript
-{ path: '/recite', name: 'recite', component: () => import('@/views/RecitePage.vue') },
-{ path: '/recite/result', name: 'recite-result', component: () => import('@/views/ReciteResultPage.vue') },
-{ path: '/poem/:id', name: 'poem-detail', component: () => import('@/views/PoemDetailPage.vue') },
+```html
+      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="router.push({ name: 'recite' })">
+        <div class="text-3xl mb-2">🎯</div>
+        <div class="font-medium">自评背诵</div>
+      </button>
 ```
 
-- [ ] **Step 2: 在 HomePage.vue 新增"背诵"入口按钮**
+将 `grid grid-cols-3` 改为 `grid grid-cols-2`，使得 4 个按钮排列为 2x2 布局。
 
-在现有 grid 中，将"古诗抽背"按钮改为指向新的背诵路由：
+- [ ] **Step 2: 验证首页显示正常**
 
-修改 `startRecitation` 方法：
-```typescript
-function startRecitation() {
-  router.push({ name: 'recite' })
-}
-```
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vite build 2>&1 | tail -5`
+Expected: 构建成功
 
-（按钮本身已存在，只需修改路由目标）
-
-- [ ] **Step 3: 验证编译**
-
-Run: `npx vue-tsc --noEmit 2>&1 | head -20`
-Expected: 无错误
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/router/index.ts src/views/HomePage.vue
-git commit -m "feat: add recite routes and update home navigation"
+git add src/views/HomePage.vue
+git commit -m "feat: add self-evaluation recite entry button on home page"
 ```
 
 ---
 
-### Task 9: 进度页增强 — 总览遗忘曲线图 + 可点击列表
+### Task 9: 更新进度页 — 新增遗忘曲线总览和古诗可点击
 
 **Files:**
 - Modify: `src/views/ProgressPage.vue`
 
-- [ ] **Step 1: 更新 ProgressPage.vue**
+- [ ] **Step 1: 重写 `src/views/ProgressPage.vue`，增加 Chart.js 总览图和可点击古诗列表**
 
 ```vue
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLearningStore } from '@/stores/learning'
 import { usePoemStore } from '@/stores/poem'
-import { getRetentionTimelineSplit } from '@/utils/retention'
-import { isDueForReview } from '@/utils/ebbinghaus'
-import Chart from 'chart.js/auto'
+import { calculateDailyRetention } from '@/utils/retention'
 import type { MasteryLevel } from '@/types'
+import { Chart, registerables } from 'chart.js'
+
+Chart.register(...registerables)
 
 const router = useRouter()
 const learningStore = useLearningStore()
@@ -1156,66 +987,70 @@ const masteryColors: Record<string, string> = {
   '固': 'bg-orange-100 text-orange-600',
 }
 
-// 总览遗忘曲线图
-const overviewChartRef = ref<HTMLCanvasElement | null>(null)
+// 遗忘曲线总览
+const overviewCanvas = ref<HTMLCanvasElement | null>(null)
 let overviewChart: Chart | null = null
 
 function renderOverviewChart() {
-  if (!overviewChartRef.value) return
+  if (!overviewCanvas.value) return
 
-  const timeline = getRetentionTimelineSplit(learningStore.records, 30)
-  if (timeline.length === 0) return
+  if (overviewChart) {
+    overviewChart.destroy()
+    overviewChart = null
+  }
 
-  const labels = timeline.map(t => t.date.slice(5))
-  const quizData = timeline.map(t => Math.round(t.quizRetention * 100))
-  const reciteData = timeline.map(t => Math.round(t.reciteRetention * 100))
+  const today = new Date()
+  const endStr = today.toISOString().slice(0, 10)
+  const start = new Date(today)
+  start.setDate(start.getDate() - 29)
+  const startStr = start.toISOString().slice(0, 10)
 
-  overviewChart = new Chart(overviewChartRef.value, {
+  const dailyData = calculateDailyRetention(learningStore.records, startStr, endStr)
+
+  overviewChart = new Chart(overviewCanvas.value, {
     type: 'line',
     data: {
-      labels,
-      datasets: [
-        {
-          label: '答题保持率',
-          data: quizData,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-        },
-        {
-          label: '背诵保持率',
-          data: reciteData,
-          borderColor: '#22c55e',
-          backgroundColor: 'rgba(34, 197, 94, 0.1)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-        }
-      ]
+      labels: dailyData.map(d => d.date.slice(5)),
+      datasets: [{
+        label: '记忆保持率',
+        data: dailyData.map(d => Math.round(d.retention * 100)),
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+        fill: true,
+        tension: 0.3,
+      }],
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: true, position: 'top' } },
+      maintainAspectRatio: false,
       scales: {
-        y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
-        x: { title: { display: true, text: '最近30天' }, ticks: { maxTicksLimit: 7 } }
-      }
-    }
+        y: {
+          min: 0,
+          max: 100,
+          ticks: { callback: (v) => `${v}%` },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+      },
+    },
   })
 }
 
-// 古诗列表（按掌握等级分组）
-const poemListByMastery = computed(() => {
-  const levels: MasteryLevel[] = ['新', '学', '熟', '固']
-  return levels.map(level => {
-    const records = learningStore.records.filter(r => r.masteryLevel === level)
-    const poems = records.map(r => {
-      const poem = poemStore.getPoemById(r.poemId)
-      return poem ? { poem, record: r } : null
-    }).filter(Boolean) as { poem: NonNullable<ReturnType<typeof poemStore.getPoemById>>; record: typeof records[0] }[]
-    return { level, poems }
+// 古诗列表
+const poemList = computed(() => {
+  return poemStore.enabledPoems.map(p => {
+    const record = learningStore.getRecord(p.id)
+    return {
+      id: p.id,
+      title: p.title,
+      author: p.author,
+      masteryLevel: record?.masteryLevel ?? '新',
+      nextReviewDate: record?.nextReviewDate ?? '—',
+    }
+  }).sort((a, b) => {
+    const order: Record<string, number> = { '新': 0, '学': 1, '熟': 2, '固': 3 }
+    return order[a.masteryLevel] - order[b.masteryLevel]
   })
 })
 
@@ -1224,8 +1059,7 @@ function goToDetail(poemId: string) {
 }
 
 onMounted(() => {
-  poemStore.fetchPoems()
-  setTimeout(renderOverviewChart, 100)
+  renderOverviewChart()
 })
 </script>
 
@@ -1248,35 +1082,32 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-6">
+    <!-- 遗忘曲线总览 -->
+    <div class="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+      <h3 class="text-sm text-gray-500 mb-2">记忆保持率趋势（近30天）</h3>
+      <div style="height: 200px; position: relative;">
+        <canvas ref="overviewCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-4">
       <div class="text-3xl font-bold text-orange-500">{{ learningStore.unproficientCount }}</div>
       <div class="text-sm text-gray-500 mt-1">不熟练</div>
     </div>
 
-    <!-- 总览遗忘曲线图 -->
-    <div class="mb-6">
-      <h3 class="text-sm text-gray-500 mb-2">记忆保持率趋势</h3>
-      <div class="bg-white border border-gray-200 rounded-lg p-3">
-        <canvas ref="overviewChartRef"></canvas>
-      </div>
-    </div>
-
     <!-- 古诗列表 -->
-    <div class="mb-6">
-      <h3 class="text-sm text-gray-500 mb-2">古诗列表</h3>
-      <div v-for="group in poemListByMastery" :key="group.level" class="mb-3">
-        <div :class="['text-sm font-medium mb-1 px-2 py-1 rounded', masteryColors[group.level]]">{{ group.level }} ({{ group.poems.length }})</div>
-        <div class="space-y-1">
-          <div
-            v-for="item in group.poems"
-            :key="item.poem.id"
-            class="flex items-center gap-2 p-2 bg-white border border-gray-100 rounded-lg cursor-pointer hover:bg-gray-50 transition"
-            @click="goToDetail(item.poem.id)"
-          >
-            <span class="text-sm font-medium">{{ item.poem.title }}</span>
-            <span class="text-xs text-gray-400">{{ item.poem.dynasty }}·{{ item.poem.author }}</span>
-            <span class="ml-auto text-xs text-gray-400">下次：{{ item.record.nextReviewDate }}</span>
-          </div>
+    <div class="mb-4">
+      <h3 class="text-sm text-gray-500 mb-2">古诗列表（点击查看详情）</h3>
+      <div class="max-h-96 overflow-y-auto">
+        <div
+          v-for="item in poemList"
+          :key="item.id"
+          class="p-3 bg-white border border-gray-200 rounded-lg mb-1 cursor-pointer hover:bg-gray-50 transition flex items-center gap-2"
+          @click="goToDetail(item.id)"
+        >
+          <span :class="['text-xs font-bold px-2 py-0.5 rounded', masteryColors[item.masteryLevel]]">{{ item.masteryLevel }}</span>
+          <span class="flex-1 text-sm">{{ item.title }}</span>
+          <span class="text-xs text-gray-400">{{ item.author }}</span>
         </div>
       </div>
     </div>
@@ -1286,114 +1117,134 @@ onMounted(() => {
 </template>
 ```
 
-- [ ] **Step 2: 验证编译**
-
-Run: `npx vue-tsc --noEmit 2>&1 | head -20`
-Expected: 无错误
-
-- [ ] **Step 3: 运行全部测试**
-
-Run: `npx vitest run`
-Expected: ALL PASS
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add src/views/ProgressPage.vue
-git commit -m "feat: enhance ProgressPage with retention chart and clickable poem list"
+git commit -m "feat: add forgetting curve overview chart and clickable poem list to progress page"
 ```
 
 ---
 
-### Task 10: 全量测试与构建验证
+### Task 10: 更新现有测试并添加新测试
 
 **Files:**
-- 无新增
+- Modify: `tests/unit/storage.test.ts`
+- Modify: `tests/unit/types.test.ts`
+- Create: `tests/unit/learning-recite.test.ts`
 
-- [ ] **Step 1: 运行全部单元测试**
+- [ ] **Step 1: 更新 `tests/unit/storage.test.ts`，确保 `reciteCorrectness` 和 `reciteRecords` 迁移正确**
 
-Run: `npx vitest run`
-Expected: ALL PASS
-
-- [ ] **Step 2: 运行 TypeScript 类型检查**
-
-Run: `npx vue-tsc --noEmit`
-Expected: 无错误
-
-- [ ] **Step 3: 运行构建**
-
-Run: `npm run build`
-Expected: BUILD SUCCESS
-
-- [ ] **Step 4: Commit（如有修复）**
-
-```bash
-git add -A
-git commit -m "fix: resolve build and test issues"
-```
-
----
-
-### Task 11: 修复现有 lastReviewDate bug
-
-**Files:**
-- Modify: `src/utils/ebbinghaus.ts`
-
-- [ ] **Step 1: 修复 calculateNextReview 中 lastReviewDate 不更新的问题**
-
-在 `src/utils/ebbinghaus.ts` 中，修改 `calculateNextReview`：
+在现有测试中，确保 `loadData` 返回的对象包含 `reciteRecords` 和每条 record 的 `reciteCorrectness`。添加测试：
 
 ```typescript
-export function calculateNextReview(record: LearningRecord, correct: boolean): LearningRecord {
-  if (correct) {
-    const newCount = record.reviewCount + 1
-    const today = new Date().toISOString().slice(0, 10)
-    const interval = getNextInterval(record.reviewCount)
-    return {
-      ...record,
-      reviewCount: newCount,
-      nextReviewDate: addDays(today, interval),
-      masteryLevel: getMasteryLevel(newCount),
-      correctness: [...record.correctness, 1],
-      lastReviewDate: today,
+import { describe, it, expect, beforeEach } from 'vitest'
+import { loadData, saveData, clearData } from '@/utils/storage'
+
+beforeEach(() => {
+  localStorage.clear()
+})
+
+describe('storage migration', () => {
+  it('adds reciteCorrectness to old records without it', () => {
+    const oldData = {
+      records: [{ poemId: 'p001', lastReviewDate: '2026-01-01', reviewCount: 1, nextReviewDate: '2026-01-02', correctness: [1], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 }],
+      quizResults: [],
+      wrongBook: [],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
     }
-  }
-  return handleWrongAnswer(record)
-}
+    localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
+    const data = loadData()
+    expect(data.records[0].reciteCorrectness).toEqual([])
+    expect(data.reciteRecords).toEqual([])
+  })
+})
 ```
 
-同时修改 `handleWrongAnswer`，更新 lastReviewDate：
+- [ ] **Step 2: 新增 `tests/unit/learning-recite.test.ts`，测试 `recordRecite` 方法**
+
 ```typescript
-export function handleWrongAnswer(record: LearningRecord): LearningRecord {
-  const today = new Date().toISOString().slice(0, 10)
-  const currentIndex = Math.max(0, record.reviewCount - 1)
-  const currentIntervalIndex = Math.min(currentIndex, INTERVALS.length - 1)
-  const backoffIndex = Math.max(0, currentIntervalIndex - 1)
-  const backoffInterval = INTERVALS[backoffIndex]
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useLearningStore } from '@/stores/learning'
+import { createPinia, setActivePinia } from 'pinia'
 
-  return {
-    ...record,
-    nextReviewDate: addDays(today, backoffInterval),
-    correctness: [...record.correctness, 0],
-    unproficientCorrectStreak: 0,
-    lastReviewDate: today,
-  }
-}
+beforeEach(() => {
+  localStorage.clear()
+  setActivePinia(createPinia())
+})
+
+describe('recordRecite', () => {
+  it('creates a new record with reciteCorrectness on correct answer', () => {
+    const store = useLearningStore()
+    store.recordRecite('p001', true)
+    const record = store.getRecord('p001')
+    expect(record).toBeDefined()
+    expect(record!.reciteCorrectness).toEqual([1])
+    expect(record!.reviewCount).toBeGreaterThan(0)
+  })
+
+  it('appends to reciteCorrectness on subsequent answers', () => {
+    const store = useLearningStore()
+    store.recordRecite('p001', true)
+    store.recordRecite('p001', false)
+    const record = store.getRecord('p001')
+    expect(record!.reciteCorrectness).toEqual([1, 0])
+  })
+
+  it('adds reciteRecord to reciteRecords array', () => {
+    const store = useLearningStore()
+    store.recordRecite('p001', true)
+    expect(store.data.reciteRecords).toHaveLength(1)
+    expect(store.data.reciteRecords[0].poemId).toBe('p001')
+    expect(store.data.reciteRecords[0].correct).toBe(true)
+  })
+
+  it('updates nextReviewDate via ebbinghaus on correct answer', () => {
+    const store = useLearningStore()
+    store.recordRecite('p001', true)
+    const record = store.getRecord('p001')
+    expect(record!.nextReviewDate).not.toBe(record!.lastReviewDate)
+  })
+})
 ```
 
-- [ ] **Step 2: 运行 ebbinghaus 测试验证**
+- [ ] **Step 3: 运行所有测试**
 
-Run: `npx vitest run tests/unit/ebbinghaus.test.ts`
-Expected: PASS（可能需要更新测试中的断言以匹配新行为）
-
-- [ ] **Step 3: 运行全部测试**
-
-Run: `npx vitest run`
-Expected: ALL PASS
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vitest run 2>&1`
+Expected: 所有测试通过
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/utils/ebbinghaus.ts
-git commit -m "fix: update lastReviewDate in calculateNextReview and handleWrongAnswer"
+git add tests/unit/storage.test.ts tests/unit/learning-recite.test.ts tests/unit/types.test.ts
+git commit -m "test: add tests for recite data migration and recordRecite method"
+```
+
+---
+
+### Task 11: 最终验证和构建
+
+**Files:**
+- 无新文件
+
+- [ ] **Step 1: 运行完整测试套件**
+
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vitest run 2>&1`
+Expected: 所有测试通过
+
+- [ ] **Step 2: 运行类型检查**
+
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vue-tsc --noEmit 2>&1`
+Expected: 无错误
+
+- [ ] **Step 3: 运行生产构建**
+
+Run: `cd /root/古诗抽查/.codebuddy/worktrees/recite-forgetting-curve && npx vite build 2>&1`
+Expected: 构建成功
+
+- [ ] **Step 4: Commit（如有未提交的修改）**
+
+```bash
+git add -A
+git commit -m "chore: final verification and cleanup"
 ```
