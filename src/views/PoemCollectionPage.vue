@@ -56,8 +56,8 @@ const learningStore = useLearningStore()
 
 const activeGrade = ref('')
 
-onMounted(() => {
-  poemStore.fetchPoems()
+onMounted(async () => {
+  await poemStore.fetchPoems()
   if (poemStore.grades.length > 0) {
     activeGrade.value = poemStore.grades[0]
   }

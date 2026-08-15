@@ -60,7 +60,7 @@
       v-model:visible="popupVisible"
     />
 
-    <router-link :to="{ name: 'settings' }" class="block text-center text-indigo-500 no-underline text-sm mt-6">返回设置</router-link>
+    <router-link :to="{ name: 'settings' }" class="block text-center text-indigo-500 no-underline text-sm mt-6 pb-16">返回设置</router-link>
   </div>
 </template>
 
@@ -74,8 +74,8 @@ const poemStore = usePoemStore()
 
 const activeGrade = ref('')
 
-onMounted(() => {
-  poemStore.fetchPoems()
+onMounted(async () => {
+  await poemStore.fetchPoems()
   if (poemStore.grades.length > 0) {
     activeGrade.value = poemStore.grades[0]
   }
