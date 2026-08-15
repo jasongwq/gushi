@@ -20,6 +20,7 @@
 import { computed } from 'vue'
 import type { QuizQuestion } from '@/types'
 import { usePoemStore } from '@/stores/poem'
+import { CJK_CHAR_REGEX } from '@/utils/distractor'
 
 const props = defineProps<{ question: QuizQuestion }>()
 defineEmits<{ answer: [index: number] }>()
@@ -38,7 +39,7 @@ const displayPrompt = computed(() => {
   for (const line of lines) {
     let displayed = ''
     for (const ch of line) {
-      if (/[\u4e00-\u9fff]/.test(ch)) {
+      if (CJK_CHAR_REGEX.test(ch)) {
         if (blankSet.has(charIndex)) {
           displayed += '____'
         } else {

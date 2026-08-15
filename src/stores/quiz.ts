@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { QuizQuestion, QuizSession, QuizType, SourceType, Poem } from '@/types'
 import { smartMix, getPoemsBySource, getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
-import { generateFillBlankOptions, generateNextLineOptions } from '@/utils/distractor'
+import { generateFillBlankOptions, generateNextLineOptions, CJK_CHAR_REGEX } from '@/utils/distractor'
 import { usePoemStore } from './poem'
 import { useLearningStore } from './learning'
 
@@ -31,7 +31,7 @@ export const useQuizStore = defineStore('quiz', () => {
     switch (quizType) {
       case 'fillBlank': {
         const fullText = poem.text.join('')
-        const chars = [...fullText.replace(/[，。、！？；：""''（）\s]/g, '')]
+        const chars = [...fullText].filter(ch => CJK_CHAR_REGEX.test(ch))
         const blankCount = Math.min(3, Math.max(1, Math.floor(chars.length / 5)))
         const positions = shuffleArray(chars.map((_, i) => i)).slice(0, blankCount).sort((a, b) => a - b)
         const blankChar = chars[positions[0]]

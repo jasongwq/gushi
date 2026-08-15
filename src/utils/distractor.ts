@@ -1,6 +1,9 @@
 import type { Poem } from '@/types'
 import { shuffleArray } from './quiz'
 
+/** Regex matching Chinese characters (CJK Unified Ideographs). Used for fill-blank index counting. */
+export const CJK_CHAR_REGEX = /[\u4e00-\u9fff]/
+
 /**
  * Extract unique Chinese characters from a poem's text.
  */
