@@ -19,6 +19,7 @@ export interface LearningRecord {
   reviewCount: number
   nextReviewDate: string
   correctness: number[]
+  reciteCorrectness: number[]   // 新增：背诵正确性历史
   masteryLevel: MasteryLevel
   unproficient: boolean
   unproficientCorrectStreak: number
@@ -31,6 +32,12 @@ export interface QuizResult {
   date: string
   correct: boolean
   wrongAnswer?: string
+}
+
+export interface ReciteRecord {
+  poemId: string
+  date: string           // YYYY-MM-DD
+  correct: boolean       // 自评"会"=true，"不会"=false
 }
 
 export interface WrongEntry {
@@ -52,6 +59,7 @@ export interface UserSettings {
 export interface UserData {
   records: LearningRecord[]
   quizResults: QuizResult[]
+  reciteRecords: ReciteRecord[]  // 新增
   wrongBook: WrongEntry[]
   settings: UserSettings
 }
