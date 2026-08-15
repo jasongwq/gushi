@@ -135,6 +135,8 @@ describe('Type definitions', () => {
       currentIndex: 0,
       answers: [],
       startTime: '2026-01-01T10:00:00Z',
+      mode: 'quiz',
+      recitationResults: [],
     }
     expect(session.source).toBe('smart')
     expect(session.quizTypes).toHaveLength(2)

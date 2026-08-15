@@ -84,6 +84,8 @@ export const useQuizStore = defineStore('quiz', () => {
     session.value = {
       source, quizTypes, questions, currentIndex: 0, answers: [],
       startTime: new Date().toISOString(),
+      mode: 'quiz',
+      recitationResults: [],
     }
     return true
   }
