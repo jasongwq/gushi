@@ -7,7 +7,7 @@
       <p class="text-indigo-500 text-sm">点击进入复习 →</p>
     </div>
 
-    <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="grid grid-cols-3 gap-4 mb-6">
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('parent')">
         <div class="text-3xl mb-2">👨‍👩‍👧</div>
         <div class="font-medium">家长抽查</div>
@@ -15,6 +15,10 @@
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('self')">
         <div class="text-3xl mb-2">📝</div>
         <div class="font-medium">自主练习</div>
+      </button>
+      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startRecitation">
+        <div class="text-3xl mb-2">📖</div>
+        <div class="font-medium">古诗抽背</div>
       </button>
     </div>
 
@@ -57,6 +61,10 @@ onMounted(() => poemStore.fetchPoems())
 
 function startReview() {
   router.push({ name: 'quiz-setup', query: { source: 'review' } })
+}
+
+function startRecitation() {
+  router.push({ name: 'recitation-setup' })
 }
 
 function startQuiz(mode: string) {
