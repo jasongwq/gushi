@@ -31,8 +31,8 @@ describe('Type definitions', () => {
   })
 
   it('should allow valid SourceType values', () => {
-    const types: SourceType[] = ['smart', 'grade', 'unit', 'all', 'review', 'wrong', 'unproficient']
-    expect(types).toHaveLength(7)
+    const types: SourceType[] = ['smart', 'grade', 'all', 'review', 'wrong', 'unproficient']
+    expect(types).toHaveLength(6)
   })
 
   it('should construct a valid Poem object', () => {
@@ -41,8 +41,7 @@ describe('Type definitions', () => {
       title: '静夜思',
       author: '李白',
       dynasty: '唐',
-      grade: '一上',
-      unit: '1',
+      grade: '一年级',
       text: ['床前明月光', '疑是地上霜', '举头望明月', '低头思故乡'],
       textType: '五言',
     }
@@ -93,7 +92,7 @@ describe('Type definitions', () => {
 
   it('should construct a valid UserSettings object', () => {
     const settings: UserSettings = {
-      enabledGrades: ['一上', '一下'],
+      enabledGrades: ['一年级', '二年级'],
       quizCount: 10,
       source: 'smart',
       quizTypes: ['fillBlank', 'nextLine'],

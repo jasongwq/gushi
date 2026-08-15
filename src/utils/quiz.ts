@@ -11,7 +11,6 @@ export function shuffleArray<T>(array: T[]): T[] {
 
 interface SourceOptions {
   grades?: string[]
-  unit?: string
 }
 
 export function getPoemsBySource(
@@ -22,7 +21,7 @@ export function getPoemsBySource(
 ): Poem[] {
   if (source === 'all') return poems
   if (source === 'grade') return poems.filter(p => options?.grades?.includes(p.grade) ?? false)
-  if (source === 'unit') return poems.filter(p => p.unit === options?.unit)
+
   return poems
 }
 

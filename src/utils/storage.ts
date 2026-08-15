@@ -17,12 +17,19 @@ export function loadData(): UserData {
     if (!raw) return getDefaultData()
     const parsed = JSON.parse(raw) as Partial<UserData>
     const defaults = getDefaultData()
-    return {
+    const data = {
       records: parsed.records ?? defaults.records,
       quizResults: parsed.quizResults ?? defaults.quizResults,
       wrongBook: parsed.wrongBook ?? defaults.wrongBook,
       settings: { ...defaults.settings, ...parsed.settings },
     }
+    // 迁移：检测旧版 poemId（b 开头），清除旧记录
+    if (data.records.some(r => r.poemId.startsWith('b')) ||
+        data.quizResults.some(r => r.poemId.startsWith('b')) ||
+        data.wrongBook.some(w => w.poemId.startsWith('b'))) {
+      return getDefaultData()
+    }
+    return data
   } catch {
     return getDefaultData()
   }
