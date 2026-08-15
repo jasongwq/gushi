@@ -195,7 +195,7 @@ test('result page shows prompt and user answer for each question', async ({ page
   await expect(page.locator('h2')).toContainText('抽查结果', { timeout: 5000 })
   const answerCards = page.locator('.border-l-4')
   await expect(answerCards).toHaveCount(5, { timeout: 5000 })
-  await expect(page.locator('text=分')).toBeVisible()
+  await expect(page.locator('.text-lg.text-gray-500')).toContainText('分')
   await expect(page.locator('.text-center.text-sm')).toContainText('正确')
   await expect(page.locator('text=返回首页')).toBeVisible()
 })

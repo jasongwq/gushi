@@ -4,10 +4,12 @@ import type { Poem, RecitationResult } from '@/types'
 
 const props = defineProps<{
   poem: Poem
+  canGoPrev?: boolean
 }>()
 
 const emit = defineEmits<{
   submit: [result: RecitationResult]
+  goPrev: []
 }>()
 
 // 每行状态：默认熟练，可标记为卡顿/不会
@@ -143,12 +145,18 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       </button>
     </div>
 
-    <button
-      :disabled="!hasAnyIssue"
-      :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer transition', hasAnyIssue ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
-      @click="submit"
-    >
-      下一首
-    </button>
+    <!-- 上一首 / 下一首 -->
+    <div class="flex gap-3">
+      <button
+        :disabled="!props.canGoPrev"
+        :class="['flex-1 p-4 rounded-lg text-lg font-medium cursor-pointer transition', props.canGoPrev ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-100 text-gray-300 cursor-not-allowed']"
+        @click="emit('goPrev')"
+      >上一首</button>
+      <button
+        :disabled="!hasAnyIssue"
+        :class="['flex-1 p-4 rounded-lg text-lg font-medium cursor-pointer transition', hasAnyIssue ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
+        @click="submit"
+      >下一首</button>
+    </div>
   </div>
 </template>

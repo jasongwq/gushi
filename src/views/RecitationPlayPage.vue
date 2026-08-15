@@ -44,14 +44,7 @@ function goPrev() {
       <p class="progress-text text-sm text-gray-500 text-center mb-4">
         第 {{ quizStore.currentIndex + 1 }} / {{ quizStore.totalQuestions }} 首
       </p>
-      <div class="flex gap-3 mb-4">
-        <button
-          :disabled="!canGoPrev"
-          :class="['flex-1 p-3 rounded-lg text-base font-medium cursor-pointer transition', canGoPrev ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-100 text-gray-300 cursor-not-allowed']"
-          @click="goPrev"
-        >上一首</button>
-      </div>
-      <RecitationCard :poem="currentPoem" @submit="onSubmit" />
+      <RecitationCard :poem="currentPoem" :can-go-prev="canGoPrev" @submit="onSubmit" @go-prev="goPrev" />
     </template>
     <div v-else>
       <p>未开始抽背</p>
