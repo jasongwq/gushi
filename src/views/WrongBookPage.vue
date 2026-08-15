@@ -18,127 +18,34 @@ function getPoemTitle(poemId: string): string {
 </script>
 
 <template>
-  <div class="wrong-book-page">
-    <h2>错题本</h2>
+  <div class="max-w-md mx-auto p-4">
+    <h2 class="text-xl font-bold text-center mb-6">错题本</h2>
 
-    <div v-if="learningStore.wrongBook.length === 0" class="empty">
+    <div v-if="learningStore.wrongBook.length === 0" class="text-center text-gray-400 py-12">
       暂无错题
     </div>
 
-    <div v-else class="wrong-list">
-      <div v-for="entry in learningStore.wrongBook" :key="entry.poemId + entry.quizType" class="wrong-item">
-        <div class="wrong-info">
-          <span class="poem-title">{{ getPoemTitle(entry.poemId) }}</span>
-          <span class="quiz-type">{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
-          <span class="wrong-count">错 {{ entry.wrongCount }} 次</span>
+    <div v-else class="mb-6">
+      <div v-for="entry in learningStore.wrongBook" :key="entry.poemId + entry.quizType" class="p-3 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="font-bold flex-1">{{ getPoemTitle(entry.poemId) }}</span>
+          <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
+          <span class="text-xs text-red-500">错 {{ entry.wrongCount }} 次</span>
         </div>
-        <div class="wrong-actions">
+        <div class="flex gap-2">
           <button
-            :class="['unproficient-btn', { active: entry.unproficient }]"
+            :class="['px-3 py-1 text-xs border rounded transition', entry.unproficient ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-gray-200 bg-white text-gray-600']"
             @click="learningStore.toggleUnproficient(entry.poemId)"
           >
             {{ entry.unproficient ? '已标不熟练' : '标不熟练' }}
           </button>
-          <button class="remove-btn" @click="learningStore.removeWrongEntry(entry.poemId, entry.quizType)">
+          <button class="px-3 py-1 text-xs border border-gray-200 rounded bg-white text-gray-500 hover:bg-gray-50 transition" @click="learningStore.removeWrongEntry(entry.poemId, entry.quizType)">
             移除
           </button>
         </div>
       </div>
     </div>
 
-    <router-link :to="{ name: 'home' }" class="back-link">返回首页</router-link>
+    <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm">返回首页</router-link>
   </div>
 </template>
-
-<style scoped>
-.wrong-book-page {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 24px 16px;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.empty {
-  text-align: center;
-  color: #999;
-  padding: 48px;
-}
-
-.wrong-list {
-  margin-bottom: 24px;
-}
-
-.wrong-item {
-  padding: 12px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.wrong-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.poem-title {
-  font-weight: bold;
-  flex: 1;
-}
-
-.quiz-type {
-  font-size: 12px;
-  color: #666;
-  background: #f5f5f5;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.wrong-count {
-  font-size: 12px;
-  color: #d32f2f;
-}
-
-.wrong-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.unproficient-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.unproficient-btn.active {
-  border-color: #ff9800;
-  background: #fff3e0;
-  color: #e65100;
-}
-
-.remove-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
-  color: #666;
-  cursor: pointer;
-}
-
-.back-link {
-  display: block;
-  text-align: center;
-  color: #1976d2;
-  text-decoration: none;
-  font-size: 14px;
-}
-</style>

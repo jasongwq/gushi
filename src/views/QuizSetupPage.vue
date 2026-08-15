@@ -42,39 +42,40 @@ function startQuiz() {
 </script>
 
 <template>
-  <div class="quiz-setup-page">
-    <h2>抽查设置</h2>
+  <div class="max-w-md mx-auto p-4">
+    <h2 class="text-xl font-bold text-center mb-6">抽查设置</h2>
 
-    <section class="setting-section">
-      <h3>题目来源</h3>
-      <select v-model="source" class="select-input">
+    <section class="mb-6">
+      <h3 class="text-sm text-gray-500 mb-2">题目来源</h3>
+      <select v-model="source" class="w-full p-3 border border-gray-200 rounded-lg text-base bg-white focus:border-indigo-300 focus:outline-none">
         <option v-for="opt in sourceOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
         </option>
       </select>
     </section>
 
-    <section class="setting-section">
-      <h3>题目类型</h3>
-      <div class="checkbox-group">
-        <label v-for="opt in quizTypeOptions" :key="opt.value" class="checkbox-label">
+    <section class="mb-6">
+      <h3 class="text-sm text-gray-500 mb-2">题目类型</h3>
+      <div class="flex flex-col gap-2">
+        <label v-for="opt in quizTypeOptions" :key="opt.value" class="flex items-center gap-2 text-base cursor-pointer">
           <input
             type="checkbox"
             :checked="quizTypes.includes(opt.value)"
             @change="toggleQuizType(opt.value)"
+            class="w-4 h-4 text-indigo-500"
           />
           {{ opt.label }}
         </label>
       </div>
     </section>
 
-    <section class="setting-section">
-      <h3>题目数量</h3>
-      <div class="count-group">
+    <section class="mb-6">
+      <h3 class="text-sm text-gray-500 mb-2">题目数量</h3>
+      <div class="flex gap-3">
         <button
           v-for="n in countOptions"
           :key="n"
-          :class="['count-btn', { active: count === n }]"
+          :class="['flex-1 p-3 border-2 rounded-lg text-base cursor-pointer transition', count === n ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
           @click="count = n"
         >
           {{ n }}
@@ -82,105 +83,16 @@ function startQuiz() {
       </div>
     </section>
 
-    <button class="start-btn" :disabled="quizTypes.length === 0" @click="startQuiz">
+    <button
+      :disabled="quizTypes.length === 0"
+      :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer mb-3 transition', quizTypes.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-600']"
+      @click="startQuiz"
+    >
       开始抽查
     </button>
 
-    <button class="back-btn" @click="router.push({ name: 'home' })">返回首页</button>
+    <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="router.push({ name: 'home' })">
+      返回首页
+    </button>
   </div>
 </template>
-
-<style scoped>
-.quiz-setup-page {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: 24px 16px;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.setting-section {
-  margin-bottom: 24px;
-}
-
-.setting-section h3 {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.select-input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 16px;
-  background: #fff;
-}
-
-.checkbox-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.count-group {
-  display: flex;
-  gap: 12px;
-}
-
-.count-btn {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-.count-btn.active {
-  border-color: #1976d2;
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.start-btn {
-  width: 100%;
-  padding: 14px;
-  background: #1976d2;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 18px;
-  cursor: pointer;
-  margin-bottom: 12px;
-}
-
-.start-btn:disabled {
-  background: #bdbdbd;
-  cursor: not-allowed;
-}
-
-.back-btn {
-  width: 100%;
-  padding: 10px;
-  background: #fff;
-  color: #666;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-</style>
