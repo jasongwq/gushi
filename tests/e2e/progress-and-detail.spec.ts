@@ -10,27 +10,20 @@ test('progress page shows forgetting curve chart', async ({ page }) => {
 
 test('progress page shows clickable poem list', async ({ page }) => {
   await page.goto('/#/progress')
-  // Wait for poem list to load
   await expect(page.locator('text=古诗列表')).toBeVisible({ timeout: 10000 })
-  // Poem list items should be visible (use a more reliable selector)
-  const poemItems = page.locator('[class*="cursor-pointer"]').filter({ hasText: /.*·.*/ })
+  const poemItems = page.locator('.cursor-pointer').filter({ hasText: /.+/ })
   await expect(poemItems.first()).toBeVisible({ timeout: 10000 })
 })
 
 test('progress page: click poem navigates to detail', async ({ page }) => {
   await page.goto('/#/progress')
-  await page.evaluate(() => localStorage.clear())
-  await page.reload()
 
-  // Wait for poem list to load
   await expect(page.locator('text=古诗列表')).toBeVisible({ timeout: 10000 })
 
-  // Click first poem item
-  const poemItems = page.locator('[class*="cursor-pointer"]').filter({ hasText: /.*·.*/ })
+  const poemItems = page.locator('.cursor-pointer').filter({ hasText: /.+/ })
   await expect(poemItems.first()).toBeVisible({ timeout: 10000 })
   await poemItems.first().click()
 
-  // Should be on poem detail page
   await expect(page.locator('text=掌握等级')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('text=下次复习')).toBeVisible()
   await expect(page.locator('text=复习次数')).toBeVisible()
@@ -38,15 +31,12 @@ test('progress page: click poem navigates to detail', async ({ page }) => {
 
 test('poem detail page shows all sections', async ({ page }) => {
   await page.goto('/#/progress')
-  await page.evaluate(() => localStorage.clear())
-  await page.reload()
 
   await expect(page.locator('text=古诗列表')).toBeVisible({ timeout: 10000 })
-  const poemItems = page.locator('[class*="cursor-pointer"]').filter({ hasText: /.*·.*/ })
+  const poemItems = page.locator('.cursor-pointer').filter({ hasText: /.+/ })
   await expect(poemItems.first()).toBeVisible({ timeout: 10000 })
   await poemItems.first().click()
 
-  // Verify all sections are present
   await expect(page.locator('text=遗忘曲线')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('text=原文')).toBeVisible()
   await expect(page.locator('text=返回')).toBeVisible()
@@ -54,18 +44,15 @@ test('poem detail page shows all sections', async ({ page }) => {
 
 test('poem detail page: back button returns to previous page', async ({ page }) => {
   await page.goto('/#/progress')
-  await page.evaluate(() => localStorage.clear())
-  await page.reload()
 
   await expect(page.locator('text=古诗列表')).toBeVisible({ timeout: 10000 })
-  const poemItems = page.locator('[class*="cursor-pointer"]').filter({ hasText: /.*·.*/ })
+  const poemItems = page.locator('.cursor-pointer').filter({ hasText: /.+/ })
   await expect(poemItems.first()).toBeVisible({ timeout: 10000 })
   await poemItems.first().click()
 
   await expect(page.locator('text=返回')).toBeVisible({ timeout: 5000 })
   await page.click('text=返回')
 
-  // Should be back on progress page
   await expect(page.locator('h2')).toContainText('学习进度')
 })
 

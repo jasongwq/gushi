@@ -100,8 +100,8 @@ test('recite flow: complete all poems and see results', async ({ page }) => {
 
   // Should be on results page
   await expect(page.locator('h2')).toContainText('背诵结果', { timeout: 10000 })
-  await expect(page.locator('text=会了')).toBeVisible()
-  await expect(page.locator('text=不会')).toBeVisible()
+  await expect(page.getByText('会了', { exact: true })).toBeVisible()
+  await expect(page.getByText('不会', { exact: true })).toBeVisible()
   await expect(page.locator('text=再来一轮')).toBeVisible()
   await expect(page.locator('text=返回首页')).toBeVisible()
 })

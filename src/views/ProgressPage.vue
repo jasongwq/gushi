@@ -106,6 +106,7 @@ function goToDetail(poemId: string) {
 }
 
 onMounted(() => {
+  poemStore.fetchPoems()
   renderOverviewChart()
 })
 </script>
