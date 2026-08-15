@@ -57,9 +57,10 @@ function goHome() {
             {{ item.isCorrect ? '✓' : '✗' }}
           </span>
         </div>
-        <div v-if="!item.isCorrect" class="mt-2 text-xs text-gray-500">
-          <p>你的答案：{{ item.selected }}</p>
-          <p>正确答案：{{ item.correct }}</p>
+        <p class="text-sm text-gray-600 mt-1">{{ item.prompt }}</p>
+        <div class="mt-1 text-xs">
+          <p :class="item.isCorrect ? 'text-green-600' : 'text-red-500'">你的答案：{{ item.selected }}</p>
+          <p v-if="!item.isCorrect" class="text-green-600">正确答案：{{ item.correct }}</p>
         </div>
       </div>
     </div>
