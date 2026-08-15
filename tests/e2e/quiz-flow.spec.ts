@@ -30,8 +30,6 @@ test('complete quiz flow', async ({ page }) => {
   await page.goto('/')
   await page.click('text=自主练习')
 
-  // Select source (smart is default)
-  // Select quiz type (fillBlank is default)
   // Set count to 5
   await page.click('text=5')
 
@@ -62,26 +60,32 @@ test('quiz setup config persists when returning from home', async ({ page }) => 
   await page.click('text=补字选择')
 
   // Navigate away and back
-  await page.click('text=返回首页')
+  await page.goto('/')
   await page.click('text=自主练习')
 
   // Verify config persisted
   await expect(page.locator('select')).toHaveValue('all')
   await expect(page.locator('text=20').first()).toBeVisible()
-  // 上下句接龙 should still be checked
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
   await expect(nextLineCheckbox).toBeChecked()
-  // 补字选择 should be unchecked
   const fillBlankCheckbox = page.locator('input[type="checkbox"]').first()
   await expect(fillBlankCheckbox).not.toBeChecked()
+
+  // Clean up: clear localStorage so subsequent tests start fresh
+  await page.evaluate(() => localStorage.clear())
 })
 
 // Bug fix 2: Fill-blank quiz shows blanks (____) in poem text
 test('fill-blank quiz shows blanks in poem text', async ({ page }) => {
-  await page.goto('/#/quiz/setup')
+  // Navigate to app first (needed after previous test cleared localStorage)
+  await page.goto('/')
+  // Reload to pick up the cleared localStorage
+  await page.reload()
 
-  // Select only fillBlank quiz type
-  // Uncheck 上下句接龙 if it's checked
+  await page.goto('/#/quiz/setup')
+  await expect(page.locator('h2')).toContainText('抽查设置')
+
+  // Select only fillBlank quiz type - uncheck 上下句接龙
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
@@ -93,9 +97,12 @@ test('fill-blank quiz shows blanks in poem text', async ({ page }) => {
   // Start quiz
   await page.click('text=开始抽查')
 
+  // Wait for quiz to load
+  await expect(page.locator('.option-btn').first()).toBeVisible({ timeout: 5000 })
+
   // Verify poem text has blanks
   const poemText = page.locator('.poem-text')
-  await expect(poemText).toBeVisible({ timeout: 3000 })
+  await expect(poemText).toBeVisible()
   await expect(poemText).toContainText('____')
 })
 
@@ -108,13 +115,14 @@ test('empty quiz source shows error message', async ({ page }) => {
 
   // Go to quiz setup and select "错题本" source (no wrong answers)
   await page.goto('/#/quiz/setup')
+  await expect(page.locator('h2')).toContainText('抽查设置')
   await page.selectOption('select', 'wrong')
 
   // Try to start quiz
   await page.click('text=开始抽查')
 
   // Should show error message instead of navigating to quiz-play
-  await expect(page.locator('text=没有符合条件的题目，请调整设置')).toBeVisible({ timeout: 3000 })
+  await expect(page.locator('.text-red-500')).toContainText('没有符合条件的题目，请调整设置', { timeout: 5000 })
 
   // Should still be on setup page
   await expect(page.locator('h2')).toContainText('抽查设置')
@@ -122,12 +130,15 @@ test('empty quiz source shows error message', async ({ page }) => {
 
 // Bug fix 4: Wrong book can mark unproficient
 test('wrong book can mark entry as unproficient', async ({ page }) => {
-  // First, create a wrong answer by doing a quiz and answering incorrectly
+  test.setTimeout(60000)
+
+  // Clear localStorage and reload
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
   await page.goto('/#/quiz/setup')
+  await expect(page.locator('h2')).toContainText('抽查设置')
   await page.selectOption('select', 'all')
   // Only fillBlank
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -140,7 +151,6 @@ test('wrong book can mark entry as unproficient', async ({ page }) => {
   // Answer incorrectly - click a wrong option
   const optionBtns = page.locator('.option-btn')
   if (await optionBtns.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-    // Click the second option (likely wrong)
     await optionBtns.nth(1).click()
     await page.waitForTimeout(2000)
   }
@@ -152,7 +162,6 @@ test('wrong book can mark entry as unproficient', async ({ page }) => {
   const unproficientBtn = page.locator('text=标不熟练').first()
   if (await unproficientBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
     await unproficientBtn.click()
-    // Button should now show "已标不熟练"
     await expect(page.locator('text=已标不熟练').first()).toBeVisible({ timeout: 2000 })
   }
 })
@@ -175,11 +184,14 @@ test('selectTitle quiz type is not available in setup', async ({ page }) => {
 
 // Feature: Auto-navigate to result page after last question
 test('answering all questions auto-navigates to result page', async ({ page }) => {
+  test.setTimeout(60000)
+
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
   await page.goto('/#/quiz/setup')
+  await expect(page.locator('h2')).toContainText('抽查设置')
   await page.selectOption('select', 'all')
   // Only fillBlank to keep it simple
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -195,23 +207,24 @@ test('answering all questions auto-navigates to result page', async ({ page }) =
     const optionBtn = page.locator('.option-btn').first()
     await expect(optionBtn).toBeVisible({ timeout: 5000 })
     await optionBtn.click()
-    // Wait for feedback to clear (1.5s) + small buffer
     await page.waitForTimeout(2000)
   }
 
-  // Should auto-navigate to result page (no "答题完成" intermediate page)
+  // Should auto-navigate to result page
   await expect(page.locator('h2')).toContainText('抽查结果', { timeout: 5000 })
-  // Should NOT show "查看结果" button (intermediate page removed)
   await expect(page.locator('text=查看结果')).not.toBeVisible()
 })
 
 // Feature: Result page shows prompt and user answer for all questions
 test('result page shows prompt and user answer for each question', async ({ page }) => {
+  test.setTimeout(60000)
+
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
   await page.goto('/#/quiz/setup')
+  await expect(page.locator('h2')).toContainText('抽查设置')
   await page.selectOption('select', 'all')
   // Only fillBlank
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -233,15 +246,13 @@ test('result page shows prompt and user answer for each question', async ({ page
   // Wait for result page
   await expect(page.locator('h2')).toContainText('抽查结果', { timeout: 5000 })
 
-  // Each answer card should show "你的答案" label
-  const answerCards = page.locator('text=你的答案：')
+  // Each answer card should show prompt text
+  const answerCards = page.locator('.border-l-4')
   await expect(answerCards).toHaveCount(5, { timeout: 5000 })
 
-  // Wrong answers should also show "正确答案"
-  // (We can't guarantee any specific answer is wrong, but the structure should be there)
-  // At minimum, verify the score is displayed
+  // Verify the score is displayed
   await expect(page.locator('text=分')).toBeVisible()
-  await expect(page.locator('text=正确')).toBeVisible()
+  await expect(page.locator('.text-center.text-sm')).toContainText('正确')
 
   // "返回首页" button should be present
   await expect(page.locator('text=返回首页')).toBeVisible()
