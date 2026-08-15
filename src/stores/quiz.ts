@@ -191,10 +191,14 @@ export const useQuizStore = defineStore('quiz', () => {
     session.value.currentIndex++
   }
 
-  function resetSession() { session.value = null }
+  function resetSession() {
+    session.value = null
+    resetCurrentRecitation()
+  }
 
   return {
     session, currentIndex, currentQuestion, isFinished, totalQuestions, correctCount,
-    startQuiz, answerQuestion, resetSession,
+    currentRecitation, resetCurrentRecitation,
+    startQuiz, startRecitation, answerQuestion, submitRecitationResult, resetSession,
   }
 })
