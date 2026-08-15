@@ -6,6 +6,7 @@ function getDefaultData(): UserData {
   return {
     records: [],
     quizResults: [],
+    reciteRecords: [],
     wrongBook: [],
     settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
   }
@@ -18,8 +19,9 @@ export function loadData(): UserData {
     const parsed = JSON.parse(raw) as Partial<UserData>
     const defaults = getDefaultData()
     const data = {
-      records: parsed.records ?? defaults.records,
+      records: (parsed.records ?? defaults.records).map(r => ({ ...r, reciteCorrectness: r.reciteCorrectness ?? [] })),
       quizResults: parsed.quizResults ?? defaults.quizResults,
+      reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
       wrongBook: parsed.wrongBook ?? defaults.wrongBook,
       settings: { ...defaults.settings, ...parsed.settings },
     }

@@ -7,7 +7,7 @@
       <p class="text-indigo-500 text-sm">点击进入复习 →</p>
     </div>
 
-    <div class="grid grid-cols-3 gap-4 mb-6">
+    <div class="grid grid-cols-2 gap-4 mb-6">
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('parent')">
         <div class="text-3xl mb-2">👨‍👩‍👧</div>
         <div class="font-medium">家长抽查</div>
@@ -19,6 +19,10 @@
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startRecitation">
         <div class="text-3xl mb-2">📖</div>
         <div class="font-medium">古诗抽背</div>
+      </button>
+      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="router.push({ name: 'recite' })">
+        <div class="text-3xl mb-2">🎯</div>
+        <div class="font-medium">自评背诵</div>
       </button>
     </div>
 

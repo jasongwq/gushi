@@ -8,6 +8,7 @@ const baseRecord: LearningRecord = {
   reviewCount: 1,
   nextReviewDate: '2026-08-16',
   correctness: [1],
+  reciteCorrectness: [],
   masteryLevel: '学',
   unproficient: false,
   unproficientCorrectStreak: 0,

@@ -12,6 +12,7 @@ describe('storage', () => {
     expect(data).toEqual({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
@@ -21,6 +22,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: ['一年级'], quizCount: 10, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -33,6 +35,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -45,6 +48,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: ['二年级'], quizCount: 8, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -62,6 +66,7 @@ describe('storage', () => {
     saveData({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
@@ -69,8 +74,22 @@ describe('storage', () => {
     expect(loadData()).toEqual({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
+  })
+
+  it('adds reciteCorrectness to old records without it', () => {
+    const oldData = {
+      records: [{ poemId: 'p001', lastReviewDate: '2026-01-01', reviewCount: 1, nextReviewDate: '2026-01-02', correctness: [1], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 }],
+      quizResults: [],
+      wrongBook: [],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
+    const data = loadData()
+    expect(data.records[0].reciteCorrectness).toEqual([])
+    expect(data.reciteRecords).toEqual([])
   })
 })
