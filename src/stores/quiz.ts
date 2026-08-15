@@ -124,6 +124,17 @@ export const useQuizStore = defineStore('quiz', () => {
     return true
   }
 
+  function goToPrevRecitation() {
+    if (!session.value || session.value.currentIndex === 0) return
+    session.value.currentIndex--
+    const poemId = session.value.questions[session.value.currentIndex].poemId
+    // 移除当前诗的结果（回退时重新判定）
+    const resultIndex = session.value.recitationResults.findIndex(r => r.poemId === poemId)
+    if (resultIndex >= 0) {
+      session.value.recitationResults.splice(resultIndex, 1)
+    }
+  }
+
   function submitRecitationResult(result: RecitationResult) {
     if (!session.value) return
     session.value.recitationResults.push(result)
@@ -201,6 +212,6 @@ export const useQuizStore = defineStore('quiz', () => {
   return {
     session, currentIndex, currentQuestion, isFinished, totalQuestions, correctCount,
     currentRecitation, resetCurrentRecitation,
-    startQuiz, startRecitation, answerQuestion, submitRecitationResult, resetSession,
+    startQuiz, startRecitation, answerQuestion, submitRecitationResult, goToPrevRecitation, resetSession,
   }
 })

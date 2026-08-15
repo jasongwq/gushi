@@ -184,3 +184,21 @@ test('recitation flow: toggle line status on and off', async ({ page }) => {
   await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
   await expect(page.locator('button:has-text("下一首")')).toBeDisabled()
 })
+
+test('recitation flow: go back to previous poem', async ({ page }) => {
+  await startRecitationWithAll(page)
+
+  // Mark first poem as mastered
+  await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+  await page.locator('button:has-text("熟练")').click()
+
+  // Should be on second poem
+  await expect(page.locator('text=第 2 / 5 首')).toBeVisible({ timeout: 5000 })
+
+  // Go back to first poem
+  await page.click('text=上一首')
+  await expect(page.locator('text=第 1 / 5 首')).toBeVisible({ timeout: 5000 })
+
+  // "上一首" should be disabled on first poem
+  await expect(page.locator('button:has-text("上一首")')).toBeDisabled()
+})
