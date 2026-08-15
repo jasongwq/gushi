@@ -12,6 +12,7 @@ describe('storage', () => {
     expect(data).toEqual({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
@@ -21,6 +22,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: ['一年级'], quizCount: 10, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -33,6 +35,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -45,6 +48,7 @@ describe('storage', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: ['二年级'], quizCount: 8, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
@@ -62,6 +66,7 @@ describe('storage', () => {
     saveData({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
@@ -69,6 +74,7 @@ describe('storage', () => {
     expect(loadData()).toEqual({
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })

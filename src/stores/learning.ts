@@ -24,7 +24,7 @@ export const useLearningStore = defineStore('learning', () => {
       const today = new Date().toISOString().split('T')[0]
       record = {
         poemId, lastReviewDate: today, reviewCount: 0,
-        nextReviewDate: today, correctness: [], masteryLevel: '新',
+        nextReviewDate: today, correctness: [], reciteCorrectness: [], masteryLevel: '新',
         unproficient: false, unproficientCorrectStreak: 0,
       }
       data.value.records.push(record)
@@ -52,6 +52,32 @@ export const useLearningStore = defineStore('learning', () => {
     } else {
       data.value.wrongBook = data.value.wrongBook.filter(w => !(w.poemId === poemId && w.quizType === quizType))
     }
+    persist()
+  }
+
+  function recordRecite(poemId: string, correct: boolean) {
+    const record = getOrCreateRecord(poemId)
+    const today = new Date().toISOString().split('T')[0]
+
+    // 更新 lastReviewDate 为当天
+    const updated = { ...record, lastReviewDate: today, lastLearnDate: today }
+
+    // 调用遗忘曲线调度
+    const scheduled = calculateNextReview(updated, correct)
+    const afterUnproficient = checkAutoUnmark(scheduled, correct)
+
+    // 更新背诵正确性历史
+    const finalRecord = {
+      ...afterUnproficient,
+      reciteCorrectness: [...afterUnproficient.reciteCorrectness, correct ? 1 : 0],
+    }
+
+    const idx = data.value.records.findIndex(r => r.poemId === poemId)
+    data.value.records[idx] = finalRecord
+
+    // 记录背诵记录
+    data.value.reciteRecords.push({ poemId, date: today, correct })
+
     persist()
   }
 
@@ -101,7 +127,7 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   function clearAllData() {
-    data.value = { records: [], quizResults: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
+    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
   }
 
@@ -114,7 +140,7 @@ export const useLearningStore = defineStore('learning', () => {
 
   return {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
-    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, toggleUnproficient, removeWrongEntry,
+    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
   }
 })
