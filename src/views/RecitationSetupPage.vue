@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
@@ -10,6 +10,8 @@ const router = useRouter()
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
+
+onMounted(() => poemStore.fetchPoems())
 
 const source = ref<SourceType>(learningStore.settings.source || 'smart')
 const count = ref(learningStore.settings.quizCount || 10)
