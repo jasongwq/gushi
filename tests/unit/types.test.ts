@@ -16,8 +16,8 @@ import type {
 
 describe('Type definitions', () => {
   it('should allow valid QuizType values', () => {
-    const types: QuizType[] = ['fillBlank', 'nextLine', 'selectTitle', 'recite']
-    expect(types).toHaveLength(4)
+    const types: QuizType[] = ['fillBlank', 'nextLine', 'recite']
+    expect(types).toHaveLength(3)
   })
 
   it('should allow valid MasteryLevel values', () => {
@@ -114,7 +114,7 @@ describe('Type definitions', () => {
   it('should construct a valid QuizQuestion object', () => {
     const question: QuizQuestion = {
       poemId: '1',
-      quizType: 'selectTitle',
+      quizType: 'fillBlank',
       prompt: '床前明月光，疑是地上霜',
       options: ['静夜思', '春晓', '登鹳雀楼', '望庐山瀑布'],
       correctIndex: 0,

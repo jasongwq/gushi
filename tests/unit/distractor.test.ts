@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   generateFillBlankOptions,
   generateNextLineOptions,
-  generateSelectOptions,
 } from '@/utils/distractor'
 import type { Poem } from '@/types'
 
@@ -66,39 +65,5 @@ describe('generateNextLineOptions', () => {
         expect(allLines).toContain(opt)
       }
     }
-  })
-})
-
-describe('generateSelectOptions', () => {
-  it('generates 6 title options with correct answer included', () => {
-    const result = generateSelectOptions(poems, '一年级上', 'title', '咏鹅')
-    expect(result).toHaveLength(6)
-    expect(result).toContain('咏鹅')
-  })
-
-  it('generates 6 author options with correct answer included', () => {
-    const result = generateSelectOptions(poems, '一年级上', 'author', '骆宾王')
-    expect(result).toHaveLength(6)
-    expect(result).toContain('骆宾王')
-  })
-
-  it('generates dynasty options with correct answer included', () => {
-    const result = generateSelectOptions(poems, '一年级上', 'dynasty', '唐')
-    expect(result).toContain('唐')
-    // Dynasty pool is small (only 唐 and 汉), so we get fewer than 6
-    expect(result.length).toBeGreaterThan(0)
-    expect(new Set(result).size).toBe(result.length)
-  })
-
-  it('all options are unique', () => {
-    const result = generateSelectOptions(poems, '一年级上', 'author', '骆宾王')
-    expect(result).toHaveLength(6)
-    expect(new Set(result).size).toBe(6)
-  })
-
-  it('prefers same grade values then falls back to all poems', () => {
-    const result = generateSelectOptions(poems, '一年级上', 'author', '骆宾王')
-    expect(result).toHaveLength(6)
-    expect(result).toContain('骆宾王')
   })
 })

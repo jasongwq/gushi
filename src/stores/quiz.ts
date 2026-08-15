@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { QuizQuestion, QuizSession, QuizType, SourceType, Poem } from '@/types'
 import { smartMix, getPoemsBySource, getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
-import { generateFillBlankOptions, generateNextLineOptions, generateSelectOptions } from '@/utils/distractor'
+import { generateFillBlankOptions, generateNextLineOptions } from '@/utils/distractor'
 import { usePoemStore } from './poem'
 import { useLearningStore } from './learning'
 
@@ -54,23 +54,9 @@ export const useQuizStore = defineStore('quiz', () => {
           options, correctIndex: options.indexOf(correctLine),
         }
       }
-      case 'selectTitle': {
-        const subType = (['title', 'author', 'dynasty'] as const)[Math.floor(Math.random() * 3)]
-        const correctValue = poem[subType]
-        const options = generateSelectOptions(allPoems, poem.grade, subType, correctValue)
-        const labels: Record<string, string> = { title: '诗名', author: '作者', dynasty: '朝代' }
-        return {
-          poemId: poem.id, quizType: 'selectTitle',
-          prompt: `${poem.text.join('\n')}\n\n这首诗的${labels[subType]}是？`,
-          options, correctIndex: options.indexOf(correctValue),
-        }
-      }
       default:
-        // recite is v2, fallback to selectTitle
-        return {
-          poemId: poem.id, quizType: 'selectTitle',
-          prompt: poem.text.join('\n'), options: [poem.title], correctIndex: 0,
-        }
+        // recite is v2, fallback to nextLine
+        return generateQuestion(poem, 'nextLine', allPoems)
     }
   }
 

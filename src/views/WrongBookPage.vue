@@ -8,7 +8,6 @@ const poemStore = usePoemStore()
 const quizTypeLabels: Record<string, string> = {
   fillBlank: '补字选择',
   nextLine: '上下句接龙',
-  selectTitle: '选标题/作者/朝代',
   recite: '背诵',
 }
 

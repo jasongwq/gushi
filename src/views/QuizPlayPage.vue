@@ -12,12 +12,7 @@
         @answer="selectAnswer"
       />
       <NextLineQuiz
-        v-else-if="quizStore.currentQuestion.quizType === 'nextLine'"
-        :question="quizStore.currentQuestion"
-        @answer="selectAnswer"
-      />
-      <SelectTitleQuiz
-        v-else-if="quizStore.currentQuestion.quizType === 'selectTitle'"
+        v-else
         :question="quizStore.currentQuestion"
         @answer="selectAnswer"
       />
@@ -42,7 +37,6 @@ import { ref, computed } from 'vue'
 import { useQuizStore } from '@/stores/quiz'
 import FillBlankQuiz from '@/components/FillBlankQuiz.vue'
 import NextLineQuiz from '@/components/NextLineQuiz.vue'
-import SelectTitleQuiz from '@/components/SelectTitleQuiz.vue'
 
 const quizStore = useQuizStore()
 const showFeedback = ref(false)

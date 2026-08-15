@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
+import { usePoemStore } from '@/stores/poem'
 import type { QuizType, SourceType } from '@/types'
 
 const router = useRouter()
 const quizStore = useQuizStore()
+const poemStore = usePoemStore()
 
 const source = ref<SourceType>('smart')
 const quizTypes = ref<QuizType[]>(['fillBlank', 'nextLine'])
 const count = ref(10)
+const selectedGrades = ref<string[]>([])
 
 const sourceOptions: { value: SourceType; label: string }[] = [
   { value: 'smart', label: '智能混合' },
@@ -23,10 +26,17 @@ const sourceOptions: { value: SourceType; label: string }[] = [
 const quizTypeOptions: { value: QuizType; label: string }[] = [
   { value: 'fillBlank', label: '补字选择' },
   { value: 'nextLine', label: '上下句接龙' },
-  { value: 'selectTitle', label: '选标题/作者/朝代' },
 ]
 
 const countOptions = [5, 10, 20]
+
+const showGradeSelector = computed(() => source.value === 'grade')
+
+const canStart = computed(() => {
+  if (quizTypes.value.length === 0) return false
+  if (source.value === 'grade' && selectedGrades.value.length === 0) return false
+  return true
+})
 
 function toggleQuizType(type: QuizType) {
   const idx = quizTypes.value.indexOf(type)
@@ -34,9 +44,16 @@ function toggleQuizType(type: QuizType) {
   else quizTypes.value.push(type)
 }
 
+function toggleGrade(grade: string) {
+  const idx = selectedGrades.value.indexOf(grade)
+  if (idx >= 0) selectedGrades.value.splice(idx, 1)
+  else selectedGrades.value.push(grade)
+}
+
 function startQuiz() {
-  if (quizTypes.value.length === 0) return
-  quizStore.startQuiz(source.value, quizTypes.value, count.value)
+  if (!canStart.value) return
+  const grades = source.value === 'grade' ? selectedGrades.value : undefined
+  quizStore.startQuiz(source.value, quizTypes.value, count.value, grades)
   router.push({ name: 'quiz-play' })
 }
 </script>
@@ -52,6 +69,20 @@ function startQuiz() {
           {{ opt.label }}
         </option>
       </select>
+    </section>
+
+    <section v-if="showGradeSelector" class="mb-6">
+      <h3 class="text-sm text-gray-500 mb-2">选择年级</h3>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="grade in poemStore.grades"
+          :key="grade"
+          :class="['px-3 py-2 border-2 rounded-lg text-sm cursor-pointer transition', selectedGrades.includes(grade) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
+          @click="toggleGrade(grade)"
+        >
+          {{ grade }}
+        </button>
+      </div>
     </section>
 
     <section class="mb-6">
@@ -84,8 +115,8 @@ function startQuiz() {
     </section>
 
     <button
-      :disabled="quizTypes.length === 0"
-      :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer mb-3 transition', quizTypes.length === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-600']"
+      :disabled="!canStart"
+      :class="['w-full p-4 rounded-lg text-lg font-medium cursor-pointer mb-3 transition', canStart ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
       @click="startQuiz"
     >
       开始抽查
