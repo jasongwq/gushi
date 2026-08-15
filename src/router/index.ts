@@ -8,6 +8,7 @@ const routes = [
   { path: '/wrong', name: 'wrong-book', component: () => import('@/views/WrongBookPage.vue') },
   { path: '/progress', name: 'progress', component: () => import('@/views/ProgressPage.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/SettingsPage.vue') },
+  { path: '/poems', name: 'poem-collection', component: () => import('@/views/PoemCollectionPage.vue') },
 ]
 
 const router = createRouter({

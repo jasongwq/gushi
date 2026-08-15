@@ -65,6 +65,19 @@ export interface QuizQuestion {
   blankPositions?: number[]
 }
 
+export interface RecitationLineResult {
+  lineIndex: number
+  status: 'ok' | 'stuck' | 'forgot'
+}
+
+export interface RecitationResult {
+  poemId: string
+  overallStatus: 'mastered' | 'not-mastered'
+  lines: RecitationLineResult[]
+  authorCorrect: boolean | null
+  dynastyCorrect: boolean | null
+}
+
 export interface QuizSession {
   source: SourceType
   quizTypes: QuizType[]
@@ -72,4 +85,6 @@ export interface QuizSession {
   currentIndex: number
   answers: { questionIndex: number; selectedIndex: number; correct: boolean }[]
   startTime: string
+  mode: 'quiz' | 'recitation'
+  recitationResults: RecitationResult[]
 }
