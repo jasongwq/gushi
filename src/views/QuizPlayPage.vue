@@ -21,9 +21,13 @@
         {{ lastCorrect ? '正确！' : '错误，正确答案是：' + correctAnswerText }}
       </div>
     </div>
-    <div v-else-if="quizStore.isFinished">
+    <div v-else-if="quizStore.isFinished && quizStore.totalQuestions > 0">
       <p>答题完成！</p>
       <button @click="$router.push({ name: 'quiz-result' })">查看结果</button>
+    </div>
+    <div v-else-if="quizStore.isFinished && quizStore.totalQuestions === 0">
+      <p>没有题目</p>
+      <button @click="$router.push({ name: 'home' })">返回首页</button>
     </div>
     <div v-else>
       <p>未开始答题</p>

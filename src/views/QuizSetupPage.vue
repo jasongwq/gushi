@@ -52,8 +52,13 @@ function toggleGrade(grade: string) {
 
 function startQuiz() {
   if (!canStart.value) return
+  errorMsg.value = ''
   const grades = source.value === 'grade' ? selectedGrades.value : undefined
-  quizStore.startQuiz(source.value, quizTypes.value, count.value, grades)
+  const success = quizStore.startQuiz(source.value, quizTypes.value, count.value, grades)
+  if (!success) {
+    errorMsg.value = '没有符合条件的题目，请调整设置'
+    return
+  }
   router.push({ name: 'quiz-play' })
 }
 </script>

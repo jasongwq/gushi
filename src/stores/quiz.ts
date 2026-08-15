@@ -60,7 +60,7 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  function startQuiz(source: SourceType, quizTypes: QuizType[], count: number, grades?: string[]) {
+  function startQuiz(source: SourceType, quizTypes: QuizType[], count: number, grades?: string[]): boolean {
     const poemStore = usePoemStore()
     const learningStore = useLearningStore()
     const today = new Date().toISOString().split('T')[0]
@@ -80,10 +80,12 @@ export const useQuizStore = defineStore('quiz', () => {
     }
 
     const questions = generateQuestions(selectedPoems.map(p => p.id), quizTypes)
+    if (questions.length === 0) return false
     session.value = {
       source, quizTypes, questions, currentIndex: 0, answers: [],
       startTime: new Date().toISOString(),
     }
+    return true
   }
 
   function answerQuestion(selectedIndex: number) {
