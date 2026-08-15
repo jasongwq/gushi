@@ -172,3 +172,77 @@ test('selectTitle quiz type is not available in setup', async ({ page }) => {
   // Verify selectTitle is not present
   await expect(page.locator('text=选标题/作者/朝代')).not.toBeVisible()
 })
+
+// Feature: Auto-navigate to result page after last question
+test('answering all questions auto-navigates to result page', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await page.goto('/#/quiz/setup')
+  await page.selectOption('select', 'all')
+  // Only fillBlank to keep it simple
+  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  if (await nextLineCheckbox.isChecked()) {
+    await nextLineCheckbox.click()
+  }
+  // Set count to 5
+  await page.click('text=5')
+  await page.click('text=开始抽查')
+
+  // Answer all 5 questions
+  for (let i = 0; i < 5; i++) {
+    const optionBtn = page.locator('.option-btn').first()
+    await expect(optionBtn).toBeVisible({ timeout: 5000 })
+    await optionBtn.click()
+    // Wait for feedback to clear (1.5s) + small buffer
+    await page.waitForTimeout(2000)
+  }
+
+  // Should auto-navigate to result page (no "答题完成" intermediate page)
+  await expect(page.locator('h2')).toContainText('抽查结果', { timeout: 5000 })
+  // Should NOT show "查看结果" button (intermediate page removed)
+  await expect(page.locator('text=查看结果')).not.toBeVisible()
+})
+
+// Feature: Result page shows prompt and user answer for all questions
+test('result page shows prompt and user answer for each question', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await page.goto('/#/quiz/setup')
+  await page.selectOption('select', 'all')
+  // Only fillBlank
+  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  if (await nextLineCheckbox.isChecked()) {
+    await nextLineCheckbox.click()
+  }
+  // Set count to 5
+  await page.click('text=5')
+  await page.click('text=开始抽查')
+
+  // Answer all 5 questions
+  for (let i = 0; i < 5; i++) {
+    const optionBtn = page.locator('.option-btn').first()
+    await expect(optionBtn).toBeVisible({ timeout: 5000 })
+    await optionBtn.click()
+    await page.waitForTimeout(2000)
+  }
+
+  // Wait for result page
+  await expect(page.locator('h2')).toContainText('抽查结果', { timeout: 5000 })
+
+  // Each answer card should show "你的答案" label
+  const answerCards = page.locator('text=你的答案：')
+  await expect(answerCards).toHaveCount(5, { timeout: 5000 })
+
+  // Wrong answers should also show "正确答案"
+  // (We can't guarantee any specific answer is wrong, but the structure should be there)
+  // At minimum, verify the score is displayed
+  await expect(page.locator('text=分')).toBeVisible()
+  await expect(page.locator('text=正确')).toBeVisible()
+
+  // "返回首页" button should be present
+  await expect(page.locator('text=返回首页')).toBeVisible()
+})
