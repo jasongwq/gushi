@@ -13,6 +13,9 @@ const routes = [
   { path: '/settings', name: 'settings', component: () => import('@/views/SettingsPage.vue') },
   { path: '/poems', name: 'poem-collection', component: () => import('@/views/PoemCollectionPage.vue') },
   { path: '/settings/poems', name: 'poem-config', component: () => import('@/views/PoemConfigPage.vue') },
+  { path: '/recite', name: 'recite', component: () => import('@/views/RecitePage.vue') },
+  { path: '/recite/result', name: 'recite-result', component: () => import('@/views/ReciteResultPage.vue') },
+  { path: '/poem/:id', name: 'poem-detail', component: () => import('@/views/PoemDetailPage.vue') },
 ]
 
 const router = createRouter({
