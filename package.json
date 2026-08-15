@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "echo 'E2E tests not configured yet'"
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "pinia": "^4.0.3",
@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@pinia/testing": "^2.0.1",
+    "@playwright/test": "^1.62.1",
     "@vitejs/plugin-vue": "^5.2.0",
     "@vue/test-utils": "^2.4.11",
     "autoprefixer": "^10.5.4",
