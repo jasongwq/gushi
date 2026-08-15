@@ -29,4 +29,8 @@ dist
 
 # Coverage
 coverage
+
+# Cache
+.cache/
 .worktrees/
+__pycache__/
