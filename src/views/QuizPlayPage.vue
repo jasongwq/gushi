@@ -1,6 +1,6 @@
 <template>
   <div class="quiz-play">
-    <div v-if="quizStore.currentQuestion && !quizStore.isFinished">
+    <div v-if="(quizStore.currentQuestion && !quizStore.isFinished) || showFeedback">
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
       </div>
@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import FillBlankQuiz from '@/components/FillBlankQuiz.vue'
@@ -55,17 +55,21 @@ const correctAnswerText = computed(() => {
   return q ? q.options[q.correctIndex] : ''
 })
 
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null
+
 function selectAnswer(index: number) {
   lastCorrect.value = index === quizStore.currentQuestion?.correctIndex
   quizStore.answerQuestion(index)
   showFeedback.value = true
-  setTimeout(() => {
+  feedbackTimer = setTimeout(() => {
     showFeedback.value = false
     if (quizStore.isFinished) {
       router.push({ name: 'quiz-result' })
     }
   }, 1500)
 }
+
+onUnmounted(() => { if (feedbackTimer) clearTimeout(feedbackTimer) })
 </script>
 
 <style scoped>
