@@ -9,6 +9,7 @@ const routes = [
   { path: '/progress', name: 'progress', component: () => import('@/views/ProgressPage.vue') },
   { path: '/settings', name: 'settings', component: () => import('@/views/SettingsPage.vue') },
   { path: '/poems', name: 'poem-collection', component: () => import('@/views/PoemCollectionPage.vue') },
+  { path: '/settings/poems', name: 'poem-config', component: () => import('@/views/PoemConfigPage.vue') },
 ]
 
 const router = createRouter({
