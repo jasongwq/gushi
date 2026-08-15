@@ -16,8 +16,7 @@ function makePoem(overrides: Partial<Poem> = {}): Poem {
     title: '静夜思',
     author: '李白',
     dynasty: '唐',
-    grade: '一上',
-    unit: '1',
+    grade: '一年级',
     text: ['床前明月光', '疑是地上霜'],
     textType: '五言',
     ...overrides,
@@ -70,9 +69,9 @@ describe('shuffleArray', () => {
 
 describe('getPoemsBySource', () => {
   const poems = [
-    makePoem({ id: 'p1', grade: '一上', unit: '1' }),
-    makePoem({ id: 'p2', grade: '一下', unit: '2' }),
-    makePoem({ id: 'p3', grade: '一上', unit: '2' }),
+    makePoem({ id: 'p1', grade: '一年级' }),
+    makePoem({ id: 'p2', grade: '二年级' }),
+    makePoem({ id: 'p3', grade: '一年级' }),
   ]
 
   it('returns all poems for "all" source', () => {
@@ -80,15 +79,9 @@ describe('getPoemsBySource', () => {
   })
 
   it('filters by grade', () => {
-    const result = getPoemsBySource(poems, 'grade', today, { grades: ['一上'] })
+    const result = getPoemsBySource(poems, 'grade', today, { grades: ['一年级'] })
     expect(result).toHaveLength(2)
-    expect(result.every(p => p.grade === '一上')).toBe(true)
-  })
-
-  it('filters by unit', () => {
-    const result = getPoemsBySource(poems, 'unit', today, { unit: '2' })
-    expect(result).toHaveLength(2)
-    expect(result.every(p => p.unit === '2')).toBe(true)
+    expect(result.every(p => p.grade === '一年级')).toBe(true)
   })
 
   it('returns all for other source types', () => {
@@ -163,7 +156,7 @@ describe('getRecentlyLearnedPoems', () => {
 describe('smartMix', () => {
   it('returns correct number of poems', () => {
     const poems = Array.from({ length: 20 }, (_, i) =>
-      makePoem({ id: `p${i}`, grade: '一上', unit: '1' })
+      makePoem({ id: `p${i}`, grade: '一年级' })
     )
     const records = poems.map(p =>
       makeRecord({ poemId: p.id, nextReviewDate: '2026-01-01', unproficient: false, lastLearnDate: '2020-01-01' })
@@ -174,7 +167,7 @@ describe('smartMix', () => {
 
   it('returns no duplicates', () => {
     const poems = Array.from({ length: 20 }, (_, i) =>
-      makePoem({ id: `p${i}`, grade: '一上', unit: '1' })
+      makePoem({ id: `p${i}`, grade: '一年级' })
     )
     const records = poems.map(p =>
       makeRecord({ poemId: p.id, nextReviewDate: '2026-01-01', unproficient: true, lastLearnDate: '2026-01-10' })
