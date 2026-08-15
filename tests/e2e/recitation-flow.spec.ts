@@ -17,14 +17,12 @@ test('recitation setup page shows source and count options', async ({ page }) =>
 test('recitation setup requires grade selection for grade source', async ({ page }) => {
   await page.goto('/#/recitation/setup')
   await page.selectOption('select', 'grade')
-  // Start button should be disabled without grade selection
   await expect(page.locator('button:has-text("开始抽背")')).toBeDisabled()
 })
 
 test('recitation setup enables start after selecting grade', async ({ page }) => {
   await page.goto('/#/recitation/setup')
   await page.selectOption('select', 'grade')
-  // Click a grade button in the grade selector section
   const gradeBtn = page.locator('section button').filter({ hasText: '年级' }).first()
   await gradeBtn.click()
   await expect(page.locator('button:has-text("开始抽背")')).toBeEnabled()
@@ -38,57 +36,75 @@ async function startRecitationWithAll(page: any) {
   await page.click('text=开始抽背')
 }
 
-test('recitation play page shows poem title and judgment buttons', async ({ page }) => {
+test('recitation play page shows poem with all lines and judgment buttons', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // Should be on play page with judgment buttons
-  await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-  await expect(page.locator('button:has-text("有不熟练")')).toBeVisible()
-  await expect(page.locator('button:has-text("标记作者")')).toBeVisible()
-  await expect(page.locator('button:has-text("标记朝代")')).toBeVisible()
-  // Next button should be disabled before judgment
+  // Should show poem lines (not hidden behind a click)
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.recitation-card').locator('button:has-text("不会")').first()).toBeVisible()
+  // Author and dynasty with "不会" buttons
+  await expect(page.locator('.recitation-card').locator('text=不会').first()).toBeVisible()
+  // Global buttons
+  await expect(page.locator('button:has-text("熟练")')).toBeVisible()
+  await expect(page.locator('button:has-text("完全不会")')).toBeVisible()
+  // "下一首" disabled by default (no issues marked)
   await expect(page.locator('button:has-text("下一首")')).toBeDisabled()
 })
 
 test('recitation flow: mark mastered and advance', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // Wait for first poem
-  await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
 
-  // Mark as mastered
-  await page.locator('button:has-text("整首熟练")').click()
+  // Click "熟练" to mark all as mastered
+  await page.locator('button:has-text("熟练")').click()
 
-  // Next button should now be enabled
+  // Should advance to second poem
+  await expect(page.locator('text=第 2 / 5 首')).toBeVisible({ timeout: 5000 })
+})
+
+test('recitation flow: mark completely forgot and advance', async ({ page }) => {
+  await startRecitationWithAll(page)
+
+  await expect(page.locator('button:has-text("完全不会")')).toBeVisible({ timeout: 5000 })
+
+  // Click "完全不会" to mark all lines as forgot
+  await page.locator('button:has-text("完全不会")').click()
+
+  // Should advance to second poem
+  await expect(page.locator('text=第 2 / 5 首')).toBeVisible({ timeout: 5000 })
+})
+
+test('recitation flow: mark individual line and submit', async ({ page }) => {
+  await startRecitationWithAll(page)
+
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+
+  // Mark first line as "卡顿"
+  await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
+
+  // "下一首" should now be enabled
   await expect(page.locator('button:has-text("下一首")')).toBeEnabled()
 
   // Click next
   await page.click('text=下一首')
 
-  // Should show progress for second poem
+  // Should show second poem
   await expect(page.locator('text=第 2 / 5 首')).toBeVisible({ timeout: 5000 })
 })
 
-test('recitation flow: mark not mastered and judge lines', async ({ page }) => {
+test('recitation flow: mark author forgot', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // Wait for first poem
-  await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.recitation-card').locator('button:has-text("不会")').first()).toBeVisible({ timeout: 5000 })
 
-  // Mark as not mastered
-  await page.locator('button:has-text("有不熟练")').click()
+  // Click author "不会" button (the one next to author name)
+  const authorBtn = page.locator('.recitation-card').locator('button:has-text("不会")').first()
+  await authorBtn.click()
 
-  // Lines should be visible with judgment buttons
-  await expect(page.locator('.recitation-card').locator('button:has-text("✓")').first()).toBeVisible()
+  // "下一首" should be enabled
+  await expect(page.locator('button:has-text("下一首")')).toBeEnabled()
 
-  // Mark author and dynasty
-  await page.click('text=标记作者')
-  await page.click('text=标记朝代')
-
-  // Author/dynasty correct/wrong buttons should appear
-  await expect(page.locator('text=作者').first()).toBeVisible()
-
-  // Click next to submit
   await page.click('text=下一首')
 })
 
@@ -97,9 +113,8 @@ test('recitation flow: complete all poems and see results', async ({ page }) => 
 
   // Complete 5 poems - mark all as mastered
   for (let i = 0; i < 5; i++) {
-    await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-    await page.locator('button:has-text("整首熟练")').click()
-    await page.click('text=下一首')
+    await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+    await page.locator('button:has-text("熟练")').click()
   }
 
   // Should be on results page
@@ -113,16 +128,15 @@ test('recitation flow: complete all poems and see results', async ({ page }) => 
 test('recitation results show not-mastered details on click', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // First poem: mark not mastered
-  await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-  await page.locator('button:has-text("有不熟练")').click()
+  // First poem: mark a line as forgot
+  await expect(page.locator('.recitation-card').locator('button:has-text("不会")').first()).toBeVisible({ timeout: 5000 })
+  await page.locator('.recitation-card').locator('button:has-text("不会")').first().click()
   await page.click('text=下一首')
 
   // Rest: mark mastered
   for (let i = 1; i < 5; i++) {
-    await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-    await page.locator('button:has-text("整首熟练")').click()
-    await page.click('text=下一首')
+    await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+    await page.locator('button:has-text("熟练")').click()
   }
 
   // Results page
@@ -136,14 +150,11 @@ test('recitation results show not-mastered details on click', async ({ page }) =
 test('recitation results: try again navigates to setup', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // Complete all poems
   for (let i = 0; i < 5; i++) {
-    await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-    await page.locator('button:has-text("整首熟练")').click()
-    await page.click('text=下一首')
+    await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+    await page.locator('button:has-text("熟练")').click()
   }
 
-  // Click try again
   await page.click('text=再来一轮')
   await expect(page.locator('h2')).toContainText('抽背设置')
 })
@@ -151,14 +162,25 @@ test('recitation results: try again navigates to setup', async ({ page }) => {
 test('recitation results: go home navigates to home', async ({ page }) => {
   await startRecitationWithAll(page)
 
-  // Complete all poems
   for (let i = 0; i < 5; i++) {
-    await expect(page.locator('button:has-text("整首熟练")')).toBeVisible({ timeout: 5000 })
-    await page.locator('button:has-text("整首熟练")').click()
-    await page.click('text=下一首')
+    await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+    await page.locator('button:has-text("熟练")').click()
   }
 
-  // Click go home
   await page.click('text=返回首页')
   await expect(page.locator('h1')).toContainText('古诗抽查')
+})
+
+test('recitation flow: toggle line status on and off', async ({ page }) => {
+  await startRecitationWithAll(page)
+
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+
+  // Click "卡顿" to mark line as stuck
+  await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
+  await expect(page.locator('button:has-text("下一首")')).toBeEnabled()
+
+  // Click "卡顿" again to toggle back to ok
+  await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
+  await expect(page.locator('button:has-text("下一首")')).toBeDisabled()
 })
