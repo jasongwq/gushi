@@ -72,7 +72,7 @@ function tryAgain() {
           <div class="flex items-center gap-2">
             <span class="font-medium">{{ getPoemTitle(result.poemId) }}</span>
             <span :class="['ml-auto text-lg font-bold', result.overallStatus === 'mastered' ? 'text-green-600' : 'text-red-500']">
-              {{ result.overallStatus === 'mastered' ? '✓' : '✗' }}
+              {{ result.overallStatus === 'mastered' ? '熟练' : '不熟练' }}
             </span>
           </div>
         </div>

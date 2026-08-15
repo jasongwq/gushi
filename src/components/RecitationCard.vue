@@ -133,13 +133,13 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
         class="flex-1 p-4 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-lg cursor-pointer hover:bg-green-100 transition"
         @click="markMastered"
       >
-        ✓ 熟练
+        熟练
       </button>
       <button
         class="flex-1 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-lg cursor-pointer hover:bg-red-100 transition"
         @click="markForgot"
       >
-        ✗ 完全不会
+        完全不会
       </button>
     </div>
 
