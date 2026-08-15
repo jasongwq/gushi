@@ -13,7 +13,7 @@ describe('storage', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: [], quizCount: 5 },
+      settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
   })
 
@@ -22,7 +22,7 @@ describe('storage', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: ['一年级'], quizCount: 10 },
+      settings: { enabledGrades: ['一年级'], quizCount: 10, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     saveData(data)
     const loaded = loadData()
@@ -34,7 +34,7 @@ describe('storage', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: [], quizCount: 5 },
+      settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     saveData(data)
     const exported = exportData()
@@ -46,7 +46,7 @@ describe('storage', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: ['二年级'], quizCount: 8 },
+      settings: { enabledGrades: ['二年级'], quizCount: 8, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     const json = JSON.stringify(data)
     expect(importData(json)).toBe(true)
@@ -63,14 +63,14 @@ describe('storage', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: [], quizCount: 5 },
+      settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
     clearData()
     expect(loadData()).toEqual({
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: [], quizCount: 5 },
+      settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
   })
 })

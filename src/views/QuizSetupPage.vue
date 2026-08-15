@@ -1,19 +1,32 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
+import { useLearningStore } from '@/stores/learning'
 import type { QuizType, SourceType } from '@/types'
 
 const router = useRouter()
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
+const learningStore = useLearningStore()
 
-const source = ref<SourceType>('smart')
-const quizTypes = ref<QuizType[]>(['fillBlank', 'nextLine'])
-const count = ref(10)
-const selectedGrades = ref<string[]>([])
+const source = ref<SourceType>(learningStore.settings.source || 'smart')
+const quizTypes = ref<QuizType[]>(learningStore.settings.quizTypes.length > 0 ? learningStore.settings.quizTypes : ['fillBlank', 'nextLine'])
+const count = ref(learningStore.settings.quizCount || 10)
+const selectedGrades = ref<string[]>(learningStore.settings.selectedGrades || [])
 const errorMsg = ref('')
+
+function saveSettings() {
+  learningStore.updateSettings({
+    source: source.value,
+    quizTypes: quizTypes.value,
+    quizCount: count.value,
+    selectedGrades: selectedGrades.value,
+  })
+}
+
+watch([source, quizTypes, count, selectedGrades], saveSettings, { deep: true })
 
 const sourceOptions: { value: SourceType; label: string }[] = [
   { value: 'smart', label: '智能混合' },

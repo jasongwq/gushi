@@ -45,6 +45,9 @@ export interface WrongEntry {
 export interface UserSettings {
   enabledGrades: string[]
   quizCount: number
+  source: SourceType
+  quizTypes: QuizType[]
+  selectedGrades: string[]
 }
 
 export interface UserData {
