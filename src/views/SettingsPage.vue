@@ -51,6 +51,10 @@ function clearData() {
     <h2 class="text-xl font-bold text-center mb-6">设置</h2>
 
     <div class="flex flex-col gap-3 mb-6">
+      <router-link to="/settings/poems" class="w-full p-4 border border-gray-200 rounded-lg bg-white text-base text-left cursor-pointer hover:bg-gray-50 transition block no-underline text-inherit">
+        古诗配置
+      </router-link>
+
       <button class="w-full p-4 border border-gray-200 rounded-lg bg-white text-base text-left cursor-pointer hover:bg-gray-50 transition" @click="exportData">
         导出数据
       </button>
