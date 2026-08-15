@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
@@ -10,6 +10,8 @@ import type { Poem } from '@/types'
 const router = useRouter()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
+
+onMounted(() => poemStore.fetchPoems())
 
 const source = ref<'review' | 'all'>('review')
 const selectedGrades = ref<string[]>([])
@@ -66,7 +68,8 @@ function selfEvaluate(correct: boolean) {
     currentIndex.value++
     expanded.value = false
   } else {
-    router.push({ name: 'recite-result', state: { results: results.value } })
+    sessionStorage.setItem('recite-results', JSON.stringify(results.value))
+    router.push({ name: 'recite-result' })
   }
 }
 </script>

@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 
 const router = useRouter()
 const poemStore = usePoemStore()
 
+onMounted(() => poemStore.fetchPoems())
+
 interface ReciteResult {
   poemId: string
   correct: boolean
 }
 
-// 从 router state 获取结果
-const results = ref<ReciteResult[]>((history.state?.results as ReciteResult[]) ?? [])
+// 从 router state 或 sessionStorage 获取结果
+function loadResults(): ReciteResult[] {
+  const fromState = history.state?.results as ReciteResult[] | undefined
+  if (fromState && fromState.length > 0) return fromState
+  const fromSession = sessionStorage.getItem('recite-results')
+  if (fromSession) {
+    try { return JSON.parse(fromSession) } catch { /* ignore */ }
+  }
+  return []
+}
+
+const results = ref<ReciteResult[]>(loadResults())
 
 const correctCount = computed(() => results.value.filter(r => r.correct).length)
 const wrongCount = computed(() => results.value.filter(r => !r.correct).length)
