@@ -9,16 +9,16 @@
 
     <div class="grid grid-cols-3 gap-4 mb-6">
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('parent')">
-        <div class="text-2xl mb-2">抽查</div>
-        <div class="font-medium text-sm">家长抽查</div>
+        <div class="text-3xl mb-2">👨‍👩‍👧</div>
+        <div class="font-medium">家长抽查</div>
       </button>
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('self')">
-        <div class="text-2xl mb-2">练习</div>
-        <div class="font-medium text-sm">自主练习</div>
+        <div class="text-3xl mb-2">📝</div>
+        <div class="font-medium">自主练习</div>
       </button>
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startRecitation">
-        <div class="text-2xl mb-2">抽背</div>
-        <div class="font-medium text-sm">古诗抽背</div>
+        <div class="text-3xl mb-2">📖</div>
+        <div class="font-medium">古诗抽背</div>
       </button>
     </div>
 
@@ -37,7 +37,7 @@
       </router-link>
       <router-link to="/settings" class="shortcut-btn p-3 bg-white rounded-lg shadow text-center hover:shadow-md transition">
         <div class="text-sm">设置</div>
-        <div class="text-lg">设置</div>
+        <div class="text-lg">⚙️</div>
       </router-link>
     </div>
   </div>
