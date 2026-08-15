@@ -13,6 +13,7 @@ const source = ref<SourceType>('smart')
 const quizTypes = ref<QuizType[]>(['fillBlank', 'nextLine'])
 const count = ref(10)
 const selectedGrades = ref<string[]>([])
+const errorMsg = ref('')
 
 const sourceOptions: { value: SourceType; label: string }[] = [
   { value: 'smart', label: '智能混合' },
@@ -79,7 +80,9 @@ function startQuiz() {
     <section v-if="showGradeSelector" class="mb-6">
       <h3 class="text-sm text-gray-500 mb-2">选择年级</h3>
       <div class="flex flex-wrap gap-2">
-        <button
+        <p v-if="errorMsg" class="text-red-500 text-sm text-center mb-3">{{ errorMsg }}</p>
+
+    <button
           v-for="grade in poemStore.grades"
           :key="grade"
           :class="['px-3 py-2 border-2 rounded-lg text-sm cursor-pointer transition', selectedGrades.includes(grade) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white']"
