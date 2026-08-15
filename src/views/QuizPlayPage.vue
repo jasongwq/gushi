@@ -6,16 +6,18 @@
       </div>
       <p class="progress-text">{{ quizStore.currentIndex + 1 }} / {{ quizStore.totalQuestions }}</p>
 
-      <FillBlankQuiz
-        v-if="quizStore.currentQuestion.quizType === 'fillBlank'"
-        :question="quizStore.currentQuestion"
-        @answer="selectAnswer"
-      />
-      <NextLineQuiz
-        v-else
-        :question="quizStore.currentQuestion"
-        @answer="selectAnswer"
-      />
+      <template v-if="quizStore.currentQuestion">
+        <FillBlankQuiz
+          v-if="quizStore.currentQuestion.quizType === 'fillBlank'"
+          :question="quizStore.currentQuestion"
+          @answer="selectAnswer"
+        />
+        <NextLineQuiz
+          v-else
+          :question="quizStore.currentQuestion"
+          @answer="selectAnswer"
+        />
+      </template>
 
       <div v-if="showFeedback" class="feedback" :class="lastCorrect ? 'correct' : 'wrong'">
         {{ lastCorrect ? '正确！' : '错误，正确答案是：' + correctAnswerText }}
