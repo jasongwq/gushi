@@ -57,6 +57,7 @@ describe('Type definitions', () => {
       reviewCount: 5,
       nextReviewDate: '2026-01-08',
       correctness: [1, 1, 0, 1, 1],
+      reciteCorrectness: [1, 0, 1],
       masteryLevel: '熟',
       unproficient: false,
       unproficientCorrectStreak: 0,
@@ -107,6 +108,7 @@ describe('Type definitions', () => {
     const data: UserData = {
       records: [],
       quizResults: [],
+      reciteRecords: [],
       wrongBook: [],
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }

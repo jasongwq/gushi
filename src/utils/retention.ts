@@ -54,7 +54,7 @@ export function calculateDailyRetention(
  */
 export function calculatePoemRetentionTimeline(
   record: LearningRecord,
-  endDate: string,
+  _endDate: string,
 ): { date: string; retention: number; type: 'quiz' | 'recite'; correct: boolean }[] {
   if (record.reviewCount === 0) return []
 
