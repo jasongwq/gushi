@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Poem } from '@/types'
+import { useLearningStore } from './learning'
 
 export const usePoemStore = defineStore('poem', () => {
   const poems = ref<Poem[]>([])
@@ -20,6 +21,72 @@ export const usePoemStore = defineStore('poem', () => {
     return map
   })
 
+  const enabledPoems = computed(() => {
+    const learningStore = useLearningStore()
+    const enabledSet = learningStore.settings.enabledPoems
+    if (enabledSet.length === 0) return poems.value
+    const ids = new Set(enabledSet)
+    return poems.value.filter(p => ids.has(p.id))
+  })
+
+  function isEnabled(poemId: string): boolean {
+    const learningStore = useLearningStore()
+    const enabledSet = learningStore.settings.enabledPoems
+    if (enabledSet.length === 0) return true
+    return enabledSet.includes(poemId)
+  }
+
+  function togglePoem(poemId: string) {
+    const learningStore = useLearningStore()
+    const current = learningStore.settings.enabledPoems
+    if (current.length === 0) {
+      const allIds = poems.value.map(p => p.id)
+      learningStore.updateSettings({ enabledPoems: allIds.filter(id => id !== poemId) })
+    } else {
+      const idx = current.indexOf(poemId)
+      if (idx >= 0) {
+        const next = [...current]
+        next.splice(idx, 1)
+        learningStore.updateSettings({ enabledPoems: next })
+      } else {
+        learningStore.updateSettings({ enabledPoems: [...current, poemId] })
+      }
+    }
+  }
+
+  function toggleGrade(grade: string, enabled: boolean) {
+    const learningStore = useLearningStore()
+    const current = learningStore.settings.enabledPoems
+    const gradeIds = (poemsByGrade.value.get(grade) ?? []).map(p => p.id)
+
+    if (current.length === 0) {
+      if (!enabled) {
+        const excludeSet = new Set(gradeIds)
+        learningStore.updateSettings({ enabledPoems: poems.value.filter(p => !excludeSet.has(p.id)).map(p => p.id) })
+      }
+    } else {
+      if (enabled) {
+        const existingSet = new Set(current)
+        const toAdd = gradeIds.filter(id => !existingSet.has(id))
+        learningStore.updateSettings({ enabledPoems: [...current, ...toAdd] })
+      } else {
+        const excludeSet = new Set(gradeIds)
+        learningStore.updateSettings({ enabledPoems: current.filter((id: string) => !excludeSet.has(id)) })
+      }
+    }
+  }
+
+  const enabledCount = computed(() => enabledPoems.value.length)
+
+  function gradeEnabledCount(grade: string): number {
+    const learningStore = useLearningStore()
+    const enabledSet = learningStore.settings.enabledPoems
+    const gradePoems = poemsByGrade.value.get(grade) ?? []
+    if (enabledSet.length === 0) return gradePoems.length
+    const ids = new Set(enabledSet)
+    return gradePoems.filter(p => ids.has(p.id)).length
+  }
+
   async function fetchPoems() {
     if (poems.value.length > 0) return
     loading.value = true
@@ -35,5 +102,5 @@ export const usePoemStore = defineStore('poem', () => {
     return poems.value.find(p => p.id === id)
   }
 
-  return { poems, loading, grades, poemsByGrade, fetchPoems, getPoemById }
+  return { poems, loading, grades, poemsByGrade, enabledPoems, enabledCount, fetchPoems, getPoemById, isEnabled, togglePoem, toggleGrade, gradeEnabledCount }
 })

@@ -34,3 +34,4 @@ coverage
 .cache/
 .worktrees/
 __pycache__/
+.superpowers/

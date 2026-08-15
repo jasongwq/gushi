@@ -92,13 +92,13 @@ describe('Type definitions', () => {
 
   it('should construct a valid UserSettings object', () => {
     const settings: UserSettings = {
-      enabledGrades: ['一年级', '二年级'],
+      enabledPoems: ['一年级', '二年级'],
       quizCount: 10,
       source: 'smart',
       quizTypes: ['fillBlank', 'nextLine'],
       selectedGrades: [],
     }
-    expect(settings.enabledGrades).toHaveLength(2)
+    expect(settings.enabledPoems).toHaveLength(2)
     expect(settings.quizCount).toBe(10)
     expect(settings.source).toBe('smart')
   })
@@ -108,7 +108,7 @@ describe('Type definitions', () => {
       records: [],
       quizResults: [],
       wrongBook: [],
-      settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     expect(data.records).toEqual([])
     expect(data.settings.quizCount).toBe(5)

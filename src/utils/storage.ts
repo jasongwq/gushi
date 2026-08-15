@@ -7,7 +7,7 @@ function getDefaultData(): UserData {
     records: [],
     quizResults: [],
     wrongBook: [],
-    settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
+    settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
   }
 }
 

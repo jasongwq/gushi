@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LearningRecord, QuizResult, WrongEntry, UserData } from '@/types'
+import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel } from '@/types'
 import { loadData, saveData } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
@@ -95,8 +95,13 @@ export const useLearningStore = defineStore('learning', () => {
     return JSON.stringify(data.value, null, 2)
   }
 
+  function getMasteryLevel(poemId: string): MasteryLevel {
+    const record = getRecord(poemId)
+    return record?.masteryLevel ?? '新'
+  }
+
   function clearAllData() {
-    data.value = { records: [], quizResults: [], wrongBook: [], settings: { enabledGrades: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
+    data.value = { records: [], quizResults: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
   }
 
@@ -109,7 +114,7 @@ export const useLearningStore = defineStore('learning', () => {
 
   return {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
-    getRecord, getOrCreateRecord, recordAnswer, toggleUnproficient, removeWrongEntry,
+    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
   }
 })

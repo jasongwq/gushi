@@ -42,7 +42,7 @@ export interface WrongEntry {
 }
 
 export interface UserSettings {
-  enabledGrades: string[]
+  enabledPoems: string[]
   quizCount: number
   source: SourceType
   quizTypes: QuizType[]
