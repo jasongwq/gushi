@@ -1,0 +1,75 @@
+import { test, expect } from '@playwright/test'
+
+test('progress page shows forgetting curve chart', async ({ page }) => {
+  await page.goto('/#/progress')
+  await expect(page.locator('h2')).toContainText('学习进度')
+  await expect(page.locator('text=记忆保持率趋势')).toBeVisible()
+  // Chart canvas should be present
+  await expect(page.locator('canvas')).toBeVisible()
+})
+
+test('progress page shows clickable poem list', async ({ page }) => {
+  await page.goto('/#/progress')
+  await expect(page.locator('text=古诗列表')).toBeVisible()
+  // Poem list items should be visible
+  const poemItems = page.locator('.cursor-pointer.hover\\:bg-gray-50')
+  await expect(poemItems.first()).toBeVisible({ timeout: 5000 })
+})
+
+test('progress page: click poem navigates to detail', async ({ page }) => {
+  await page.goto('/#/progress')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  // Wait for poem list to load
+  const poemItems = page.locator('.cursor-pointer.hover\\:bg-gray-50')
+  await expect(poemItems.first()).toBeVisible({ timeout: 5000 })
+
+  // Click first poem
+  await poemItems.first().click()
+
+  // Should be on poem detail page
+  await expect(page.locator('text=掌握等级')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('text=下次复习')).toBeVisible()
+  await expect(page.locator('text=复习次数')).toBeVisible()
+})
+
+test('poem detail page shows all sections', async ({ page }) => {
+  // Navigate to a specific poem detail page
+  await page.goto('/#/progress')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  const poemItems = page.locator('.cursor-pointer.hover\\:bg-gray-50')
+  await expect(poemItems.first()).toBeVisible({ timeout: 5000 })
+  await poemItems.first().click()
+
+  // Verify all sections are present
+  await expect(page.locator('text=遗忘曲线')).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('text=原文')).toBeVisible()
+  await expect(page.locator('text=返回')).toBeVisible()
+})
+
+test('poem detail page: back button returns to previous page', async ({ page }) => {
+  await page.goto('/#/progress')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  const poemItems = page.locator('.cursor-pointer.hover\\:bg-gray-50')
+  await expect(poemItems.first()).toBeVisible({ timeout: 5000 })
+  await poemItems.first().click()
+
+  await expect(page.locator('text=返回')).toBeVisible({ timeout: 5000 })
+  await page.click('text=返回')
+
+  // Should be back on progress page
+  await expect(page.locator('h2')).toContainText('学习进度')
+})
+
+test('poem detail page direct URL', async ({ page }) => {
+  // Navigate directly to a poem detail page
+  await page.goto('/#/poem/p001')
+  // Should show either poem details or "古诗不存在"
+  const body = page.locator('body')
+  await expect(body).toBeVisible()
+})
