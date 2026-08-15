@@ -44,6 +44,7 @@ describe('Type definitions', () => {
       grade: '一年级',
       text: ['床前明月光', '疑是地上霜', '举头望明月', '低头思故乡'],
       textType: '五言',
+      yiwen: '',
     }
     expect(poem.id).toBe('1')
     expect(poem.text).toHaveLength(4)

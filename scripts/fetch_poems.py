@@ -153,6 +153,31 @@ def fetch_poem_page(url: str) -> list[str] | None:
     return None
 
 
+def fetch_yiwen_from_page(url: str) -> str:
+    """Fetch the 译文 (translation) from a guwendao.net poem page."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=15)
+        resp.encoding = 'utf-8'
+        if resp.status_code != 200:
+            return ""
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        contyishang = soup.find_all('div', class_='contyishang')
+        if not contyishang:
+            return ""
+        text = contyishang[0].get_text(strip=True)
+        # Pattern: "译文及注释译文[content]注释" or "译文[content]注释"
+        yiwen_match = re.search(r'译文[及与]?注释?\s*译文(.+?)(?:注释|创作|简析|鉴赏|$)', text, re.DOTALL)
+        if yiwen_match:
+            return yiwen_match.group(1).strip()
+        # Fallback: just "译文" followed by content
+        yiwen_match = re.search(r'译文(.+?)(?:注释|创作|简析|鉴赏|$)', text, re.DOTALL)
+        if yiwen_match:
+            return yiwen_match.group(1).strip()
+        return ""
+    except Exception:
+        return ""
+
+
 # ── URL Index Builder ─────────────────────────────────────────────────────
 
 def _title_matches(search_title: str, found_title: str) -> bool:
@@ -445,6 +470,69 @@ def do_fetch(force: bool = False) -> None:
     print(f"\nFetch complete: {fetched} fetched, {skipped} cached, {failed} failed")
 
 
+def do_fetch_yiwen() -> None:
+    """Fetch 译文 (translation) for all poems and update cache."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    url_index = build_url_index()
+    fetched = 0
+    skipped = 0
+    failed = 0
+
+    for meta in POEMS:
+        seq = meta["seq"]
+        cache_id = f"p{seq:03d}"
+
+        cached = load_cache(seq)
+        if not cached:
+            print(f"  {cache_id}: not cached, skipping")
+            skipped += 1
+            continue
+
+        # Skip if already has non-empty yiwen
+        if cached.get("yiwen"):
+            print(f"  {cache_id}: yiwen already cached, skipping")
+            skipped += 1
+            continue
+
+        title = meta["title"]
+        author_raw = meta["author_raw"]
+        author, _ = parse_author(author_raw)
+
+        print(f"  Fetching yiwen for {cache_id}: {title} ({author})...")
+
+        yiwen = ""
+
+        # Find URL from index
+        url = find_url_for_poem(title, author, url_index)
+        if not url:
+            # Try simplified title
+            simple_title = re.sub(r"[（(][^）)]*[）)]", "", title)
+            if simple_title != title:
+                url = find_url_for_poem(simple_title, author, url_index)
+
+        if url:
+            yiwen = fetch_yiwen_from_page(url)
+            if yiwen:
+                print(f"  {cache_id}: OK yiwen fetched ({len(yiwen)} chars)")
+                fetched += 1
+            else:
+                print(f"  {cache_id}: yiwen not found on page")
+                failed += 1
+        else:
+            print(f"  {cache_id}: URL not found")
+            failed += 1
+
+        # Update cache with yiwen field
+        cached["yiwen"] = yiwen
+        save_cache(seq, cached)
+
+        # Rate limiting
+        time.sleep(0.5)
+
+    print(f"\nFetch yiwen complete: {fetched} fetched, {skipped} skipped, {failed} failed")
+
+
 # ── Task 4: Deep Validation ───────────────────────────────────────────────
 
 def detect_text_type(text: list[str]) -> str:
@@ -563,6 +651,7 @@ def do_generate() -> None:
             "unit": "",
             "text": cached.get("text", []),
             "textType": cached.get("textType", "其他"),
+            "yiwen": cached.get("yiwen", ""),
         }
         poems.append(poem)
 
@@ -581,18 +670,22 @@ def do_generate() -> None:
 def main():
     parser = argparse.ArgumentParser(description="Fetch and validate Chinese poems")
     parser.add_argument("--fetch", action="store_true", help="Fetch all poems from the web")
+    parser.add_argument("--fetch-yiwen", action="store_true", help="Fetch 译文 (translation) for all poems")
     parser.add_argument("--validate", action="store_true", help="Validate cached poems")
     parser.add_argument("--generate", action="store_true", help="Validate and generate poems.json")
     parser.add_argument("--force", action="store_true", help="Force re-fetch even if cached")
 
     args = parser.parse_args()
 
-    if not any([args.fetch, args.validate, args.generate]):
+    if not any([args.fetch, args.fetch_yiwen, args.validate, args.generate]):
         parser.print_help()
         sys.exit(1)
 
     if args.fetch:
         do_fetch(force=args.force)
+
+    if args.fetch_yiwen:
+        do_fetch_yiwen()
 
     if args.validate:
         do_validate()

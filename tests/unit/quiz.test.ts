@@ -19,6 +19,7 @@ function makePoem(overrides: Partial<Poem> = {}): Poem {
     grade: '一年级',
     text: ['床前明月光', '疑是地上霜'],
     textType: '五言',
+    yiwen: '',
     ...overrides,
   }
 }

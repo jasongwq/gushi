@@ -1,13 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-// Helper: navigate to recite page
-async function gotoRecitePage(page: any) {
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
-  await page.reload()
-  await page.click('text=自评背诵')
-}
-
 test('navigate to recite page from home', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('text=自评背诵')).toBeVisible()

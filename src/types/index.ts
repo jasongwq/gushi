@@ -11,6 +11,7 @@ export interface Poem {
   grade: string
   text: string[]
   textType: TextType
+  yiwen: string  // 译文/释义
 }
 
 export interface LearningRecord {
