@@ -1,9 +1,29 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useLearningStore } from '@/stores/learning'
 import { usePoemStore } from '@/stores/poem'
+import PoemPopup from '@/components/PoemPopup.vue'
+import type { Poem } from '@/types'
 
 const learningStore = useLearningStore()
 const poemStore = usePoemStore()
+
+const popupVisible = ref(false)
+const popupPoemId = ref('')
+
+const popupPoem = computed<Poem | undefined>(() => {
+  if (!popupPoemId.value) return undefined
+  return poemStore.getPoemById(popupPoemId.value)
+})
+
+function togglePopup(poemId: string) {
+  if (popupPoemId.value === poemId && popupVisible.value) {
+    popupVisible.value = false
+  } else {
+    popupPoemId.value = poemId
+    popupVisible.value = true
+  }
+}
 
 const quizTypeLabels: Record<string, string> = {
   fillBlank: '补字选择',
@@ -27,7 +47,7 @@ function getPoemTitle(poemId: string): string {
     <div v-else class="mb-6">
       <div v-for="entry in learningStore.wrongBook" :key="entry.poemId + entry.quizType" class="p-3 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm">
         <div class="flex items-center gap-2 mb-2">
-          <span class="font-bold flex-1">{{ getPoemTitle(entry.poemId) }}</span>
+          <span class="font-bold flex-1 cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300" @click="togglePopup(entry.poemId)">{{ getPoemTitle(entry.poemId) }}</span>
           <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
           <span class="text-xs text-red-500">错 {{ entry.wrongCount }} 次</span>
         </div>
@@ -44,6 +64,8 @@ function getPoemTitle(poemId: string): string {
         </div>
       </div>
     </div>
+
+    <PoemPopup v-if="popupPoem" :poem="popupPoem" v-model:visible="popupVisible" />
 
     <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm">返回首页</router-link>
   </div>

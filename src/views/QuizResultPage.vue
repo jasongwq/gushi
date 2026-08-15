@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
+import PoemPopup from '@/components/PoemPopup.vue'
+import type { Poem } from '@/types'
 
 const router = useRouter()
 const quizStore = useQuizStore()
@@ -20,6 +22,7 @@ const answers = computed(() => {
     const poem = poemStore.getPoemById(question.poemId)
     return {
       index: i + 1,
+      poemId: question.poemId,
       poemTitle: poem?.title ?? '',
       prompt: question.prompt,
       selected: question.options[a.selectedIndex],
@@ -32,6 +35,23 @@ const answers = computed(() => {
 function goHome() {
   quizStore.resetSession()
   router.push({ name: 'home' })
+}
+
+const popupVisible = ref(false)
+const popupPoemId = ref('')
+
+const popupPoem = computed<Poem | undefined>(() => {
+  if (!popupPoemId.value) return undefined
+  return poemStore.getPoemById(popupPoemId.value)
+})
+
+function togglePopup(poemId: string) {
+  if (popupPoemId.value === poemId && popupVisible.value) {
+    popupVisible.value = false
+  } else {
+    popupPoemId.value = poemId
+    popupVisible.value = true
+  }
 }
 </script>
 
@@ -52,7 +72,7 @@ function goHome() {
       <div v-for="item in answers" :key="item.index" :class="['p-3 rounded-lg mb-2 border-l-4', item.isCorrect ? 'bg-green-50 border-l-green-500' : 'bg-red-50 border-l-red-500']">
         <div class="flex items-center gap-2">
           <span class="font-bold">{{ item.index }}.</span>
-          <span class="flex-1 text-sm">{{ item.poemTitle }}</span>
+          <span class="flex-1 text-sm cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300" @click="togglePopup(item.poemId)">{{ item.poemTitle }}</span>
           <span :class="['text-lg font-bold', item.isCorrect ? 'text-green-600' : 'text-red-500']">
             {{ item.isCorrect ? '✓' : '✗' }}
           </span>
@@ -64,6 +84,8 @@ function goHome() {
         </div>
       </div>
     </div>
+
+    <PoemPopup v-if="popupPoem" :poem="popupPoem" v-model:visible="popupVisible" />
 
     <button class="w-full p-4 bg-indigo-500 text-white rounded-lg text-lg font-medium cursor-pointer hover:bg-indigo-600 transition" @click="goHome">
       返回首页
