@@ -21,10 +21,6 @@
         {{ lastCorrect ? '正确！' : '错误，正确答案是：' + correctAnswerText }}
       </div>
     </div>
-    <div v-else-if="quizStore.isFinished && quizStore.totalQuestions > 0">
-      <p>答题完成！</p>
-      <button @click="$router.push({ name: 'quiz-result' })">查看结果</button>
-    </div>
     <div v-else-if="quizStore.isFinished && quizStore.totalQuestions === 0">
       <p>没有题目</p>
       <button @click="$router.push({ name: 'home' })">返回首页</button>
@@ -38,11 +34,13 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import FillBlankQuiz from '@/components/FillBlankQuiz.vue'
 import NextLineQuiz from '@/components/NextLineQuiz.vue'
 
 const quizStore = useQuizStore()
+const router = useRouter()
 const showFeedback = ref(false)
 const lastCorrect = ref(false)
 
@@ -61,7 +59,12 @@ function selectAnswer(index: number) {
   lastCorrect.value = index === quizStore.currentQuestion?.correctIndex
   quizStore.answerQuestion(index)
   showFeedback.value = true
-  setTimeout(() => { showFeedback.value = false }, 1500)
+  setTimeout(() => {
+    showFeedback.value = false
+    if (quizStore.isFinished) {
+      router.push({ name: 'quiz-result' })
+    }
+  }, 1500)
 }
 </script>
 
