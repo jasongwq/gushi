@@ -1,7 +1,7 @@
 export type QuizType = 'fillBlank' | 'nextLine' | 'selectTitle' | 'recite'
 export type MasteryLevel = '新' | '学' | '熟' | '固'
 export type TextType = '五言' | '七言' | '其他'
-export type SourceType = 'smart' | 'grade' | 'unit' | 'all' | 'review' | 'wrong' | 'unproficient'
+export type SourceType = 'smart' | 'grade' | 'all' | 'review' | 'wrong' | 'unproficient'
 
 export interface Poem {
   id: string
@@ -9,7 +9,6 @@ export interface Poem {
   author: string
   dynasty: string
   grade: string
-  unit: string
   text: string[]
   textType: TextType
 }
