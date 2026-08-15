@@ -86,6 +86,7 @@ interface UserData {
    - 背诵"会"→ 调用 `calculateNextReview(correct=true)`
    - 背诵"不会"→ 调用 `handleWrongAnswer()`
    - 复用现有 `ebbinghaus.ts`，不重复实现
+   - **重要**：`calculateNextReview` 当前不更新 `lastReviewDate`，背诵调用时需确保 `lastReviewDate` 被更新为当天（与答题流程的 `recordAnswer` 保持一致），否则下次复习日期计算会从旧的日期偏移
 
 ### ReciteResultPage
 
