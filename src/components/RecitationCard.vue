@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Poem, RecitationResult, RecitationLineResult } from '@/types'
+import type { Poem, RecitationResult } from '@/types'
 
 const props = defineProps<{
   poem: Poem

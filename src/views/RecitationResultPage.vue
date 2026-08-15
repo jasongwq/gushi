@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
-import type { RecitationResult } from '@/types'
+
 
 const router = useRouter()
 const quizStore = useQuizStore()
