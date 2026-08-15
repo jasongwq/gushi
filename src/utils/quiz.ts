@@ -17,7 +17,7 @@ interface SourceOptions {
 export function getPoemsBySource(
   poems: Poem[],
   source: SourceType,
-  today: string,
+  _today: string,
   options?: SourceOptions
 ): Poem[] {
   if (source === 'all') return poems

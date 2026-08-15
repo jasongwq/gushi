@@ -74,7 +74,7 @@ export function generateFillBlankOptions(
 }
 
 export function generateNextLineOptions(
-  poem: Poem,
+  _poem: Poem,
   allPoems: Poem[],
   correctLine: string,
   grade: string
