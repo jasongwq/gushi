@@ -7,8 +7,13 @@ export const usePoemStore = defineStore('poem', () => {
   const poems = ref<Poem[]>([])
   const loading = ref(false)
 
+  const GRADE_ORDER: Record<string, number> = {
+    '一年级': 1, '二年级': 2, '三年级': 3,
+    '四年级': 4, '五年级': 5, '六年级': 6, '配读篇目': 7,
+  }
+
   const grades = computed(() => {
-    return [...new Set(poems.value.map(p => p.grade))].sort()
+    return [...new Set(poems.value.map(p => p.grade))].sort((a, b) => (GRADE_ORDER[a] ?? 99) - (GRADE_ORDER[b] ?? 99))
   })
 
   const poemsByGrade = computed(() => {
