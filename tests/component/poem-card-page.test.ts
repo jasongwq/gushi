@@ -21,6 +21,8 @@ vi.mock('@/stores/learning', () => ({
     settings: { showYiwen: false },
     updateSettings: vi.fn(),
     recordAnswer: vi.fn(),
+    recordDetail: vi.fn(),
+    getRecord: vi.fn(() => undefined),
     records: {},
     wrongBook: [],
   }),
