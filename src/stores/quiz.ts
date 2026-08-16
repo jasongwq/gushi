@@ -203,22 +203,22 @@ export const useQuizStore = defineStore('quiz', () => {
 
     const learningStore = useLearningStore()
 
-    if (result.overallStatus === 'mastered') {
-      learningStore.recordAnswer(result.poemId, 'recite', true)
-    } else {
-      learningStore.recordAnswer(result.poemId, 'recite', false)
+    // 整体只调用一次 recordAnswer
+    learningStore.recordAnswer(result.poemId, 'recite', result.overallStatus === 'mastered')
+
+    // 细节用 recordDetail，不影响复习调度
+    if (result.overallStatus !== 'mastered') {
       for (const line of result.lines) {
         if (line.status === 'stuck' || line.status === 'forgot') {
-          learningStore.recordAnswer(result.poemId, 'recite', false, `第${line.lineIndex + 1}句:${line.status}`)
+          learningStore.recordDetail(result.poemId, 'line', `第${line.lineIndex + 1}句:${line.status}`)
         }
       }
     }
-
     if (result.authorCorrect === false) {
-      learningStore.recordAnswer(result.poemId, 'author', false)
+      learningStore.recordDetail(result.poemId, 'author')
     }
     if (result.dynastyCorrect === false) {
-      learningStore.recordAnswer(result.poemId, 'dynasty', false)
+      learningStore.recordDetail(result.poemId, 'dynasty')
     }
 
     session.value.currentIndex++
