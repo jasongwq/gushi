@@ -653,3 +653,6 @@ Port 5173 is in use, trying another one...
 11:12:59 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
 11:13:00 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
 11:13:01 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+11:13:04 AM [vite] (client) hmr update /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+11:14:29 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:14:48 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
