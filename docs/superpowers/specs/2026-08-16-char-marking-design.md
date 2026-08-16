@@ -47,7 +47,7 @@ interface CharMarkStats {
   char: string           // 原字，用于校验数据一致性
   fuzzyCount: number     // 历史快照中被标为模糊的次数
   wrongCount: number     // 历史快照中被标为错误的次数
-  totalSessions: number  // 该诗参与背诵次数
+  // totalSessions 可从 reciteRecords.length 推导，不在此冗余存储
 }
 ```
 
@@ -64,7 +64,7 @@ interface LearningRecord {
 
 - **会话内**：CharMarkMap 是可变状态，点击循环 ok→fuzzy→wrong→ok，回到 ok 时删除条目（误标记）
 - **提交时**：将当前 CharMarkMap 快照存入 `ReciteRecord.charMarks`，追加到历史
-- **提交后**：遍历本次快照更新 `CharMarkStats` 计数（fuzzyCount/wrongCount++），totalSessions 也 +1
+- **提交后**：遍历本次快照更新 `CharMarkStats` 计数（fuzzyCount/wrongCount++）
 - **未来分析**：从 `ReciteRecord[]` 或 `CharMarkStats` 计算某字的错误率
 
 ## 组件设计
