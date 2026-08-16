@@ -10,7 +10,6 @@ import RecitationCard from '@/components/RecitationCard.vue'
 import { SwiperSlide } from 'swiper/vue'
 import type { Poem, RecitationResult, SourceType } from '@/types'
 import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
-import { useSwipeHandoff } from '@/composables/useSwipeHandoff'
 
 const router = useRouter()
 const poemStore = usePoemStore()
@@ -19,18 +18,16 @@ const learningStore = useLearningStore()
 onMounted(() => poemStore.fetchPoems())
 
 // ========== 视图状态 ==========
-type ViewMode = 'swiper' | 'mystery'
-type ViewLayer = 'browse' | 'detail'
+type ViewMode = 'swiper' | 'recite' | 'mystery'
 
 const viewMode = ref<ViewMode>('swiper')
-const viewLayer = ref<ViewLayer>('browse')
 
-// 当前正在查看的古诗
-const currentPoem = ref<Poem | null>(null)
+// 当前展开的诗 ID，null 表示没有展开
+const expandedPoemId = ref<string | null>(null)
 
-// 盲盒来源标记：从盲盒进入详情时，滑动只显示盲盒4首
+// 盲盒来源标记
 const mysteryPoems = ref<Poem[]>([])
-const mysteryRevealedPoems = ref<Poem[]>([]) // 仅已开盲盒中的诗
+const mysteryRevealedPoems = ref<Poem[]>([])
 const fromMystery = ref(false)
 
 // ========== 筛选 ==========
@@ -68,11 +65,14 @@ const allPoems = computed(() => {
   return enabled
 })
 
-// 滑动中的诗列表：从盲盒来时只显示已开盒的诗，否则显示全部
+// 当前诗列表：从盲盒来时只显示已开盒的诗，否则显示全部
 const poems = computed(() => fromMystery.value ? mysteryRevealedPoems.value : allPoems.value)
 
 // 当前卡片索引
 const currentIndex = ref(0)
+
+// 当前诗（computed，不再需要 ref）
+const currentPoem = computed(() => poems.value[currentIndex.value] ?? null)
 
 // ========== 已抽查 ==========
 const checkedPoemIds = ref(new Set<string>())
@@ -98,63 +98,90 @@ function saveResult(result: RecitationResult) {
   }
 }
 
-// ========== 进入详情 ==========
-const detailEnterAnim = ref(false)
+// ========== 展开/缩回逻辑 ==========
+const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
 
-function enterDetail(poem: Poem) {
-  currentPoem.value = poem
-  // 同步浏览层索引到当前诗
-  const idx = poems.value.findIndex(p => p.id === poem.id)
-  if (idx >= 0) currentIndex.value = idx
+// 展开某个 slide：添加 expanded 类，内容切换为 RecitationCard
+function expandSlide(slideIndex: number) {
+  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+  if (!swiper) return
+  const slide = swiper.slides[slideIndex]
+  if (!slide) return
 
-  // 进入动画：初始 scale(0.85) opacity(0)，nextTick 后 transition 到正常
-  detailEnterAnim.value = true
-  viewLayer.value = 'detail'
-  nextTick(() => {
-    detailEnterAnim.value = false
+  const poemId = poems.value[swiper.realIndex]?.id
+  if (!poemId) return
+
+  expandedPoemId.value = poemId
+  viewMode.value = 'recite'
+  slide.classList.add('expanded')
+}
+
+// 缩回当前展开的 slide
+function collapseSlide() {
+  if (!expandedPoemId.value) return
+  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+  if (!swiper) return
+  swiper.slides.forEach((slide: HTMLElement) => {
+    slide.classList.remove('expanded')
   })
+  expandedPoemId.value = null
+  viewMode.value = 'swiper'
 }
 
-// 返回浏览层
-function goBackToBrowse() {
-  viewLayer.value = 'browse'
-  const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
-  if (idx >= 0) currentIndex.value = idx
+// 点击 PoemCard → 展开进入背诵
+function onCardClick(_poem: Poem) {
+  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+  if (!swiper) return
+  expandSlide(swiper.activeIndex)
 }
 
-// 滑动模式点击卡片
-function onCardClick(poem: Poem) {
-  enterDetail(poem)
+// Swiper touchStart → 如果有展开的 slide，先缩回
+function onSwiperTouchStart() {
+  if (expandedPoemId.value) {
+    collapseSlide()
+  }
 }
 
-// 盲盒揭示时记录
-function onMysteryRevealed(_poem: Poem) {
-  // 盲盒揭示时不做跳转，等用户点击
+// 判断某个诗是否是当前展开的
+function isSlideExpanded(poemId: string) {
+  return expandedPoemId.value === poemId && viewMode.value === 'recite'
 }
 
-// ========== 详情页 ==========
+// ========== 详情页提交/导航 ==========
 function onDetailSubmit(result: RecitationResult) {
   saveResult(result)
-  // 盲盒模式下，只在已开盲盒之间切换，不跳到未开盲盒
+
   if (fromMystery.value) {
     const navList = mysteryRevealedPoems.value
     const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
     if (idx >= 0 && idx < navList.length - 1) {
-      currentPoem.value = navList[idx + 1]
+      collapseSlide()
+      nextTick(() => {
+        currentIndex.value = idx + 1
+        setTimeout(() => {
+          const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+          if (swiper) expandSlide(swiper.activeIndex)
+        }, 350)
+      })
     } else {
-      // 已开盲盒都查完了，返回盲盒页面
-      viewLayer.value = 'browse'
+      collapseSlide()
       viewMode.value = 'mystery'
     }
     return
   }
-  // 标记后自动进入下一首
+
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx >= 0 && idx < poems.value.length - 1) {
-    currentPoem.value = poems.value[idx + 1]
+    collapseSlide()
+    nextTick(() => {
+      currentIndex.value = idx + 1
+      setTimeout(() => {
+        const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+        if (swiper) expandSlide(swiper.activeIndex)
+      }, 350)
+    })
   } else {
-    // 最后一首，返回浏览
-    viewLayer.value = 'browse'
+    collapseSlide()
   }
 }
 
@@ -163,209 +190,65 @@ function onDetailGoPrev() {
     const navList = mysteryRevealedPoems.value
     const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
     if (idx > 0) {
-      currentPoem.value = navList[idx - 1]
+      collapseSlide()
+      nextTick(() => {
+        currentIndex.value = idx - 1
+        setTimeout(() => {
+          const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+          if (swiper) expandSlide(swiper.activeIndex)
+        }, 350)
+      })
     }
     return
   }
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx > 0) {
-    currentPoem.value = poems.value[idx - 1]
-  }
-}
-
-// ========== 跟手拖拽返回 ==========
-const SWIPE_THRESHOLD = 50
-
-type DragPhase = 'idle' | 'pending' | 'dragging' | 'transitioning' | 'handed-off'
-const dragPhase = ref<DragPhase>('idle')
-const dragDeltaX = ref(0)
-let dragStartX = 0
-let dragStartY = 0
-let dragDirection: 'h' | 'v' | null = null
-const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
-
-const { handOffToSwiper: doHandOff } = useSwipeHandoff({
-  get dragPhase() { return dragPhase },
-  get dragStartX() { return dragStartX },
-  get dragStartY() { return dragStartY },
-  get viewLayer() { return viewLayer },
-  get currentIndex() { return currentIndex },
-  get currentPoemId() { return currentPoem.value?.id },
-  get poems() { return poems.value },
-  getSwiperInstance: () => cardSwiperRef.value?.getSwiperInstance?.() as any ?? null,
-})
-
-const dragProgress = computed(() =>
-  Math.min(Math.abs(dragDeltaX.value) / SWIPE_THRESHOLD, 1)
-)
-
-const dragScale = computed(() =>
-  1 - dragProgress.value * 0.15 // 1.0 → 0.85
-)
-
-const dragOpacity = computed(() =>
-  1 - dragProgress.value // 1.0 → 0.0
-)
-
-const detailLayerStyle = computed(() => {
-  if (dragPhase.value === 'idle') {
-    if (detailEnterAnim.value) {
-      return { transform: 'scale(0.85)', opacity: '0', transition: 'none' }
-    }
-    return {}
-  }
-  if (dragPhase.value === 'transitioning') {
-    // settling 时用 CSS transition，目标值由 dragDeltaX 决定
-    return {
-      transform: `scale(${dragScale.value})`,
-      opacity: String(dragOpacity.value),
-      transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s cubic-bezier(0.4,0,0.2,1)',
-    }
-  }
-  if (dragPhase.value === 'handed-off') {
-    // 已转交给 Swiper，详情层保持缩小状态
-    return { transform: 'scale(0.85)', opacity: '0', transition: 'none' }
-  }
-  // dragging 时无 transition，跟手
-  return {
-    transform: `scale(${dragScale.value})`,
-    opacity: String(dragOpacity.value),
-    transition: 'none',
-  }
-})
-
-function onDetailTouchStart(e: TouchEvent) {
-  if (dragPhase.value !== 'idle' && dragPhase.value !== 'pending') return
-  const touch = e.touches[0]
-  dragStartX = touch.clientX
-  dragStartY = touch.clientY
-  dragDirection = null
-  dragPhase.value = 'pending'
-  dragDeltaX.value = 0
-}
-
-function onDetailTouchMove(e: TouchEvent) {
-  if (dragPhase.value !== 'pending' && dragPhase.value !== 'dragging') return
-  const touch = e.touches[0]
-  const deltaX = touch.clientX - dragStartX
-  const deltaY = touch.clientY - dragStartY
-
-  // 方向判断（仅首次）
-  if (dragDirection === null) {
-    if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return
-    dragDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'h' : 'v'
-  }
-
-  if (dragDirection === 'v') {
-    // 垂直方向，放弃拖拽，恢复正常滚动
-    dragPhase.value = 'idle'
-    return
-  }
-
-  // 水平方向，阻止默认行为（防止滚动），进入拖拽
-  e.preventDefault()
-  dragPhase.value = 'dragging'
-  dragDeltaX.value = deltaX
-
-  // 超过阈值 → 立即切换到浏览层，将手势转交给 Swiper
-  if (Math.abs(dragDeltaX.value) >= SWIPE_THRESHOLD) {
-    doHandOff(touch)
-  }
-}
-
-function onDetailTouchEnd() {
-  if (dragPhase.value === 'pending' || dragPhase.value === 'idle') {
-    dragPhase.value = 'idle'
-    return
-  }
-
-  if (dragPhase.value === 'dragging') {
-    // 拖拽中松手但没到阈值 → 弹回
-    if (Math.abs(dragDeltaX.value) < SWIPE_THRESHOLD) {
-      dragPhase.value = 'transitioning'
-      dragDeltaX.value = 0
+    collapseSlide()
+    nextTick(() => {
+      currentIndex.value = idx - 1
       setTimeout(() => {
-        dragPhase.value = 'idle'
-      }, 260)
-    }
-    // 到了阈值的情况已经在 touchMove 中处理了（handed-off）
-    return
-  }
-
-  if (dragPhase.value === 'transitioning') {
-    // settling 中松手，等待动画完成
-    return
-  }
-}
-
-// ========== Pointer 事件（桌面端鼠标拖拽） ==========
-function onDetailPointerDown(e: PointerEvent) {
-  if (e.pointerType === 'touch') return // 触摸设备由 touch 事件处理，避免双重触发
-  if (dragPhase.value !== 'idle' && dragPhase.value !== 'pending') return
-  dragStartX = e.clientX
-  dragStartY = e.clientY
-  dragDirection = null
-  dragPhase.value = 'pending'
-  dragDeltaX.value = 0
-}
-
-function onDetailPointerMove(e: PointerEvent) {
-  if (e.pointerType === 'touch') return
-  if (dragPhase.value !== 'pending' && dragPhase.value !== 'dragging') return
-  const deltaX = e.clientX - dragStartX
-  const deltaY = e.clientY - dragStartY
-
-  if (dragDirection === null) {
-    if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return
-    dragDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'h' : 'v'
-  }
-
-  if (dragDirection === 'v') {
-    dragPhase.value = 'idle'
-    return
-  }
-
-  dragPhase.value = 'dragging'
-  dragDeltaX.value = deltaX
-
-  if (Math.abs(dragDeltaX.value) >= SWIPE_THRESHOLD) {
-    doHandOff({
-      clientX: e.clientX,
-      clientY: e.clientY,
-      identifier: 0,
+        const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+        if (swiper) expandSlide(swiper.activeIndex)
+      }, 350)
     })
   }
 }
 
-function onDetailPointerEnd(_e: PointerEvent) {
-  onDetailTouchEnd()
+// 返回浏览（从背诵模式）
+function goBackToBrowse() {
+  collapseSlide()
 }
 
 // ========== 盲盒相关 ==========
 const mysteryBoxRef = ref<InstanceType<typeof MysteryBox> | null>(null)
 
-function onMysterySelectAndEnter(poem: Poem) {
-  fromMystery.value = true
-  // 记录盲盒中的诗列表
-  if (mysteryBoxRef.value) {
-    mysteryPoems.value = [...mysteryBoxRef.value.revealedPoems]
-  }
-  // 只记录已开盲盒中的诗（用于详情页导航）
-  mysteryRevealedPoems.value = mysteryBoxRef.value?.boxes
-    ? mysteryBoxRef.value.boxes
-        .filter((b: { state: string; poem: Poem | null }) => b.state === 'revealed' && b.poem)
-        .map((b: { poem: Poem | null }) => b.poem!)
-    : []
-  // 同步当前诗到已开盲盒列表索引
-  const idx = mysteryRevealedPoems.value.findIndex(p => p.id === poem.id)
-  if (idx >= 0) currentIndex.value = idx
-  enterDetail(poem)
+function onMysteryRevealed(_poem: Poem) {
+  // 盲盒揭示时不做跳转
 }
 
-// 从盲盒模式切换到全局古诗
+function onMysterySelectAndEnter(poem: Poem) {
+  fromMystery.value = true
+  if (mysteryBoxRef.value) {
+    mysteryPoems.value = [...mysteryBoxRef.value.revealedPoems]
+    mysteryRevealedPoems.value = mysteryBoxRef.value.boxes
+      ? mysteryBoxRef.value.boxes
+          .filter((b: { state: string; poem: Poem | null }) => b.state === 'revealed' && b.poem)
+          .map((b: { poem: Poem | null }) => b.poem!)
+      : []
+  }
+  const idx = mysteryRevealedPoems.value.findIndex(p => p.id === poem.id)
+  if (idx >= 0) currentIndex.value = idx
+  viewMode.value = 'swiper'
+  nextTick(() => {
+    const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+    if (swiper) {
+      expandSlide(swiper.activeIndex)
+    }
+  })
+}
+
 function switchToGlobal() {
   fromMystery.value = false
-  // 定位到当前诗在全局列表中的位置
   if (currentPoem.value) {
     const idx = allPoems.value.findIndex(p => p.id === currentPoem.value?.id)
     if (idx >= 0) currentIndex.value = idx
@@ -387,7 +270,7 @@ const progressPercent = computed(() =>
   poems.value.length > 0 ? ((currentIndex.value + 1) / poems.value.length) * 100 : 0
 )
 
-// 详情页的进度信息
+// 背诵模式的进度信息
 const detailProgress = computed(() => {
   if (!currentPoem.value) return { text: '', percent: 0 }
   const navList = poems.value
@@ -403,56 +286,6 @@ const detailProgress = computed(() => {
 
 <template>
   <div class="poem-card-page w-full max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
-    <!-- ====== 详情层（始终渲染，z-index 覆盖） ====== -->
-    <div
-      v-if="viewLayer === 'detail' && currentPoem"
-      class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
-      :style="detailLayerStyle"
-      @touchstart.passive="onDetailTouchStart"
-      @touchmove="onDetailTouchMove"
-      @touchend="onDetailTouchEnd"
-      @touchcancel="onDetailTouchEnd"
-      @pointerdown="onDetailPointerDown"
-      @pointermove="onDetailPointerMove"
-      @pointerup="onDetailPointerEnd"
-      @pointercancel="onDetailPointerEnd"
-    >
-      <!-- 顶部标题栏 - 固定高度 -->
-      <div class="shrink-0 p-4 pb-2">
-        <div class="flex items-center justify-between mb-2">
-          <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
-          <span data-testid="detail-progress" class="text-xs text-gray-400">{{ detailProgress.text }}</span>
-        </div>
-        <!-- 进度条 -->
-        <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
-          <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
-        </div>
-      </div>
-      <!-- 古诗正文区域 - flex-1 占剩余空间，内部可滚动 -->
-      <RecitationCard
-        class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4"
-        :poem="currentPoem"
-        :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
-        @submit="onDetailSubmit"
-        @go-prev="onDetailGoPrev"
-      />
-      <!-- 底部区域 - 固定高度 -->
-      <div class="shrink-0 p-3 bg-white border-t border-gray-100 text-center">
-        <span class="text-xs text-gray-300">左右滑动返回卡片浏览</span>
-        <button
-          v-if="fromMystery"
-          class="ml-3 text-xs text-purple-400 cursor-pointer"
-          @click="viewLayer = 'browse'; viewMode = 'mystery'"
-        >返回盲盒</button>
-        <button
-          v-if="fromMystery"
-          class="ml-2 text-xs text-indigo-400 cursor-pointer"
-          @click="switchToGlobal"
-        >全部古诗</button>
-      </div>
-    </div>
-
-    <!-- ====== 浏览层（始终渲染，在详情层下方） ====== -->
     <div class="flex flex-col flex-1 min-h-0">
       <!-- 顶部筛选栏 -->
       <div class="p-3 bg-white border-b border-gray-100">
@@ -493,10 +326,26 @@ const detailProgress = computed(() => {
           @select="onMysterySelectAndEnter"
         />
 
-        <!-- 滑动模式 -->
-        <CardSwiper v-show="viewMode === 'swiper'" v-if="poems.length > 0" ref="cardSwiperRef" v-model="currentIndex" :count="poems.length">
+        <!-- 滑动模式（浏览 + 背诵共用同一个 Swiper） -->
+        <CardSwiper
+          v-show="viewMode !== 'mystery'"
+          v-if="poems.length > 0"
+          ref="cardSwiperRef"
+          v-model="currentIndex"
+          :count="poems.length"
+          @swiper-touch-start="onSwiperTouchStart"
+        >
           <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
+            <RecitationCard
+              v-if="viewMode === 'recite' && isSlideExpanded(poem.id)"
+              class="h-full px-4"
+              :poem="poem"
+              :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === poem.id) > 0 : poems.findIndex(p => p.id === poem.id) > 0"
+              @submit="onDetailSubmit"
+              @go-prev="onDetailGoPrev"
+            />
             <PoemCard
+              v-else
               :poem="poem"
               :checked="checkedPoemIds.has(poem.id)"
               @click="onCardClick(poem)"
@@ -511,7 +360,31 @@ const detailProgress = computed(() => {
 
       <!-- 底部工具栏 -->
       <div class="bg-white border-t border-gray-100">
-        <!-- 滑动模式：进度条 -->
+        <!-- 背诵模式：进度条 + 返回按钮 -->
+        <div v-if="viewMode === 'recite'" class="px-4 pt-2 pb-1">
+          <div class="flex items-center justify-between mb-1">
+            <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
+            <span data-testid="detail-progress" class="text-xs text-gray-400">{{ detailProgress.text }}</span>
+          </div>
+          <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
+          </div>
+          <div class="flex justify-center mt-1">
+            <span class="text-xs text-gray-300">左右滑动切换</span>
+            <button
+              v-if="fromMystery"
+              class="ml-3 text-xs text-purple-400 cursor-pointer"
+              @click="collapseSlide(); viewMode = 'mystery'"
+            >返回盲盒</button>
+            <button
+              v-if="fromMystery"
+              class="ml-2 text-xs text-indigo-400 cursor-pointer"
+              @click="switchToGlobal"
+            >全部古诗</button>
+          </div>
+        </div>
+
+        <!-- 浏览模式：进度条 -->
         <div v-if="viewMode === 'swiper' && poems.length > 0" class="px-4 pt-2 pb-1">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs text-gray-400">{{ currentIndex + 1 }}/{{ poems.length }} {{ currentPoemTitle }}</span>
@@ -527,7 +400,7 @@ const detailProgress = computed(() => {
         <div class="p-3 flex gap-3">
           <button
             :disabled="allPoems.length === 0"
-            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' || viewMode === 'recite' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
             @click="viewMode = 'swiper'; fromMystery = false"
           >
             📇 滑动
@@ -544,9 +417,3 @@ const detailProgress = computed(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.detail-layer {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-</style>
