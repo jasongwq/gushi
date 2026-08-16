@@ -2,8 +2,16 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { execSync } from 'node:child_process'
+
+const gitHash = execSync('git rev-parse --short HEAD').toString().trim()
+const buildTime = new Date().toISOString().slice(0, 10)
 
 export default defineConfig({
+  define: {
+    __GIT_HASH__: JSON.stringify(gitHash),
+    __BUILD_TIME__: JSON.stringify(buildTime),
+  },
   server: {
     allowedHosts: ['gushi-dev.ypwq.fun'],
   },
