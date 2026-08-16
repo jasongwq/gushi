@@ -424,3 +424,90 @@ test.describe('navigation consistency', () => {
     await expect(page.locator('h2')).toContainText('设置')
   })
 })
+
+// === 禁用古诗后在各页面隐藏 ===
+
+test.describe('disabled poems are hidden from collection and home', () => {
+  test('disabling a poem hides it from poem collection page', async ({ page }) => {
+    // Step 1: Go to config page and disable a poem
+    await page.goto('/#/settings/poems')
+    await waitForPoems(page)
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+
+    // Get the title of the first poem
+    const firstPoemTitle = await page.locator('.space-y-2 > div').first().locator('span.font-bold').textContent()
+    expect(firstPoemTitle).toBeTruthy()
+
+    // Disable it
+    const firstToggle = page.locator('.space-y-2 > div').first().locator('label')
+    await firstToggle.click()
+
+    // Step 2: Go to poem collection page
+    await page.goto('/#/poems')
+    await waitForPoems(page)
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+
+    // The disabled poem should NOT appear in the collection
+    const poemTitles = await page.locator('.space-y-2 > div span.font-bold').allTextContents()
+    expect(poemTitles).not.toContain(firstPoemTitle)
+  })
+
+  test('disabling all poems in a grade hides that grade from collection page', async ({ page }) => {
+    // Go to config and disable all poems in the first grade
+    await page.goto('/#/settings/poems')
+    await waitForPoems(page)
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+
+    // Get the first grade name
+    const firstGradeName = await page.locator('.grade-tabs button').first().textContent()
+
+    // Click "全不选" to disable all poems in current grade
+    await page.click('button:has-text("全不选")')
+
+    // Go to poem collection page
+    await page.goto('/#/poems')
+    await waitForPoems(page)
+
+    // The disabled grade should NOT appear in grade tabs
+    const gradeTabs = page.locator('.grade-tabs button')
+    const tabTexts = await gradeTabs.allTextContents()
+    expect(tabTexts).not.toContain(firstGradeName)
+  })
+
+  test('home page shows enabled poem count, not total', async ({ page }) => {
+    // Go to home page first - should show total count
+    await page.goto('/')
+    const countBefore = await page.locator('a[href="/poems"] .text-indigo-500').textContent()
+
+    // Go to config and disable a poem
+    await page.goto('/#/settings/poems')
+    await waitForPoems(page)
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const firstToggle = page.locator('.space-y-2 > div').first().locator('label')
+    await firstToggle.click()
+
+    // Go back to home page
+    await page.goto('/')
+    const countAfter = await page.locator('a[href="/poems"] .text-indigo-500').textContent()
+
+    // Count should be one less
+    expect(Number(countAfter)).toBe(Number(countBefore) - 1)
+  })
+
+  test('config page still shows all grades even when all poems in a grade are disabled', async ({ page }) => {
+    // Go to config and disable all poems in first grade
+    await page.goto('/#/settings/poems')
+    await waitForPoems(page)
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+
+    const firstGradeName = await page.locator('.grade-tabs button').first().textContent()
+
+    // Click "全不选"
+    await page.click('button:has-text("全不选")')
+
+    // The grade tab should still be visible in config page
+    const gradeTabs = page.locator('.grade-tabs button')
+    const tabTexts = await gradeTabs.allTextContents()
+    expect(tabTexts).toContain(firstGradeName)
+  })
+})
