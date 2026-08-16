@@ -9,7 +9,7 @@ import MysteryBox from '@/components/MysteryBox.vue'
 import RecitationCard from '@/components/RecitationCard.vue'
 import { SwiperSlide } from 'swiper/vue'
 import type { Poem, RecitationResult, SourceType } from '@/types'
-import { getReviewPoems, getWrongPoems, getUnproficientPoems } from '@/utils/quiz'
+import { getReviewPoems, getWrongPoems, getUnproficientPoems, compareSmartPriority } from '@/utils/quiz'
 import { createSwipeState, swipeStart, swipeMove, swipeEnd } from '@/utils/swipe'
 
 const router = useRouter()
@@ -58,22 +58,7 @@ const allPoems = computed(() => {
   const enabled = poemStore.enabledPoems
   if (source.value === 'all') return [...enabled].sort((a, b) => a.id.localeCompare(b.id))
   if (source.value === 'smart') {
-    return [...enabled].sort((a, b) => {
-      const today = new Date().toISOString().split('T')[0]
-      // 优先级：到期需复习 > wrongBook > reviewCount 低 > poemId
-      const aDue = learningStore.getRecord(a.id)?.nextReviewDate ?? ''
-      const bDue = learningStore.getRecord(b.id)?.nextReviewDate ?? ''
-      const aDueFlag = aDue <= today ? 0 : 1
-      const bDueFlag = bDue <= today ? 0 : 1
-      if (aDueFlag !== bDueFlag) return aDueFlag - bDueFlag
-      const aWrong = learningStore.wrongBook.some(w => w.poemId === a.id) ? 0 : 1
-      const bWrong = learningStore.wrongBook.some(w => w.poemId === b.id) ? 0 : 1
-      if (aWrong !== bWrong) return aWrong - bWrong
-      const aCount = learningStore.getRecord(a.id)?.reviewCount ?? 0
-      const bCount = learningStore.getRecord(b.id)?.reviewCount ?? 0
-      if (aCount !== bCount) return aCount - bCount
-      return a.id.localeCompare(b.id)
-    })
+    return [...enabled].sort((a, b) => compareSmartPriority(a, b, learningStore.records, learningStore.wrongBook, today))
   }
   if (source.value === 'grade') return enabled.filter(p => selectedGrades.value.includes(p.grade))
   if (source.value === 'review') return getReviewPoems(enabled, learningStore.records, today)

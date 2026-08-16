@@ -237,6 +237,25 @@ describe('recordDetail', () => {
     store.recordDetail('p001', 'line')
     expect(store.data.quizResults).toHaveLength(0)
   })
+
+  it('stores wrongInfo as note', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook[0].note).toBe('第1句:stuck')
+  })
+
+  it('keys entries by note so different stuck lines count separately', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    store.recordDetail('p001', 'line', '第2句:forgot')
+    expect(store.data.wrongBook).toHaveLength(2)
+    expect(store.data.wrongBook[0].wrongCount).toBe(1)
+    expect(store.data.wrongBook[1].wrongCount).toBe(1)
+    // 相同备注则累加
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(2)
+    expect(store.data.wrongBook[0].wrongCount).toBe(2)
+  })
 })
 
 describe('importUserData', () => {

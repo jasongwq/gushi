@@ -9,6 +9,37 @@ export function shuffleArray<T>(array: T[]): T[] {
   return result
 }
 
+/**
+ * 智能模式优先级比较器：到期需复习 > wrongBook 有记录 > reviewCount 低 > poemId 字母序
+ * 无学习记录（nextReviewDate 为空）的诗不算到期，排在错题诗之后
+ */
+export function compareSmartPriority(
+  a: Poem,
+  b: Poem,
+  records: LearningRecord[],
+  wrongBook: WrongEntry[],
+  today: string,
+): number {
+  const recordMap = new Map(records.map(r => [r.poemId, r]))
+  const wrongIds = new Set(wrongBook.map(w => w.poemId))
+
+  const aDue = recordMap.get(a.id)?.nextReviewDate ?? ''
+  const bDue = recordMap.get(b.id)?.nextReviewDate ?? ''
+  const aDueFlag = aDue && aDue <= today ? 0 : 1
+  const bDueFlag = bDue && bDue <= today ? 0 : 1
+  if (aDueFlag !== bDueFlag) return aDueFlag - bDueFlag
+
+  const aWrong = wrongIds.has(a.id) ? 0 : 1
+  const bWrong = wrongIds.has(b.id) ? 0 : 1
+  if (aWrong !== bWrong) return aWrong - bWrong
+
+  const aCount = recordMap.get(a.id)?.reviewCount ?? 0
+  const bCount = recordMap.get(b.id)?.reviewCount ?? 0
+  if (aCount !== bCount) return aCount - bCount
+
+  return a.id.localeCompare(b.id)
+}
+
 interface SourceOptions {
   grades?: string[]
 }

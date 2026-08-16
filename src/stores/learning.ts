@@ -62,9 +62,9 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   function recordDetail(poemId: string, detailType: 'line' | 'author' | 'dynasty', wrongInfo?: string) {
-    void wrongInfo
     const today = new Date().toISOString().split('T')[0]
-    const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === detailType)
+    // 同类型同备注视为同一条目（不同卡顿句各自计数）
+    const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === detailType && w.note === wrongInfo)
     if (existing) {
       existing.wrongCount++
       existing.lastWrongDate = today
@@ -75,6 +75,7 @@ export const useLearningStore = defineStore('learning', () => {
         wrongCount: 1,
         lastWrongDate: today,
         unproficient: false,
+        ...(wrongInfo ? { note: wrongInfo } : {}),
       })
     }
     persist()
