@@ -123,6 +123,13 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
 
 .card-swiper :deep(.swiper-slide.expanded) {
   width: 100%;
+  transform: none !important;
+  z-index: 10;
+}
+
+.card-swiper :deep(.swiper-slide.expanded ~ .swiper-slide),
+.card-swiper :deep(.swiper-slide:not(.expanded):not(.swiper-slide-duplicate-prev):not(.swiper-slide-duplicate-next)) {
+  /* Non-expanded slides are dimmed when one is expanded */
 }
 
 .card-swiper {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
@@ -101,6 +101,15 @@ function saveResult(result: RecitationResult) {
 // ========== 展开/缩回逻辑 ==========
 const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
 
+// 过渡中的导航计时器，用于防止竞态
+const EXPAND_TRANSITION_MS = 350
+let navTimer: ReturnType<typeof setTimeout> | null = null
+let isNavigating = ref(false)
+
+onBeforeUnmount(() => {
+  if (navTimer) clearTimeout(navTimer)
+})
+
 // 展开某个 slide：添加 expanded 类，内容切换为 RecitationCard
 function expandSlide(slideIndex: number) {
   const swiper = cardSwiperRef.value?.getSwiperInstance?.()
@@ -118,16 +127,15 @@ function expandSlide(slideIndex: number) {
   slide.classList.add('expanded')
 
   // Override Swiper's inline coverflow transform for the expanded slide
+  // CSS !important on .expanded class handles transform: none
+  // We still need to dim other slides inline since CSS can't target siblings by class
   nextTick(() => {
-    slide.style.transform = 'none'
-    slide.style.zIndex = '10'
     // Dim other slides
     swiper.slides.forEach((s: HTMLElement, i: number) => {
       if (i !== slideIndex) {
         s.style.opacity = '0.3'
       }
     })
-    swiper.update()
   })
 }
 
@@ -138,15 +146,10 @@ function collapseSlide() {
   if (!swiper) return
   swiper.slides.forEach((slide: HTMLElement) => {
     slide.classList.remove('expanded')
-    slide.style.transform = ''
-    slide.style.zIndex = ''
     slide.style.opacity = ''
   })
   expandedPoemId.value = null
   viewMode.value = 'swiper'
-  nextTick(() => {
-    swiper.update()
-  })
 }
 
 // 点击 PoemCard → 展开进入背诵
@@ -157,8 +160,9 @@ function onCardClick(_poem: Poem) {
 }
 
 // Swiper touchStart → 如果有展开的 slide，先缩回
+// 但在导航过渡期间不缩回，避免竞态
 function onSwiperTouchStart() {
-  if (expandedPoemId.value) {
+  if (expandedPoemId.value && !isNavigating.value) {
     collapseSlide()
   }
 }
@@ -169,6 +173,21 @@ function isSlideExpanded(poemId: string) {
 }
 
 // ========== 详情页提交/导航 ==========
+function navigateToPoem(targetIndex: number) {
+  isNavigating.value = true
+  if (navTimer) clearTimeout(navTimer)
+  collapseSlide()
+  nextTick(() => {
+    currentIndex.value = targetIndex
+    navTimer = setTimeout(() => {
+      const swiper = cardSwiperRef.value?.getSwiperInstance?.()
+      if (swiper) expandSlide(swiper.activeIndex)
+      isNavigating.value = false
+      navTimer = null
+    }, EXPAND_TRANSITION_MS)
+  })
+}
+
 function onDetailSubmit(result: RecitationResult) {
   saveResult(result)
 
@@ -176,14 +195,7 @@ function onDetailSubmit(result: RecitationResult) {
     const navList = mysteryRevealedPoems.value
     const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
     if (idx >= 0 && idx < navList.length - 1) {
-      collapseSlide()
-      nextTick(() => {
-        currentIndex.value = idx + 1
-        setTimeout(() => {
-          const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-          if (swiper) expandSlide(swiper.activeIndex)
-        }, 350)
-      })
+      navigateToPoem(idx + 1)
     } else {
       collapseSlide()
       viewMode.value = 'mystery'
@@ -193,14 +205,7 @@ function onDetailSubmit(result: RecitationResult) {
 
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx >= 0 && idx < poems.value.length - 1) {
-    collapseSlide()
-    nextTick(() => {
-      currentIndex.value = idx + 1
-      setTimeout(() => {
-        const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-        if (swiper) expandSlide(swiper.activeIndex)
-      }, 350)
-    })
+    navigateToPoem(idx + 1)
   } else {
     collapseSlide()
   }
@@ -211,27 +216,13 @@ function onDetailGoPrev() {
     const navList = mysteryRevealedPoems.value
     const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
     if (idx > 0) {
-      collapseSlide()
-      nextTick(() => {
-        currentIndex.value = idx - 1
-        setTimeout(() => {
-          const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-          if (swiper) expandSlide(swiper.activeIndex)
-        }, 350)
-      })
+      navigateToPoem(idx - 1)
     }
     return
   }
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx > 0) {
-    collapseSlide()
-    nextTick(() => {
-      currentIndex.value = idx - 1
-      setTimeout(() => {
-        const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-        if (swiper) expandSlide(swiper.activeIndex)
-      }, 350)
-    })
+    navigateToPoem(idx - 1)
   }
 }
 

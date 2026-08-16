@@ -659,3 +659,39 @@ Port 5173 is in use, trying another one...
 11:18:16 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
 11:18:20 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
 11:18:24 AM [vite] (client) hmr update /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+11:20:06 AM [vite] (client) hmr update /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+11:20:12 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:20:25 AM [vite] Internal server error: [vue/compiler-sfc] Unexpected token (145:0)
+
+/root/古诗抽查/src/views/PoemCardPage.vue
+142|    expandedPoemId.value = null
+143|    viewMode.value = 'swiper'
+144|  }
+   |    ^
+145|  }
+   |  ^
+146|  
+  Plugin: vite:vue
+  File: /root/古诗抽查/src/views/PoemCardPage.vue:145:0
+  141|    })
+  142|    expandedPoemId.value = null
+  143|    viewMode.value = 'swiper'
+     |        ^
+  144|  }
+  145|  }
+      at constructor (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:369:19)
+      at TypeScriptParserMixin.raise (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:6620:19)
+      at TypeScriptParserMixin.unexpected (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:6640:16)
+      at TypeScriptParserMixin.parseExprAtom (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11468:22)
+      at TypeScriptParserMixin.parseExprSubscripts (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11102:23)
+      at TypeScriptParserMixin.parseUpdate (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11087:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11067:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:9858:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:10920:61)
+      at TypeScriptParserMixin.parseExprOps (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:10925:23)
+11:20:32 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:20:36 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:20:40 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:20:45 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:20:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+11:21:06 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css

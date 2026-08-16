@@ -12,7 +12,7 @@ defineEmits<{
 </script>
 
 <template>
-  <div class="poem-card h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden select-none bg-gradient-to-br from-indigo-50 to-white shadow-lg" @click="$emit('click')">
+  <div class="poem-card h-full flex flex-col items-center justify-center rounded-2xl overflow-hidden select-none bg-gradient-to-br from-indigo-50 to-white shadow-lg" role="button" tabindex="0" @click="$emit('click')" @keydown.enter="$emit('click')">
     <div class="flex-1 flex flex-col items-center justify-center p-5 gap-2">
       <div class="w-10 h-1 rounded-full bg-indigo-200"></div>
       <h2 class="text-xl font-bold text-center text-gray-800 tracking-wide">{{ poem.title }}</h2>
