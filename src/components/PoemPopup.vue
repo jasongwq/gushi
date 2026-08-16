@@ -1,37 +1,42 @@
 <template>
   <Teleport to="body">
     <Transition name="popup">
-      <div v-if="visible" class="popup-overlay" role="dialog" aria-modal="true" aria-label="古诗详情" @keydown.escape="$emit('update:visible', false)" @click.self="$emit('update:visible', false)">
-        <FocusLock :return-focus="true">
-          <div class="popup-content" ref="contentRef" tabindex="-1">
-            <div class="popup-header">
-              <h3 class="popup-title">{{ poem.title }}</h3>
-              <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
-            </div>
-            <div class="popup-body">
-              <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
-            </div>
-            <div class="popup-yiwen-toggle">
-              <button
-                :class="['yiwen-btn', showYiwen ? 'yiwen-btn-active' : '']"
-                @click="toggleYiwen"
-              >
-                {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
-              </button>
-            </div>
-            <div v-if="showYiwen" class="popup-yiwen">
-              <p class="yiwen-text">{{ poem.yiwen }}</p>
-            </div>
+      <div
+        v-if="visible"
+        class="popup-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="古诗详情"
+        @keydown.tab.prevent="trapFocus"
+        @click.self="$emit('update:visible', false)"
+      >
+        <div class="popup-content" ref="contentRef" tabindex="-1">
+          <div class="popup-header">
+            <h3 class="popup-title">{{ poem.title }}</h3>
+            <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
           </div>
-        </FocusLock>
+          <div class="popup-body">
+            <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
+          </div>
+          <div class="popup-yiwen-toggle">
+            <button
+              :class="['yiwen-btn', showYiwen ? 'yiwen-btn-active' : '']"
+              @click="toggleYiwen"
+            >
+              {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+            </button>
+          </div>
+          <div v-if="showYiwen" class="popup-yiwen">
+            <p class="yiwen-text">{{ poem.yiwen }}</p>
+          </div>
+        </div>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
-import FocusLock from 'vue-focus-lock'
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import type { Poem } from '@/types'
 import { useLearningStore } from '@/stores/learning'
 
@@ -40,7 +45,7 @@ const props = defineProps<{
   visible: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:visible': [value: boolean]
 }>()
 
@@ -52,8 +57,44 @@ watch(() => props.visible, (v) => {
   if (v) {
     showYiwen.value = learningStore.settings.showYiwen ?? false
     nextTick(() => contentRef.value?.focus())
+    document.addEventListener('keydown', onDocumentKeydown)
+  } else {
+    document.removeEventListener('keydown', onDocumentKeydown)
   }
-})
+}, { immediate: true })
+
+// 文档级 Escape 监听：弹窗打开时按 Escape 关闭（无论焦点在何处）
+function onDocumentKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.visible) {
+    emit('update:visible', false)
+  }
+}
+
+onBeforeUnmount(() => document.removeEventListener('keydown', onDocumentKeydown))
+
+// 焦点陷阱：Tab 循环限制在弹窗内
+function trapFocus(e: KeyboardEvent) {
+  const content = contentRef.value
+  if (!content) return
+  const focusables = content.querySelectorAll<HTMLElement>(
+    'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+  )
+  if (focusables.length === 0) return
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  const active = document.activeElement as HTMLElement | null
+  if (e.shiftKey) {
+    if (active === first || !content.contains(active)) {
+      e.preventDefault()
+      last.focus()
+    }
+  } else {
+    if (active === last || !content.contains(active)) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+}
 
 function toggleYiwen() {
   showYiwen.value = !showYiwen.value

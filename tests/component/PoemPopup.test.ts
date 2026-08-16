@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PoemPopup from '@/components/PoemPopup.vue'
@@ -14,14 +14,6 @@ const mockPoem: Poem = {
   textType: '五言',
   yiwen: '译文内容',
 }
-
-vi.mock('vue-focus-lock', () => ({
-  default: {
-    inheritAttrs: false,
-    props: ['returnFocus'],
-    template: '<div><slot /></div>',
-  },
-}))
 
 beforeEach(() => {
   localStorage.clear()
@@ -68,7 +60,7 @@ describe('PoemPopup', () => {
   it('emits update:visible false on Escape keydown', async () => {
     const wrapper = mountPopup({ visible: true })
     await wrapper.vm.$nextTick()
-    await wrapper.find('.popup-overlay').trigger('keydown.escape')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     expect(wrapper.emitted('update:visible')).toBeTruthy()
     expect(wrapper.emitted('update:visible')![0]).toEqual([false])
   })
