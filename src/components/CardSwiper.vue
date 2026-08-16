@@ -107,4 +107,8 @@ defineExpose({ shuffle, goTo })
   width: 65%;
   height: 100%;
 }
+
+.card-swiper {
+  overflow: hidden;
+}
 </style>
