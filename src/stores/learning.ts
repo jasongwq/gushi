@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel } from '@/types'
-import { loadData, saveData } from '@/utils/storage'
+import { loadData, saveData, importData as importDataUtil } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 
@@ -133,13 +133,9 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   function importUserData(json: string): boolean {
-    try {
-      const imported = JSON.parse(json) as UserData
-      if (!imported.settings || !Array.isArray(imported.records)) return false
-      data.value = imported
-      persist()
-      return true
-    } catch { return false }
+    const success = importDataUtil(json)
+    if (success) data.value = loadData()
+    return success
   }
 
   function exportUserData(): string {
