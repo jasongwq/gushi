@@ -1,34 +1,37 @@
 <template>
   <Teleport to="body">
     <Transition name="popup">
-      <div v-if="visible" class="popup-overlay" @click.self="$emit('update:visible', false)">
-        <div class="popup-content">
-          <div class="popup-header">
-            <h3 class="popup-title">{{ poem.title }}</h3>
-            <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
+      <div v-if="visible" class="popup-overlay" role="dialog" aria-modal="true" aria-label="古诗详情" @keydown.escape="$emit('update:visible', false)" @click.self="$emit('update:visible', false)">
+        <FocusLock :return-focus="true">
+          <div class="popup-content" ref="contentRef" tabindex="-1">
+            <div class="popup-header">
+              <h3 class="popup-title">{{ poem.title }}</h3>
+              <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
+            </div>
+            <div class="popup-body">
+              <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
+            </div>
+            <div class="popup-yiwen-toggle">
+              <button
+                :class="['yiwen-btn', showYiwen ? 'yiwen-btn-active' : '']"
+                @click="toggleYiwen"
+              >
+                {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+              </button>
+            </div>
+            <div v-if="showYiwen" class="popup-yiwen">
+              <p class="yiwen-text">{{ poem.yiwen }}</p>
+            </div>
           </div>
-          <div class="popup-body">
-            <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
-          </div>
-          <div class="popup-yiwen-toggle">
-            <button
-              :class="['yiwen-btn', showYiwen ? 'yiwen-btn-active' : '']"
-              @click="toggleYiwen"
-            >
-              {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
-            </button>
-          </div>
-          <div v-if="showYiwen" class="popup-yiwen">
-            <p class="yiwen-text">{{ poem.yiwen }}</p>
-          </div>
-        </div>
+        </FocusLock>
       </div>
     </Transition>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
+import FocusLock from 'vue-focus-lock'
 import type { Poem } from '@/types'
 import { useLearningStore } from '@/stores/learning'
 
@@ -43,9 +46,13 @@ defineEmits<{
 
 const learningStore = useLearningStore()
 const showYiwen = ref(learningStore.settings.showYiwen ?? false)
+const contentRef = ref<HTMLElement | null>(null)
 
 watch(() => props.visible, (v) => {
-  if (v) showYiwen.value = learningStore.settings.showYiwen ?? false
+  if (v) {
+    showYiwen.value = learningStore.settings.showYiwen ?? false
+    nextTick(() => contentRef.value?.focus())
+  }
 })
 
 function toggleYiwen() {
@@ -72,6 +79,7 @@ function toggleYiwen() {
   max-width: 320px;
   width: 100%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  outline: none;
 }
 .popup-header {
   text-align: center;
