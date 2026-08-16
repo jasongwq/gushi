@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
+  server: {
+    allowedHosts: ['gushi-dev.ypwq.fun'],
+  },
   plugins: [
     vue(),
     VitePWA({
