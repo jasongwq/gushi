@@ -34,10 +34,12 @@ export const useLearningStore = defineStore('learning', () => {
 
   function recordAnswer(poemId: string, quizType: string, correct: boolean, wrongAnswer?: string) {
     const record = getOrCreateRecord(poemId)
-    const updated = calculateNextReview(record, correct)
+    const today = new Date().toISOString().split('T')[0]
+    // 更新 lastReviewDate 为当天，确保 nextReviewDate 基于当前日期计算
+    const updated = calculateNextReview({ ...record, lastReviewDate: today }, correct)
     const afterUnproficient = checkAutoUnmark(updated, correct)
     const idx = data.value.records.findIndex(r => r.poemId === poemId)
-    data.value.records[idx] = { ...afterUnproficient, lastLearnDate: new Date().toISOString().split('T')[0] }
+    data.value.records[idx] = { ...afterUnproficient, lastLearnDate: today }
 
     const result: QuizResult = {
       poemId, quizType: quizType as QuizResult['quizType'],

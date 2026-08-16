@@ -84,6 +84,9 @@ function renderOverviewChart() {
   })
 }
 
+const showMasteryTip = ref(false)
+const showRetentionTip = ref(false)
+
 // 古诗列表
 const poemList = computed(() => {
   return poemStore.enabledPoems.map(p => {
@@ -121,7 +124,13 @@ onMounted(() => {
     </div>
 
     <div class="mb-4">
-      <h3 class="text-sm text-gray-500 mb-2">掌握程度分布</h3>
+      <h3 class="text-sm text-gray-500 mb-2 flex items-center gap-1">
+        掌握程度分布
+        <span class="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-indigo-500 bg-indigo-100 rounded-full cursor-pointer select-none" @click="showMasteryTip = !showMasteryTip">!</span>
+      </h3>
+      <div v-if="showMasteryTip" class="text-xs text-gray-500 bg-indigo-50 rounded-lg p-3 mb-2 leading-relaxed">
+        掌握程度分为四个等级：<strong>新</strong>（未学习）、<strong>学</strong>（已开始学习，复习1次）、<strong>熟</strong>（较熟悉，复习2次）、<strong>固</strong>（已巩固，复习3次及以上）。等级越高，说明复习次数越多，记忆越牢固。建议优先关注「新」和「学」的诗词，及时复习。
+      </div>
       <div class="flex gap-3 justify-center">
         <div v-for="item in masteryDistribution" :key="item.level" class="flex flex-col items-center gap-1 p-3 bg-white border border-gray-200 rounded-lg shadow-sm min-w-[60px]">
           <span :class="['text-xl font-bold px-2 py-0.5 rounded', masteryColors[item.level]]">{{ item.level }}</span>
@@ -132,7 +141,13 @@ onMounted(() => {
 
     <!-- 遗忘曲线总览 -->
     <div class="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-      <h3 class="text-sm text-gray-500 mb-2">记忆保持率趋势（近30天）</h3>
+      <h3 class="text-sm text-gray-500 mb-2 flex items-center gap-1">
+        记忆保持率趋势（近30天）
+        <span class="inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-indigo-500 bg-indigo-100 rounded-full cursor-pointer select-none" @click="showRetentionTip = !showRetentionTip">!</span>
+      </h3>
+      <div v-if="showRetentionTip" class="text-xs text-gray-500 bg-indigo-50 rounded-lg p-3 mb-2 leading-relaxed">
+        记忆保持率基于艾宾浩斯遗忘曲线计算，反映所有已学诗词的平均记忆强度。100% 表示完全记忆，0% 表示完全遗忘。曲线下降说明记忆正在衰退，需要及时复习；曲线上升说明复习有效，记忆得到了巩固。保持率越高，说明复习越及时。
+      </div>
       <div style="height: 200px; position: relative;">
         <canvas ref="overviewCanvas"></canvas>
       </div>
@@ -150,6 +165,7 @@ onMounted(() => {
         <div
           v-for="item in poemList"
           :key="item.id"
+          data-testid="poem-list-item"
           class="p-3 bg-white border border-gray-200 rounded-lg mb-1 cursor-pointer hover:bg-gray-50 transition flex items-center gap-2"
           @click="goToDetail(item.id)"
         >

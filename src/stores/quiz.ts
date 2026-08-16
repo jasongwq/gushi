@@ -146,17 +146,19 @@ export const useQuizStore = defineStore('quiz', () => {
     const learningStore = useLearningStore()
     const today = new Date().toISOString().split('T')[0]
 
+    const enabledPoems = poemStore.enabledPoems
+
     let selectedPoems: Poem[]
     if (source === 'smart') {
-      selectedPoems = smartMix(poemStore.poems, learningStore.records, learningStore.wrongBook, count, today)
+      selectedPoems = smartMix(enabledPoems, learningStore.records, learningStore.wrongBook, count, today)
     } else if (source === 'review') {
-      selectedPoems = shuffleArray(getReviewPoems(poemStore.poems, learningStore.records, today)).slice(0, count)
+      selectedPoems = shuffleArray(getReviewPoems(enabledPoems, learningStore.records, today)).slice(0, count)
     } else if (source === 'wrong') {
-      selectedPoems = shuffleArray(getWrongPoems(poemStore.poems, learningStore.wrongBook)).slice(0, count)
+      selectedPoems = shuffleArray(getWrongPoems(enabledPoems, learningStore.wrongBook)).slice(0, count)
     } else if (source === 'unproficient') {
-      selectedPoems = shuffleArray(getUnproficientPoems(poemStore.poems, learningStore.records)).slice(0, count)
+      selectedPoems = shuffleArray(getUnproficientPoems(enabledPoems, learningStore.records)).slice(0, count)
     } else {
-      selectedPoems = getPoemsBySource(poemStore.poems, source, today, { grades })
+      selectedPoems = getPoemsBySource(enabledPoems, source, today, { grades })
       selectedPoems = shuffleArray(selectedPoems).slice(0, count)
     }
 

@@ -118,8 +118,8 @@ onMounted(() => {
   // 用 capture 阶段确保能收到卡片区域内的触摸事件
   pageRootRef.value?.addEventListener('touchstart', onAreaTouchStart, { passive: true, capture: true })
   pageRootRef.value?.addEventListener('touchmove', onAreaTouchMove, { passive: true, capture: true })
-  pageRootRef.value?.addEventListener('touchend', () => swipeEnd(swipeState), { capture: true })
-  pageRootRef.value?.addEventListener('touchcancel', () => swipeEnd(swipeState), { capture: true })
+  pageRootRef.value?.addEventListener('touchend', onAreaTouchEnd, { capture: true })
+  pageRootRef.value?.addEventListener('touchcancel', onAreaTouchEnd, { capture: true })
 })
 
 onBeforeUnmount(() => {
@@ -127,8 +127,8 @@ onBeforeUnmount(() => {
   swipeEnd(swipeState)
   pageRootRef.value?.removeEventListener('touchstart', onAreaTouchStart, { capture: true })
   pageRootRef.value?.removeEventListener('touchmove', onAreaTouchMove, { capture: true })
-  pageRootRef.value?.removeEventListener('touchend', () => swipeEnd(swipeState), { capture: true })
-  pageRootRef.value?.removeEventListener('touchcancel', () => swipeEnd(swipeState), { capture: true })
+  pageRootRef.value?.removeEventListener('touchend', onAreaTouchEnd, { capture: true })
+  pageRootRef.value?.removeEventListener('touchcancel', onAreaTouchEnd, { capture: true })
 })
 
 // 原生触摸：记录起点（仅背诵模式；不拦截按钮，靠移动阈值区分点击 vs 上滑）
@@ -150,6 +150,10 @@ function onAreaTouchMove(e: TouchEvent) {
   if (swipeMove(swipeState, touch.clientX, touch.clientY)) {
     collapseSlide()
   }
+}
+
+function onAreaTouchEnd() {
+  swipeEnd(swipeState)
 }
 
 // 展开某个 slide：切换到背诵模式（Swiper 通过 key 重建为 slide 全宽效果）
