@@ -19,6 +19,12 @@ const record = computed(() => learningStore.getRecord(poemId.value))
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chartInstance: Chart | null = null
+const showYiwen = ref(learningStore.settings.showYiwen ?? false)
+
+function toggleYiwen() {
+  showYiwen.value = !showYiwen.value
+  learningStore.updateSettings({ showYiwen: showYiwen.value })
+}
 
 const quizCorrectRate = computed(() => {
   if (!record.value || record.value.correctness.length === 0) return null
@@ -162,8 +168,22 @@ watch(poemId, () => {
 
       <!-- 原文 -->
       <div class="p-4 bg-white border border-gray-200 rounded-lg mb-4">
-        <h3 class="text-sm text-gray-500 mb-2">原文</h3>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm text-gray-500">原文</h3>
+          <button
+            :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
+            @click="toggleYiwen"
+          >
+            {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+          </button>
+        </div>
         <p v-for="(line, i) in poem.text" :key="i" class="text-lg leading-relaxed text-center">{{ line }}</p>
+      </div>
+
+      <!-- 译文 -->
+      <div v-if="showYiwen" class="p-4 bg-white border border-gray-200 rounded-lg mb-4">
+        <h3 class="text-sm text-gray-500 mb-2">译文</h3>
+        <p class="text-sm leading-relaxed text-center text-gray-500">{{ poem.yiwen }}</p>
       </div>
     </template>
 

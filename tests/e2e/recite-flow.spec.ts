@@ -172,3 +172,27 @@ test('recite page: grade filter works', async ({ page }) => {
   // Start button should be enabled
   await expect(page.locator('button:has-text("开始背诵")')).toBeEnabled()
 })
+
+test('recite flow: yiwen toggle shows and hides translation', async ({ page }) => {
+  await page.goto('/#/recite')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await page.click('text=全部古诗')
+  await page.click('text=开始背诵')
+
+  // Wait for first poem
+  await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 10000 })
+  await page.click('text=查看原文')
+
+  // 译文按钮可见
+  await expect(page.locator('button:has-text("显示译文")')).toBeVisible()
+
+  // 点击显示译文
+  await page.locator('button:has-text("显示译文")').click()
+  await expect(page.locator('button:has-text("隐藏译文")')).toBeVisible()
+
+  // 再次点击隐藏译文
+  await page.locator('button:has-text("隐藏译文")').click()
+  await expect(page.locator('button:has-text("显示译文")')).toBeVisible()
+})

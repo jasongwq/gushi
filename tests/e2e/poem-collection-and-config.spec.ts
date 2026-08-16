@@ -89,6 +89,25 @@ test.describe('poem collection page', () => {
     await expect(page.locator('.popup-line').first()).toBeVisible()
   })
 
+  test('popup yiwen toggle shows and hides translation', async ({ page }) => {
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const titleSpan = page.locator('.space-y-2 > div').first().locator('span.font-bold')
+    await titleSpan.click()
+    await expect(page.locator('.popup-overlay')).toBeVisible()
+
+    // 译文默认隐藏
+    await expect(page.locator('.popup-yiwen')).not.toBeVisible()
+
+    // 点击显示译文
+    await page.locator('.yiwen-btn').click()
+    await expect(page.locator('.popup-yiwen')).toBeVisible()
+    await expect(page.locator('.yiwen-text')).toBeVisible()
+
+    // 再次点击隐藏译文
+    await page.locator('.yiwen-btn').click()
+    await expect(page.locator('.popup-yiwen')).not.toBeVisible()
+  })
+
   test('clicking overlay closes popup', async ({ page }) => {
     await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
     const titleSpan = page.locator('.space-y-2 > div').first().locator('span.font-bold')

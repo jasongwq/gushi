@@ -42,6 +42,28 @@ test('poem detail page shows all sections', async ({ page }) => {
   await expect(page.locator('text=返回')).toBeVisible()
 })
 
+test('poem detail page yiwen toggle shows and hides translation', async ({ page }) => {
+  await page.goto('/#/progress')
+
+  await expect(page.locator('text=古诗列表')).toBeVisible({ timeout: 10000 })
+  const poemItems = page.locator('.cursor-pointer').filter({ hasText: /.+/ })
+  await expect(poemItems.first()).toBeVisible({ timeout: 10000 })
+  await poemItems.first().click()
+
+  await expect(page.locator('text=原文')).toBeVisible({ timeout: 5000 })
+
+  // 译文区块默认隐藏
+  await expect(page.locator('h3:has-text("译文")')).not.toBeVisible()
+
+  // 点击显示译文
+  await page.locator('button:has-text("显示译文")').click()
+  await expect(page.locator('h3:has-text("译文")')).toBeVisible()
+
+  // 再次点击隐藏译文
+  await page.locator('button:has-text("隐藏译文")').click()
+  await expect(page.locator('h3:has-text("译文")')).not.toBeVisible()
+})
+
 test('poem detail page: back button returns to previous page', async ({ page }) => {
   await page.goto('/#/progress')
 

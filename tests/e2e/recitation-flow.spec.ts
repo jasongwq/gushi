@@ -202,3 +202,21 @@ test('recitation flow: go back to previous poem', async ({ page }) => {
   // "上一首" should be disabled on first poem
   await expect(page.locator('button:has-text("上一首")')).toBeDisabled()
 })
+
+test('recitation flow: yiwen toggle shows and hides translation', async ({ page }) => {
+  await startRecitationWithAll(page)
+
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+
+  // 译文默认隐藏
+  await expect(page.locator('.recitation-card').locator('button:has-text("显示译文")')).toBeVisible()
+  await expect(page.locator('.recitation-card .bg-gray-50')).not.toBeVisible()
+
+  // 点击显示译文
+  await page.locator('.recitation-card').locator('button:has-text("显示译文")').click()
+  await expect(page.locator('.recitation-card').locator('button:has-text("隐藏译文")')).toBeVisible()
+
+  // 再次点击隐藏译文
+  await page.locator('.recitation-card').locator('button:has-text("隐藏译文")').click()
+  await expect(page.locator('.recitation-card').locator('button:has-text("显示译文")')).toBeVisible()
+})

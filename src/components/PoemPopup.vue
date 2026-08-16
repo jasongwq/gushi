@@ -10,6 +10,17 @@
           <div class="popup-body">
             <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
           </div>
+          <div class="popup-yiwen-toggle">
+            <button
+              :class="['yiwen-btn', showYiwen ? 'yiwen-btn-active' : '']"
+              @click="toggleYiwen"
+            >
+              {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+            </button>
+          </div>
+          <div v-if="showYiwen" class="popup-yiwen">
+            <p class="yiwen-text">{{ poem.yiwen }}</p>
+          </div>
         </div>
       </div>
     </Transition>
@@ -17,9 +28,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { Poem } from '@/types'
+import { useLearningStore } from '@/stores/learning'
 
-defineProps<{
+const props = defineProps<{
   poem: Poem
   visible: boolean
 }>()
@@ -27,6 +40,18 @@ defineProps<{
 defineEmits<{
   'update:visible': [value: boolean]
 }>()
+
+const learningStore = useLearningStore()
+const showYiwen = ref(learningStore.settings.showYiwen ?? false)
+
+watch(() => props.visible, (v) => {
+  if (v) showYiwen.value = learningStore.settings.showYiwen ?? false
+})
+
+function toggleYiwen() {
+  showYiwen.value = !showYiwen.value
+  learningStore.updateSettings({ showYiwen: showYiwen.value })
+}
 </script>
 
 <style scoped>
@@ -70,6 +95,42 @@ defineEmits<{
   font-size: 1rem;
   line-height: 2;
   color: var(--color-text);
+}
+.popup-yiwen-toggle {
+  text-align: center;
+  margin-top: 0.75rem;
+}
+.yiwen-btn {
+  font-size: 0.8125rem;
+  color: #6366f1;
+  background: #eef2ff;
+  border: 2px solid #c7d2fe;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0.375rem 1rem;
+  transition: all 0.15s;
+}
+.yiwen-btn:hover {
+  background: #e0e7ff;
+}
+.yiwen-btn-active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+}
+.yiwen-btn-active:hover {
+  background: #4f46e5;
+}
+.popup-yiwen {
+  text-align: center;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f0f0f0;
+}
+.yiwen-text {
+  font-size: 0.875rem;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
 }
 .popup-enter-active,
 .popup-leave-active {

@@ -55,6 +55,7 @@ export interface UserSettings {
   source: SourceType
   quizTypes: QuizType[]
   selectedGrades: string[]
+  showYiwen?: boolean
 }
 
 export interface UserData {

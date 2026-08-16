@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Poem, RecitationResult } from '@/types'
+import { useLearningStore } from '@/stores/learning'
 
 const props = defineProps<{
   poem: Poem
@@ -11,6 +12,14 @@ const emit = defineEmits<{
   submit: [result: RecitationResult]
   goPrev: []
 }>()
+
+const learningStore = useLearningStore()
+const showYiwen = ref(learningStore.settings.showYiwen ?? false)
+
+function toggleYiwen() {
+  showYiwen.value = !showYiwen.value
+  learningStore.updateSettings({ showYiwen: showYiwen.value })
+}
 
 // 每行状态：默认熟练，可标记为卡顿/不会
 const lineStatuses = ref<{ lineIndex: number; status: 'ok' | 'stuck' | 'forgot' }[]>(
@@ -24,6 +33,7 @@ watch(() => props.poem.id, () => {
   lineStatuses.value = props.poem.text.map((_, i) => ({ lineIndex: i, status: 'ok' as const }))
   authorCorrect.value = null
   dynastyCorrect.value = null
+  showYiwen.value = learningStore.settings.showYiwen ?? false
 })
 
 // 整首熟练：所有行都ok，作者/朝代都没标错
@@ -109,6 +119,19 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
           >不会</button>
         </div>
       </div>
+    </div>
+
+    <!-- 译文 -->
+    <div class="mb-4 text-center">
+      <button
+        :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
+        @click="toggleYiwen"
+      >
+        {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+      </button>
+    </div>
+    <div v-if="showYiwen" class="mb-4 p-3 bg-gray-50 rounded-lg text-center">
+      <p class="text-sm leading-relaxed text-gray-500">{{ poem.yiwen }}</p>
     </div>
 
     <!-- 作者/朝代标记 -->

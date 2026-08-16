@@ -19,7 +19,13 @@ const phase = ref<'setup' | 'cards'>('setup')
 const poems = ref<Poem[]>([])
 const currentIndex = ref(0)
 const expanded = ref(false)
+const showYiwen = ref(learningStore.settings.showYiwen ?? false)
 const results = ref<{ poemId: string; correct: boolean }[]>([])
+
+function toggleYiwen() {
+  showYiwen.value = !showYiwen.value
+  learningStore.updateSettings({ showYiwen: showYiwen.value })
+}
 
 const reviewDuePoems = computed(() => {
   const records = learningStore.records.filter(r => isDueForReview(r))
@@ -55,6 +61,7 @@ function startRecite() {
   poems.value = selected.slice(0, 20)
   currentIndex.value = 0
   expanded.value = false
+  showYiwen.value = learningStore.settings.showYiwen ?? false
   results.value = []
   phase.value = 'cards'
 }
@@ -67,6 +74,7 @@ function selfEvaluate(correct: boolean) {
   if (currentIndex.value < poems.value.length - 1) {
     currentIndex.value++
     expanded.value = false
+    showYiwen.value = learningStore.settings.showYiwen ?? false
   } else {
     sessionStorage.setItem('recite-results', JSON.stringify(results.value))
     router.push({ name: 'recite-result' })
@@ -130,7 +138,7 @@ function selfEvaluate(correct: boolean) {
 
       <div class="text-center mb-6">
         <h2 class="text-3xl font-bold mb-2">{{ currentPoem.title }}</h2>
-        <p class="text-gray-500">{{ currentPoem.dynasty }} · {{ currentPoem.author }}</p>
+        <p v-if="expanded" class="text-gray-500">{{ currentPoem.dynasty }} · {{ currentPoem.author }}</p>
       </div>
 
       <!-- 查看原文 -->
@@ -145,6 +153,17 @@ function selfEvaluate(correct: boolean) {
       <div v-else class="mb-6">
         <div class="p-4 bg-white border border-gray-200 rounded-lg mb-4">
           <p v-for="(line, i) in currentPoem.text" :key="i" class="text-lg leading-relaxed text-center">{{ line }}</p>
+          <div class="text-center mt-2">
+            <button
+              :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
+              @click="toggleYiwen"
+            >
+              {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="showYiwen" class="p-3 bg-gray-50 rounded-lg mb-4 text-center">
+          <p class="text-sm leading-relaxed text-gray-500">{{ currentPoem.yiwen }}</p>
         </div>
         <div class="flex gap-3">
           <button
