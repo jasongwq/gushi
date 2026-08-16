@@ -49,10 +49,12 @@ function getPoemText(poemId: string): string[] {
 }
 
 function goHome() {
+  sessionStorage.removeItem('poem-recite-state')
   router.push({ name: 'home' })
 }
 
 function tryAgain() {
+  sessionStorage.removeItem('poem-recite-state')
   router.push({ name: 'recite' })
 }
 </script>

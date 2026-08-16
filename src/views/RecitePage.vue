@@ -1,11 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import { isDueForReview } from '@/utils/ebbinghaus'
 import { shuffleArray } from '@/utils/quiz'
 import type { Poem } from '@/types'
+
+const RECITE_STATE_KEY = 'poem-recite-state'
+
+interface ReciteState {
+  phase: 'setup' | 'cards'
+  poemIds: string[]
+  currentIndex: number
+  expanded: boolean
+  showYiwen: boolean
+  results: { poemId: string; correct: boolean }[]
+  source: 'review' | 'all'
+  selectedGrades: string[]
+}
+
+function saveReciteState(state: ReciteState) {
+  sessionStorage.setItem(RECITE_STATE_KEY, JSON.stringify(state))
+}
+
+function loadReciteState(): ReciteState | null {
+  try {
+    const raw = sessionStorage.getItem(RECITE_STATE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function clearReciteState() {
+  sessionStorage.removeItem(RECITE_STATE_KEY)
+}
 
 const router = useRouter()
 const poemStore = usePoemStore()
@@ -21,6 +51,50 @@ const currentIndex = ref(0)
 const expanded = ref(false)
 const showYiwen = ref(learningStore.settings.showYiwen ?? false)
 const results = ref<{ poemId: string; correct: boolean }[]>([])
+
+// Restore state from sessionStorage on mount
+const savedState = loadReciteState()
+if (savedState && savedState.phase === 'cards') {
+  // Wait for poems to load, then restore
+  const restorePoems = () => {
+    if (poemStore.poems.length > 0) {
+      source.value = savedState.source
+      selectedGrades.value = savedState.selectedGrades
+      phase.value = savedState.phase
+      poems.value = savedState.poemIds.map(id => poemStore.getPoemById(id)).filter((p): p is Poem => p !== undefined)
+      currentIndex.value = savedState.currentIndex
+      expanded.value = savedState.expanded
+      showYiwen.value = savedState.showYiwen
+      results.value = savedState.results
+    }
+  }
+  if (poemStore.poems.length > 0) {
+    restorePoems()
+  } else {
+    const unwatch = watch(() => poemStore.poems.length, (len) => {
+      if (len > 0) {
+        restorePoems()
+        unwatch()
+      }
+    })
+  }
+}
+
+// Auto-persist state to sessionStorage when in cards phase
+watch([phase, currentIndex, expanded, showYiwen, results, source, selectedGrades], () => {
+  if (phase.value === 'cards') {
+    saveReciteState({
+      phase: phase.value,
+      poemIds: poems.value.map(p => p.id),
+      currentIndex: currentIndex.value,
+      expanded: expanded.value,
+      showYiwen: showYiwen.value,
+      results: results.value,
+      source: source.value,
+      selectedGrades: selectedGrades.value,
+    })
+  }
+}, { deep: true })
 
 function toggleYiwen() {
   showYiwen.value = !showYiwen.value
@@ -76,6 +150,7 @@ function selfEvaluate(correct: boolean) {
     expanded.value = false
     showYiwen.value = learningStore.settings.showYiwen ?? false
   } else {
+    clearReciteState()
     sessionStorage.setItem('recite-results', JSON.stringify(results.value))
     router.push({ name: 'recite-result' })
   }

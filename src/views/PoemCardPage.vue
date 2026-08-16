@@ -5,6 +5,7 @@ import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import CardSwiper from '@/components/CardSwiper.vue'
 import PoemCard from '@/components/PoemCard.vue'
+import { SwiperSlide } from 'swiper/vue'
 import type { RecitationResult, SourceType } from '@/types'
 import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
 
@@ -138,13 +139,13 @@ const totalCount = computed(() => poems.value.length)
     <!-- 卡片区域 -->
     <div class="flex-1 min-h-0 p-4">
       <CardSwiper v-if="poems.length > 0" ref="swiperRef" v-model="currentIndex" :count="poems.length">
-        <template #default="{ index }">
+        <SwiperSlide v-for="(poem, index) in poems" :key="poem.id">
           <PoemCard
             :ref="(el: any) => { if (el) poemCardRefs[index] = el }"
-            :poem="poems[index]"
-            :checked="checkedPoemIds.has(poems[index].id)"
+            :poem="poem"
+            :checked="checkedPoemIds.has(poem.id)"
           />
-        </template>
+        </SwiperSlide>
       </CardSwiper>
       <div v-else class="h-full flex items-center justify-center text-gray-400">
         没有符合条件的古诗

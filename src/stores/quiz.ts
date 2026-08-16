@@ -1,30 +1,77 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { QuizQuestion, QuizSession, QuizType, SourceType, Poem, RecitationResult } from '@/types'
 import { smartMix, getPoemsBySource, getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
-import { generateFillBlankOptions, generateNextLineOptions, CJK_CHAR_REGEX } from '@/utils/distractor'
+import { generateFillBlankOptions, generateNextLineOptions, CJK_CHAR_REGEX, cjkCharCount, stripPunctuation } from '@/utils/distractor'
 import { usePoemStore } from './poem'
 import { useLearningStore } from './learning'
 
+const SESSION_STORAGE_KEY = 'poem-quiz-session'
+const RECITATION_STORAGE_KEY = 'poem-quiz-recitation'
+
+function saveSessionToStorage(session: QuizSession | null) {
+  if (session) {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
+  } else {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  }
+}
+
+function loadSessionFromStorage(): QuizSession | null {
+  try {
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+function saveCurrentRecitationToStorage(recitation: {
+  overallStatus: 'mastered' | 'not-mastered' | null
+  lineStatuses: { lineIndex: number; status: 'ok' | 'stuck' | 'forgot' }[]
+  authorCorrect: boolean | null
+  dynastyCorrect: boolean | null
+}) {
+  if (recitation.overallStatus !== null || recitation.lineStatuses.length > 0) {
+    sessionStorage.setItem(RECITATION_STORAGE_KEY, JSON.stringify(recitation))
+  } else {
+    sessionStorage.removeItem(RECITATION_STORAGE_KEY)
+  }
+}
+
+function loadCurrentRecitationFromStorage() {
+  try {
+    const raw = sessionStorage.getItem(RECITATION_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 export const useQuizStore = defineStore('quiz', () => {
-  const session = ref<QuizSession | null>(null)
+  const session = ref<QuizSession | null>(loadSessionFromStorage())
   const currentIndex = computed(() => session.value?.currentIndex ?? 0)
   const currentQuestion = computed(() => session.value?.questions[session.value.currentIndex] ?? null)
   const isFinished = computed(() => session.value ? session.value.currentIndex >= session.value.questions.length : false)
   const totalQuestions = computed(() => session.value?.questions.length ?? 0)
   const correctCount = computed(() => session.value?.answers.filter(a => a.correct).length ?? 0)
 
+  const savedRecitation = loadCurrentRecitationFromStorage()
   const currentRecitation = ref<{
     overallStatus: 'mastered' | 'not-mastered' | null
     lineStatuses: { lineIndex: number; status: 'ok' | 'stuck' | 'forgot' }[]
     authorCorrect: boolean | null
     dynastyCorrect: boolean | null
-  }>({
+  }>(savedRecitation ?? {
     overallStatus: null,
     lineStatuses: [],
     authorCorrect: null,
     dynastyCorrect: null,
   })
+
+  // Auto-persist session and currentRecitation to sessionStorage
+  watch(session, (val) => saveSessionToStorage(val), { deep: true })
+  watch(currentRecitation, (val) => saveCurrentRecitationToStorage(val), { deep: true })
 
   function resetCurrentRecitation() {
     currentRecitation.value = {
@@ -63,15 +110,29 @@ export const useQuizStore = defineStore('quiz', () => {
         }
       }
       case 'nextLine': {
-        const isForward = Math.random() > 0.5
-        const lineIndex = Math.floor(Math.random() * (poem.text.length - 1))
-        const givenLine = isForward ? poem.text[lineIndex] : poem.text[lineIndex + 1]
-        const correctLine = isForward ? poem.text[lineIndex + 1] : poem.text[lineIndex]
-        const options = generateNextLineOptions(poem, allPoems, correctLine, poem.grade)
+        // Find adjacent line pairs where both lines have the same CJK char count
+        const validPairs: { lineIndex: number; isForward: boolean }[] = []
+        for (let i = 0; i < poem.text.length - 1; i++) {
+          const len1 = cjkCharCount(poem.text[i])
+          const len2 = cjkCharCount(poem.text[i + 1])
+          if (len1 === len2 && len2 >= 4) {
+            validPairs.push({ lineIndex: i, isForward: true })
+            validPairs.push({ lineIndex: i, isForward: false })
+          }
+        }
+        if (validPairs.length === 0) {
+          // Fallback to fillBlank if no valid nextLine pairs
+          return generateQuestion(poem, 'fillBlank', allPoems)
+        }
+        const pair = validPairs[Math.floor(Math.random() * validPairs.length)]
+        const givenLine = pair.isForward ? poem.text[pair.lineIndex] : poem.text[pair.lineIndex + 1]
+        const correctLine = pair.isForward ? poem.text[pair.lineIndex + 1] : poem.text[pair.lineIndex]
+        const givenStripped = stripPunctuation(givenLine)
+        const options = generateNextLineOptions(poem, allPoems, correctLine, poem.grade, givenLine)
         return {
           poemId: poem.id, quizType: 'nextLine',
-          prompt: `${givenLine}\n${isForward ? '→ 下句是？' : '→ 上句是？'}`,
-          options, correctIndex: options.indexOf(correctLine),
+          prompt: `${givenStripped}\n${pair.isForward ? '→ 下句是？' : '→ 上句是？'}`,
+          options, correctIndex: options.indexOf(stripPunctuation(correctLine)),
         }
       }
       default:

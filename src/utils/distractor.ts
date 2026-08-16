@@ -4,6 +4,24 @@ import { shuffleArray } from './quiz'
 /** Regex matching Chinese characters (CJK Unified Ideographs). Used for fill-blank index counting. */
 export const CJK_CHAR_REGEX = /[\u4e00-\u9fff]/
 
+/** Count CJK characters in a string. */
+export function cjkCharCount(s: string): number {
+  let count = 0
+  for (const ch of s) {
+    if (CJK_CHAR_REGEX.test(ch)) count++
+  }
+  return count
+}
+
+/** Strip non-CJK characters from a string. */
+export function stripPunctuation(s: string): string {
+  let result = ''
+  for (const ch of s) {
+    if (CJK_CHAR_REGEX.test(ch)) result += ch
+  }
+  return result
+}
+
 /**
  * Extract unique Chinese characters from a poem's text.
  */
@@ -80,16 +98,33 @@ export function generateNextLineOptions(
   _poem: Poem,
   allPoems: Poem[],
   correctLine: string,
-  grade: string
+  grade: string,
+  givenLine?: string
 ): string[] {
-  // Collect lines from same grade poems, excluding the correct line
+  // Lines to exclude from distractors: correctLine and givenLine (if different from correctLine)
+  const excludeSet = new Set<string>([correctLine])
+  if (givenLine && givenLine !== correctLine) excludeSet.add(givenLine)
+
+  // Strip punctuation for comparison (options should not contain punctuation)
+  const correctStripped = stripPunctuation(correctLine)
+  const correctLen = cjkCharCount(correctLine)
+
+  // Collect lines from same grade poems, matching CJK char length, excluding punctuation
   const sameGradePoems = allPoems.filter(p => p.grade === grade)
   const candidateLines: string[] = []
+  const seenStripped = new Set<string>([correctStripped])
+  if (givenLine) {
+    const givenStripped = stripPunctuation(givenLine)
+    if (givenStripped !== correctStripped) seenStripped.add(givenStripped)
+  }
+
   for (const p of sameGradePoems) {
     for (const line of p.text) {
-      if (line !== correctLine && !candidateLines.includes(line)) {
-        candidateLines.push(line)
-      }
+      if (cjkCharCount(line) !== correctLen) continue
+      const stripped = stripPunctuation(line)
+      if (seenStripped.has(stripped)) continue
+      seenStripped.add(stripped)
+      candidateLines.push(stripped)
     }
   }
 
@@ -98,17 +133,19 @@ export function generateNextLineOptions(
     for (const p of allPoems) {
       if (p.grade === grade) continue
       for (const line of p.text) {
-        if (line !== correctLine && !candidateLines.includes(line)) {
-          candidateLines.push(line)
-          if (candidateLines.length >= 5) break
-        }
+        if (cjkCharCount(line) !== correctLen) continue
+        const stripped = stripPunctuation(line)
+        if (seenStripped.has(stripped)) continue
+        seenStripped.add(stripped)
+        candidateLines.push(stripped)
+        if (candidateLines.length >= 5) break
       }
       if (candidateLines.length >= 5) break
     }
   }
 
   const selected = candidateLines.slice(0, 5)
-  const options = [correctLine, ...selected]
+  const options = [correctStripped, ...selected]
   return shuffleArray(options)
 }
 

@@ -42,8 +42,6 @@ describe('FillBlankQuiz', () => {
       global: { plugins: [createPinia()] },
     })
     const poemText = wrapper.find('.poem-text')
-    // "春眠不觉晓" with blank at index 4 (晓) → "春眠不觉____"
-    // "处处闻啼鸟" unchanged
     expect(poemText.text()).toContain('____')
     expect(poemText.text()).toContain('处处闻啼鸟')
   })
@@ -64,5 +62,42 @@ describe('FillBlankQuiz', () => {
     const poemText = wrapper.find('.poem-text')
     expect(poemText.text()).toContain('春眠不觉晓')
     expect(poemText.text()).toContain('处处闻啼鸟')
+  })
+
+  it('highlights correct option green when selectedOption is set', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(FillBlankQuiz, {
+      props: { question: mockQuestion, selectedOption: 0 },
+      global: { plugins: [createPinia()] },
+    })
+    // correctIndex is 0, selectedOption is 0 → correct
+    const correctBtn = wrapper.findAll('.option-btn')[0]
+    expect(correctBtn.classes()).toContain('option-correct')
+  })
+
+  it('highlights wrong option red and correct option green', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(FillBlankQuiz, {
+      props: { question: mockQuestion, selectedOption: 1 },
+      global: { plugins: [createPinia()] },
+    })
+    // correctIndex is 0, selectedOption is 1 → wrong
+    const wrongBtn = wrapper.findAll('.option-btn')[1]
+    const correctBtn = wrapper.findAll('.option-btn')[0]
+    expect(wrongBtn.classes()).toContain('option-wrong')
+    expect(correctBtn.classes()).toContain('option-correct')
+  })
+
+  it('disables options when disabled prop is true', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(FillBlankQuiz, {
+      props: { question: mockQuestion, selectedOption: 0, disabled: true },
+      global: { plugins: [createPinia()] },
+    })
+    // The selected option should NOT be disabled (it's already highlighted)
+    // Other options should be disabled
+    const buttons = wrapper.findAll('.option-btn')
+    expect((buttons[0].element as HTMLButtonElement).disabled).toBe(false)
+    expect((buttons[1].element as HTMLButtonElement).disabled).toBe(true)
   })
 })

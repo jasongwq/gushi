@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
@@ -9,6 +9,8 @@ import type { Poem } from '@/types'
 const router = useRouter()
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
+
+onMounted(() => poemStore.fetchPoems())
 
 const score = computed(() => {
   if (!quizStore.session) return 0

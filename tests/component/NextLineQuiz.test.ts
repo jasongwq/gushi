@@ -32,4 +32,26 @@ describe('NextLineQuiz', () => {
     wrapper.findAll('.option-btn')[2].trigger('click')
     expect(wrapper.emitted('answer')![0]).toEqual([2])
   })
+
+  it('highlights correct option green when selectedOption matches correctIndex', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(NextLineQuiz, {
+      props: { question: mockQuestion, selectedOption: 0 },
+      global: { plugins: [createPinia()] },
+    })
+    const correctBtn = wrapper.findAll('.option-btn')[0]
+    expect(correctBtn.classes()).toContain('option-correct')
+  })
+
+  it('highlights wrong option red and correct option green when selectedOption is wrong', () => {
+    setActivePinia(createPinia())
+    const wrapper = mount(NextLineQuiz, {
+      props: { question: mockQuestion, selectedOption: 2 },
+      global: { plugins: [createPinia()] },
+    })
+    const wrongBtn = wrapper.findAll('.option-btn')[2]
+    const correctBtn = wrapper.findAll('.option-btn')[0]
+    expect(wrongBtn.classes()).toContain('option-wrong')
+    expect(correctBtn.classes()).toContain('option-correct')
+  })
 })

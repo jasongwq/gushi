@@ -1,29 +1,47 @@
 <template>
   <div class="quiz-play">
-    <div v-if="(quizStore.currentQuestion && !quizStore.isFinished) || showFeedback">
-      <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+    <div v-if="quizStore.session && quizStore.totalQuestions > 0">
+      <!-- Progress dots -->
+      <div class="progress-dots" role="group" aria-label="题目进度">
+        <button
+          v-for="(_, i) in quizStore.session.questions"
+          :key="i"
+          :class="[
+            'dot',
+            i === displayIndex ? 'current' : '',
+            getAnswerStatus(i) === 'correct' ? 'correct' : '',
+            getAnswerStatus(i) === 'wrong' ? 'wrong' : '',
+            getAnswerStatus(i) === 'unanswered' ? 'unanswered' : '',
+          ]"
+          :disabled="!canNavigateTo(i)"
+          :aria-label="'第' + (i + 1) + '题' + (getAnswerStatus(i) === 'correct' ? '（正确）' : getAnswerStatus(i) === 'wrong' ? '（错误）' : '')"
+          @click="goToQuestion(i)"
+        >
+          {{ i + 1 }}
+        </button>
       </div>
-      <p class="progress-text">{{ quizStore.currentIndex + 1 }} / {{ quizStore.totalQuestions }}</p>
 
-      <template v-if="quizStore.currentQuestion">
+      <!-- Current question area -->
+      <template v-if="currentDisplayQuestion">
         <FillBlankQuiz
-          v-if="quizStore.currentQuestion.quizType === 'fillBlank'"
-          :question="quizStore.currentQuestion"
+          v-if="currentDisplayQuestion.quizType === 'fillBlank'"
+          :key="'q-' + displayIndex"
+          :question="currentDisplayQuestion"
+          :selected-option="currentSelectedOption"
+          :disabled="isReviewing"
           @answer="selectAnswer"
         />
         <NextLineQuiz
           v-else
-          :question="quizStore.currentQuestion"
+          :key="'q-' + displayIndex"
+          :question="currentDisplayQuestion"
+          :selected-option="currentSelectedOption"
+          :disabled="isReviewing"
           @answer="selectAnswer"
         />
       </template>
-
-      <div v-if="showFeedback" class="feedback" :class="lastCorrect ? 'correct' : 'wrong'">
-        {{ lastCorrect ? '正确！' : '错误，正确答案是：' + correctAnswerText }}
-      </div>
     </div>
-    <div v-else-if="quizStore.isFinished && quizStore.totalQuestions === 0">
+    <div v-else-if="quizStore.session && quizStore.totalQuestions === 0">
       <p>没有题目</p>
       <button @click="$router.push({ name: 'home' })">返回首页</button>
     </div>
@@ -35,66 +53,156 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
+import { usePoemStore } from '@/stores/poem'
 import FillBlankQuiz from '@/components/FillBlankQuiz.vue'
 import NextLineQuiz from '@/components/NextLineQuiz.vue'
 
 const quizStore = useQuizStore()
+const poemStore = usePoemStore()
 const router = useRouter()
-const showFeedback = ref(false)
-const lastCorrect = ref(false)
 
-const progressPercent = computed(() =>
-  quizStore.totalQuestions > 0
-    ? ((quizStore.currentIndex) / quizStore.totalQuestions) * 100
-    : 0
-)
+onMounted(() => poemStore.fetchPoems())
 
-const correctAnswerText = computed(() => {
-  const q = quizStore.session?.questions[quizStore.currentIndex - 1]
-  return q ? q.options[q.correctIndex] : ''
+// The index of the question currently displayed
+const reviewingIndex = ref<number | null>(null)
+const displayIndex = computed(() => reviewingIndex.value ?? quizStore.currentIndex)
+
+const currentDisplayQuestion = computed(() => {
+  if (!quizStore.session) return null
+  return quizStore.session.questions[displayIndex.value] ?? null
 })
+
+// Whether we are viewing an already-answered question
+const isReviewing = computed(() => {
+  if (!quizStore.session) return false
+  // If we're looking at a question that has been answered
+  const answer = quizStore.session.answers.find(a => a.questionIndex === displayIndex.value)
+  return !!answer
+})
+
+// The selected option for the currently displayed question (for highlighting)
+const currentSelectedOption = computed(() => {
+  if (!quizStore.session) return null
+  const answer = quizStore.session.answers.find(a => a.questionIndex === displayIndex.value)
+  return answer ? answer.selectedIndex : null
+})
+
+function getAnswerStatus(index: number): 'correct' | 'wrong' | 'unanswered' {
+  if (!quizStore.session) return 'unanswered'
+  const answer = quizStore.session.answers.find(a => a.questionIndex === index)
+  if (!answer) return 'unanswered'
+  return answer.correct ? 'correct' : 'wrong'
+}
+
+function canNavigateTo(index: number): boolean {
+  // Can navigate to answered questions
+  if (getAnswerStatus(index) !== 'unanswered') return true
+  // Can navigate to the current unanswered question
+  if (index === quizStore.currentIndex) return true
+  return false
+}
+
+function goToQuestion(index: number) {
+  if (!quizStore.session) return
+  if (!canNavigateTo(index)) return
+  reviewingIndex.value = index
+}
 
 let feedbackTimer: ReturnType<typeof setTimeout> | null = null
 
 function selectAnswer(index: number) {
-  lastCorrect.value = index === quizStore.currentQuestion?.correctIndex
-  quizStore.answerQuestion(index)
-  showFeedback.value = true
-  feedbackTimer = setTimeout(() => {
-    showFeedback.value = false
-    if (quizStore.isFinished) {
-      router.push({ name: 'quiz-result' })
-    }
-  }, 1500)
+  if (!quizStore.currentQuestion) return
+  const isCorrect = index === quizStore.currentQuestion.correctIndex
+
+  // Clear any existing timer
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer)
+    feedbackTimer = null
+  }
+
+  // Pin the current question for display during feedback
+  reviewingIndex.value = quizStore.currentIndex
+
+  if (isCorrect) {
+    // Correct: record answer, stay on question briefly, then advance
+    quizStore.answerQuestion(index)
+    // Small delay so the user sees the green highlight
+    feedbackTimer = setTimeout(() => {
+      reviewingIndex.value = null
+      if (quizStore.isFinished) {
+        router.push({ name: 'quiz-result' })
+      }
+    }, 400)
+  } else {
+    // Wrong: record answer, stay on question for 1.5s so user sees the feedback
+    quizStore.answerQuestion(index)
+    feedbackTimer = setTimeout(() => {
+      reviewingIndex.value = null
+      if (quizStore.isFinished) {
+        router.push({ name: 'quiz-result' })
+      }
+    }, 1500)
+  }
 }
 
 onUnmounted(() => { if (feedbackTimer) clearTimeout(feedbackTimer) })
 </script>
 
 <style scoped>
-.progress-bar {
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 8px;
+.progress-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+  justify-content: center;
 }
-.progress-fill {
-  height: 100%;
-  background: var(--color-primary);
-  transition: width 0.3s;
+.dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.feedback.correct {
-  color: var(--color-success);
-  font-weight: bold;
-  margin-top: 16px;
+.dot.current {
+  border-color: var(--color-primary, #6366f1);
+  background: var(--color-primary, #6366f1);
+  color: white;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
-.feedback.wrong {
-  color: var(--color-danger);
-  font-weight: bold;
-  margin-top: 16px;
+.dot.correct {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: white;
+  cursor: pointer;
+}
+.dot.correct:hover {
+  background: #16a34a;
+}
+.dot.wrong {
+  border-color: #ef4444;
+  background: #ef4444;
+  color: white;
+  cursor: pointer;
+}
+.dot.wrong:hover {
+  background: #dc2626;
+}
+.dot.unanswered {
+  cursor: default;
+  opacity: 0.5;
+}
+.dot:disabled {
+  cursor: default;
 }
 </style>

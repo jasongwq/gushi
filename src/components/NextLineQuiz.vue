@@ -11,8 +11,12 @@
       <button
         v-for="(opt, i) in question.options"
         :key="i"
+        :disabled="disabled && i !== selectedOption"
+        :class="[
+          'option-btn',
+          optionClass(i),
+        ]"
         @click="$emit('answer', i)"
-        class="option-btn"
       >
         {{ opt }}
       </button>
@@ -28,7 +32,15 @@ import type { QuizQuestion } from '@/types'
 import type { Poem } from '@/types'
 import { usePoemStore } from '@/stores/poem'
 
-const props = defineProps<{ question: QuizQuestion }>()
+const props = withDefaults(defineProps<{
+  question: QuizQuestion
+  selectedOption?: number | null
+  disabled?: boolean
+}>(), {
+  selectedOption: null,
+  disabled: false,
+})
+
 defineEmits<{ answer: [index: number] }>()
 const poemStore = usePoemStore()
 const poem = computed(() => poemStore.getPoemById(props.question.poemId))
@@ -39,4 +51,28 @@ const popupPoemId = ref(props.question.poemId)
 const popupPoem = computed<Poem | undefined>(() => {
   return poemStore.getPoemById(popupPoemId.value)
 })
+
+function optionClass(i: number): string {
+  if (props.selectedOption === null) return ''
+  if (i === props.question.correctIndex) return 'option-correct'
+  if (i === props.selectedOption && i !== props.question.correctIndex) return 'option-wrong'
+  if (props.disabled) return 'option-dimmed'
+  return ''
+}
 </script>
+
+<style scoped>
+.option-correct {
+  background: #22c55e !important;
+  color: white !important;
+  border-color: #22c55e !important;
+}
+.option-wrong {
+  background: #ef4444 !important;
+  color: white !important;
+  border-color: #ef4444 !important;
+}
+.option-dimmed {
+  opacity: 0.4;
+}
+</style>
