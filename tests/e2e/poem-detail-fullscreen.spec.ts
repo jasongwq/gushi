@@ -448,3 +448,81 @@ test('水平滑动切诗后 RecitationCard 内容更新为下一首', async ({ b
   await cdp.detach()
   await context.close()
 })
+
+test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  // 进入背诵（点击 active slide 中心的卡片）
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  // 布局断言：根节点 flex，正文区可滚动，按钮区固定在底部
+  const layout = await page.evaluate(() => {
+    const card = document.querySelector('.swiper-slide-active .recitation-card')
+    if (!card) return null
+    const rootClasses = [...card.classList].join(' ')
+    const scrollArea = card.querySelector('.overflow-y-auto')
+    const buttons = [...card.querySelectorAll('button')]
+    // Vue 模板会在按钮文字周围渲染空白，需 trim
+    const masteredBtn = buttons.find(b => b.textContent?.trim() === '熟练')
+    // 底部按钮行最后一个（下一首）是卡片里最靠下的元素
+    const lastBtn = buttons[buttons.length - 1]
+    const scrollAreaBottom = scrollArea?.getBoundingClientRect().bottom ?? 0
+    const masteredTop = masteredBtn?.getBoundingClientRect().top ?? 0
+    const lastBtnBottom = lastBtn?.getBoundingClientRect().bottom ?? 0
+    const cardBottom = card.getBoundingClientRect().bottom
+    const viewportH = document.documentElement.clientHeight
+    const h2 = card.querySelector('h2')
+    const titleAreaText = h2?.parentElement?.textContent ?? ''
+    return {
+      rootClasses,
+      hasScrollArea: !!scrollArea,
+      scrollHeight: scrollArea?.scrollHeight ?? 0,
+      scrollClientHeight: scrollArea?.clientHeight ?? 0,
+      masteredTop: Math.round(masteredTop),
+      lastBtnBottom: Math.round(lastBtnBottom),
+      cardBottom: Math.round(cardBottom),
+      viewportH,
+      // 熟练按钮在正文滚动区下方（不在正文末尾，属于固定的底部按钮区）
+      masteredBelowScrollArea: masteredTop > scrollAreaBottom,
+      // 底部按钮行紧贴卡片底边（卡片内按钮下方无残留内容）
+      lastBtnNearCardBottom: cardBottom - lastBtnBottom < 40,
+      // 卡片底部接近视口底部（卡片占满可用高度，而非只包住正文）
+      cardNearViewportBottom: viewportH - cardBottom < 120,
+      // 作者/朝代与标题同处标题区（h2 父容器包含「朝代 · 作者」）
+      authorInTitle: (() => {
+        if (!h2) return false
+        return titleAreaText.includes(h2.textContent ?? '') && titleAreaText.includes('·')
+      })(),
+    }
+  })
+  expect(layout).toBeTruthy()
+  const l = layout!
+  expect(l.rootClasses).toContain('flex-col')
+  expect(l.hasScrollArea).toBe(true)
+  // 熟练按钮在正文滚动区下方（按钮区不在正文末尾、固定于卡片底部）
+  expect(l.masteredBelowScrollArea).toBe(true)
+  // 底部按钮行紧贴卡片底边，且卡片占满可用高度 → 按钮不会随正文滚动
+  expect(l.lastBtnNearCardBottom).toBe(true)
+  expect(l.cardNearViewportBottom).toBe(true)
+  // 作者/朝代在标题下方（与标题同一标题区）
+  expect(l.authorInTitle).toBe(true)
+
+  await context.close()
+})
