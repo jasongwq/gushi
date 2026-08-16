@@ -10,9 +10,11 @@ import 'swiper/css/free-mode'
 const props = withDefaults(defineProps<{
   count: number
   modelValue: number
+  effect?: 'coverflow' | 'slide'
 }>(), {
   count: 0,
   modelValue: 0,
+  effect: 'coverflow',
 })
 
 const emit = defineEmits<{
@@ -24,6 +26,9 @@ const currentIndex = computed({
   get: () => props.modelValue,
   set: (val) => emit('update:modelValue', val),
 })
+
+// 背诵模式（slide effect）下禁用触摸滑动，防止与 RecitationCard 内部按钮冲突
+const allowTouchMove = computed(() => props.effect === 'coverflow')
 
 let swiperInstance: SwiperType | null = null
 
@@ -42,7 +47,7 @@ function onSlideChange(swiper: SwiperType) {
 // 外部 modelValue 变化时同步到 Swiper
 watch(() => props.modelValue, (val) => {
   if (swiperInstance && swiperInstance.realIndex !== val) {
-    swiperInstance.slideToLoop(val, 300)
+    swiperInstance.slideToLoop(val, 0)
   }
 })
 
@@ -81,7 +86,7 @@ function shuffle() {
 }
 
 function goTo(index: number) {
-  swiperInstance?.slideToLoop(index, 300)
+  swiperInstance?.slideToLoop(index, 0)
 }
 
 function getSwiperInstance() {
@@ -94,16 +99,18 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
 <template>
   <Swiper
     :modules="[EffectCoverflow, FreeMode]"
-    :effect="'coverflow'"
+    :effect="effect"
     :coverflow-effect="{ rotate: 0, stretch: 30, depth: 150, modifier: 1, scale: 1, slideShadows: false }"
-    :free-mode="{ enabled: true, sticky: true, minimumVelocity: 0.2 }"
-    :slides-per-view="'auto'"
+    :free-mode="effect === 'coverflow' ? { enabled: true, sticky: true, minimumVelocity: 0.2 } : false"
+    :slides-per-view="effect === 'coverflow' ? 'auto' : 1"
     :centered-slides="true"
     :loop="true"
     :loop-additional-slides="2"
     :speed="300"
-    :initial-slide="0"
+    :initial-slide="modelValue"
+    :allow-touch-move="allowTouchMove"
     class="card-swiper h-full"
+    :class="effect === 'slide' ? 'is-fullscreen' : ''"
     @swiper="onSwiper"
     @slide-change="onSlideChange"
     @touch-start="onSwiperTouchStart"

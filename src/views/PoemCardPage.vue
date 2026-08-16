@@ -110,59 +110,27 @@ onBeforeUnmount(() => {
   if (navTimer) clearTimeout(navTimer)
 })
 
-// 展开某个 slide：切换 Swiper 为全屏模式，内容切换为 RecitationCard
+// 展开某个 slide：切换到背诵模式（Swiper 通过 key 重建为 slide 全宽效果）
 function expandSlide(slideIndex: number) {
-  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-  if (!swiper) return
-
-  const poemId = poems.value[swiper.realIndex]?.id
+  const poemId = poems.value[slideIndex]?.id
   if (!poemId) return
 
   expandedPoemId.value = poemId
+  currentIndex.value = slideIndex
   viewMode.value = 'recite'
-
-  // 禁止 Swiper 触摸交互，防止滑动干扰
-  swiper.allowTouchMove = false
-
-  // 切换 Swiper 为全屏模式：effect 从 coverflow 改为 slide，slidesPerView 改为 1
-  // 这样 Swiper 自己会管理 slide 宽度为 100%，不需要手动覆盖 DOM
-  swiper.params.slidesPerView = 1
-  swiper.params.effect = 'slide'
-  swiper.update()
-
-  // 切换容器 CSS class
-  swiper.el.classList.add('is-fullscreen')
 }
 
-// 缩回当前展开的 slide
+// 缩回当前展开的 slide：回到浏览模式
 function collapseSlide() {
   if (!expandedPoemId.value) return
-  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-  if (!swiper) return
   expandedPoemId.value = null
   viewMode.value = 'swiper'
-  // 恢复 Swiper 触摸交互
-  swiper.allowTouchMove = true
-  // 恢复 coverflow 效果
-  swiper.params.slidesPerView = 'auto'
-  swiper.params.effect = 'coverflow'
-  swiper.update()
-
-  // 切换容器 CSS class
-  swiper.el.classList.remove('is-fullscreen')
-
-  // 清除 Swiper update() 设置的 inline style width
-  // coverflow 模式下 CSS width: 65% 控制 slide 宽度，不需要 inline style
-  swiper.slides.forEach((slide: HTMLElement) => {
-    slide.style.width = ''
-  })
 }
 
 // 点击 PoemCard → 展开进入背诵
-function onCardClick(_poem: Poem) {
-  const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-  if (!swiper) return
-  expandSlide(swiper.activeIndex)
+function onCardClick(poem: Poem) {
+  const idx = poems.value.findIndex(p => p.id === poem.id)
+  if (idx >= 0) expandSlide(idx)
 }
 
 // Swiper touchStart → 如果有展开的 slide，先缩回
@@ -173,11 +141,6 @@ function onSwiperTouchStart() {
   }
 }
 
-// 判断某个诗是否是当前展开的
-function isSlideExpanded(poemId: string) {
-  return expandedPoemId.value === poemId && viewMode.value === 'recite'
-}
-
 // ========== 详情页提交/导航 ==========
 function navigateToPoem(targetIndex: number) {
   isNavigating.value = true
@@ -185,9 +148,9 @@ function navigateToPoem(targetIndex: number) {
   collapseSlide()
   nextTick(() => {
     currentIndex.value = targetIndex
+    // 回到背诵模式（Swiper 重建后 initial-slide 对齐到目标）
     navTimer = setTimeout(() => {
-      const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-      if (swiper) expandSlide(swiper.activeIndex)
+      viewMode.value = 'recite'
       isNavigating.value = false
       navTimer = null
     }, EXPAND_TRANSITION_MS)
@@ -255,14 +218,7 @@ function onMysterySelectAndEnter(poem: Poem) {
       : []
   }
   const idx = mysteryRevealedPoems.value.findIndex(p => p.id === poem.id)
-  if (idx >= 0) currentIndex.value = idx
-  viewMode.value = 'swiper'
-  nextTick(() => {
-    const swiper = cardSwiperRef.value?.getSwiperInstance?.()
-    if (swiper) {
-      expandSlide(swiper.activeIndex)
-    }
-  })
+  if (idx >= 0) expandSlide(idx)
 }
 
 function switchToGlobal() {
@@ -344,18 +300,20 @@ const detailProgress = computed(() => {
           @select="onMysterySelectAndEnter"
         />
 
-        <!-- 滑动模式（浏览 + 背诵共用同一个 Swiper） -->
+        <!-- 滑动模式（浏览 + 背诵共用同一个 Swiper 结构，通过 key 重建切换 effect） -->
         <CardSwiper
           v-show="viewMode !== 'mystery'"
           v-if="poems.length > 0"
+          :key="viewMode"
           ref="cardSwiperRef"
           v-model="currentIndex"
           :count="poems.length"
+          :effect="viewMode === 'recite' ? 'slide' : 'coverflow'"
           @swiper-touch-start="onSwiperTouchStart"
         >
           <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
             <RecitationCard
-              v-if="viewMode === 'recite' && isSlideExpanded(poem.id)"
+              v-if="viewMode === 'recite'"
               class="h-full px-4"
               :poem="poem"
               :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === poem.id) > 0 : poems.findIndex(p => p.id === poem.id) > 0"

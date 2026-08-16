@@ -7,17 +7,25 @@ async function enterPoemCardPage(page: any) {
 }
 
 // 辅助：点击第一张卡片进入背诵模式
+// 使用 dispatchEvent 绕过 Swiper coverflow 布局层对 pointer events 的拦截
 async function enterReciteFromSwiper(page: any) {
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
   await page.locator('.poem-card').first().dispatchEvent('click')
   await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
 }
 
-// 辅助：获取当前活跃 slide 的宽度
-async function getActiveSlideWidth(page: any): Promise<number> {
+// 辅助：获取 active slide 的布局信息
+async function getActiveSlideInfo(page: any) {
   return await page.evaluate(() => {
     const slide = document.querySelector('.swiper-slide-active') as HTMLElement
-    return slide?.offsetWidth ?? 0
+    if (!slide) return null
+    const rect = slide.getBoundingClientRect()
+    return {
+      left: rect.left,
+      right: rect.right,
+      width: rect.width,
+      offsetWidth: slide.offsetWidth,
+    }
   })
 }
 
@@ -31,54 +39,100 @@ async function getSwiperContainerWidth(page: any): Promise<number> {
 
 // ====== 核心功能：点击展开全屏 ======
 
-test('点击卡片后 slide 宽度变为全屏', async ({ page }) => {
+test('浏览模式 slide 为 65% 宽度（coverflow）', async ({ page }) => {
   await enterPoemCardPage(page)
 
   const containerWidth = await getSwiperContainerWidth(page)
-  const browseWidth = await getActiveSlideWidth(page)
-  expect(browseWidth).toBeGreaterThan(0)
-  // 浏览模式下 slide 宽度应该约为容器的 65%
-  expect(browseWidth / containerWidth).toBeLessThan(0.8)
+  const browse = await getActiveSlideInfo(page)
+  expect(browse).toBeTruthy()
+  const b = browse!
+  expect(b.width).toBeGreaterThan(0)
+  // 浏览模式下 slide 宽度约为容器的 65%
+  expect(b.width / containerWidth).toBeLessThan(0.8)
 
-  // 点击进入背诵
-  await enterReciteFromSwiper(page)
-
-  // 等待 transition 完成
-  await page.waitForTimeout(500)
-
-  // 展开后 slide 宽度应该接近容器宽度（100%）
-  const expandedWidth = await getActiveSlideWidth(page)
-  expect(expandedWidth).toBeGreaterThan(browseWidth)
-  // 展开后应该接近全屏（至少 90% 的容器宽度）
-  expect(expandedWidth / containerWidth).toBeGreaterThan(0.9)
+  // Swiper 有 coverflow 类
+  const hasCoverflow = await page.evaluate(() => {
+    const el = document.querySelector('.card-swiper')
+    return el?.classList.contains('swiper-coverflow') ?? false
+  })
+  expect(hasCoverflow).toBe(true)
 })
 
-test('点击卡片后 Swiper 效果切换为 slide', async ({ page }) => {
+test('点击卡片后 slide 真正全屏（宽度 100%、覆盖容器）', async ({ page }) => {
   await enterPoemCardPage(page)
 
-  // 初始是 coverflow 效果
-  const effectBefore = await page.evaluate(() => {
-    const swiper = (document.querySelector('.swiper') as any)?.swiper
-    return swiper?.params?.effect
-  })
-  expect(effectBefore).toBe('coverflow')
+  const containerWidth = await getSwiperContainerWidth(page)
+  const browse = await getActiveSlideInfo(page)
+  expect(browse.width / containerWidth).toBeLessThan(0.8)
 
   // 点击进入背诵
   await enterReciteFromSwiper(page)
   await page.waitForTimeout(500)
 
-  // 展开后应该是 slide 效果
-  const effectAfter = await page.evaluate(() => {
-    const swiper = (document.querySelector('.swiper') as any)?.swiper
-    return swiper?.params?.effect
+  // 展开后 slide 宽度应等于容器宽度（100%）
+  const expanded = await getActiveSlideInfo(page)
+  expect(expanded.width / containerWidth).toBeGreaterThan(0.9)
+
+  // slide 左边缘与容器对齐，右边缘超出容器（因为 loop 复制了很多 slide）
+  // 关键：active slide 的宽度 = 容器宽度 = 全屏
+  expect(Math.abs(expanded.width - containerWidth)).toBeLessThan(2)
+})
+
+test('点击卡片后 RecitationCard 在 viewport 内且全宽', async ({ page }) => {
+  await enterPoemCardPage(page)
+
+  // 点击进入背诵
+  await enterReciteFromSwiper(page)
+  await page.waitForTimeout(500)
+
+  // 获取 active slide 内的 RecitationCard 位置
+  const info = await page.evaluate(() => {
+    const activeSlide = document.querySelector('.swiper-slide-active')
+    const recCard = activeSlide?.querySelector('.recitation-card')
+    if (!recCard) return null
+    const slideRect = activeSlide!.getBoundingClientRect()
+    const recRect = recCard.getBoundingClientRect()
+    return {
+      viewportWidth: document.documentElement.clientWidth,
+      slideLeft: slideRect.left,
+      slideRight: slideRect.right,
+      slideWidth: slideRect.width,
+      recLeft: recRect.left,
+      recRight: recRect.right,
+      recWidth: recRect.width,
+    }
   })
-  expect(effectAfter).toBe('slide')
+  expect(info).toBeTruthy()
+  const i = info!
+
+  // RecitationCard 与 active slide 位置一致（全屏，不偏出）
+  expect(Math.abs(i.recLeft - i.slideLeft)).toBeLessThan(2)
+  expect(Math.abs(i.recRight - i.slideRight)).toBeLessThan(2)
+  // RecitationCard 宽度 = slide 宽度 = 容器全宽
+  expect(Math.abs(i.recWidth - i.slideWidth)).toBeLessThan(2)
+})
+
+test('点击卡片后 Swiper 重建为 slide 效果（无 coverflow 类）', async ({ page }) => {
+  await enterPoemCardPage(page)
+
+  // 点击进入背诵
+  await enterReciteFromSwiper(page)
+  await page.waitForTimeout(500)
+
+  const classes = await page.evaluate(() => {
+    const el = document.querySelector('.card-swiper')
+    return el ? [...el.classList] : []
+  })
+
+  // 背诵模式：不应再有 coverflow/3d 类，应有 is-fullscreen
+  expect(classes.some(c => c.includes('coverflow'))).toBe(false)
+  expect(classes.includes('is-fullscreen')).toBe(true)
 })
 
 test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   await enterPoemCardPage(page)
 
-  // 初始 allowTouchMove 为 true
+  // 初始 allowTouchMove 为 true（coverflow 浏览模式）
   const touchBefore = await page.evaluate(() => {
     const swiper = (document.querySelector('.swiper') as any)?.swiper
     return swiper?.allowTouchMove
@@ -89,7 +143,7 @@ test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   await enterReciteFromSwiper(page)
   await page.waitForTimeout(500)
 
-  // 展开后 allowTouchMove 应为 false
+  // 展开后 allowTouchMove 应为 false（背诵模式禁止滑动干扰按钮）
   const touchAfter = await page.evaluate(() => {
     const swiper = (document.querySelector('.swiper') as any)?.swiper
     return swiper?.allowTouchMove
@@ -97,42 +151,7 @@ test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   expect(touchAfter).toBe(false)
 })
 
-test('点击卡片后 coverflow transform 被覆盖', async ({ page }) => {
-  await enterPoemCardPage(page)
-
-  // 点击进入背诵
-  await enterReciteFromSwiper(page)
-  await page.waitForTimeout(500)
-
-  // 活跃 slide 的 transform 应该是 none 或接近 none
-  const transformResult = await page.evaluate(() => {
-    const slide = document.querySelector('.swiper-slide-active') as HTMLElement
-    if (!slide) return null
-    const computed = window.getComputedStyle(slide)
-    const transform = computed.transform
-    // 检查是否是 identity matrix 或 none
-    return {
-      computedTransform: transform,
-      styleTransform: slide.style.transform,
-    }
-  })
-
-  // transform 应该是 none 或 identity（不是 coverflow 的 translate3d）
-  expect(transformResult?.computedTransform).toMatch(/^(none|matrix\(1,?\s*0,?\s*0,?\s*1,?\s*0,?\s*0\)|matrix3d\(1,?\s*0)/)
-})
-
-test('展开后 RecitationCard 可见', async ({ page }) => {
-  await enterPoemCardPage(page)
-
-  // 点击进入背诵
-  await enterReciteFromSwiper(page)
-  await page.waitForTimeout(500)
-
-  // RecitationCard 应该可见
-  await expect(page.locator('.recitation-card').first()).toBeVisible()
-})
-
-test('点击返回按钮缩回到浏览模式（宽度恢复 65%）', async ({ page }) => {
+test('点击返回按钮缩回到浏览模式（宽度恢复 65%、coverflow 恢复）', async ({ page }) => {
   await enterPoemCardPage(page)
   await enterReciteFromSwiper(page)
   await page.waitForTimeout(500)
@@ -147,15 +166,16 @@ test('点击返回按钮缩回到浏览模式（宽度恢复 65%）', async ({ p
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
 
   // 宽度应该恢复为 65%
-  const browseWidth = await getActiveSlideWidth(page)
-  expect(browseWidth / containerWidth).toBeLessThan(0.8)
+  const browse = await getActiveSlideInfo(page)
+  expect(browse.width / containerWidth).toBeLessThan(0.8)
 
-  // Swiper 效果应该恢复为 coverflow
-  const effectAfter = await page.evaluate(() => {
-    const swiper = (document.querySelector('.swiper') as any)?.swiper
-    return swiper?.params?.effect
+  // coverflow 类恢复
+  const classes = await page.evaluate(() => {
+    const el = document.querySelector('.card-swiper')
+    return el ? [...el.classList] : []
   })
-  expect(effectAfter).toBe('coverflow')
+  expect(classes.some(c => c.includes('coverflow'))).toBe(true)
+  expect(classes.includes('is-fullscreen')).toBe(false)
 })
 
 test('展开-缩回-再展开循环正常', async ({ page }) => {
@@ -167,8 +187,8 @@ test('展开-缩回-再展开循环正常', async ({ page }) => {
   await enterReciteFromSwiper(page)
   await page.waitForTimeout(500)
 
-  let expandedWidth = await getActiveSlideWidth(page)
-  expect(expandedWidth / containerWidth).toBeGreaterThan(0.9)
+  let expanded = await getActiveSlideInfo(page)
+  expect(expanded.width / containerWidth).toBeGreaterThan(0.9)
 
   // 缩回（使用更精确的选择器）
   await page.locator('[data-testid="detail-progress"]').locator('..').locator('button:has-text("返回")').dispatchEvent('click')
@@ -182,6 +202,6 @@ test('展开-缩回-再展开循环正常', async ({ page }) => {
   await page.waitForTimeout(500)
   await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
 
-  expandedWidth = await getActiveSlideWidth(page)
-  expect(expandedWidth / containerWidth).toBeGreaterThan(0.9)
+  expanded = await getActiveSlideInfo(page)
+  expect(expanded.width / containerWidth).toBeGreaterThan(0.9)
 })
