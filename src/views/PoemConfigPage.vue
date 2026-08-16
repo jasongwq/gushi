@@ -4,7 +4,7 @@
 
     <div class="grade-tabs flex overflow-x-auto gap-1 mb-3 pb-1">
       <button
-        v-for="grade in poemStore.grades"
+        v-for="grade in poemStore.allGrades"
         :key="grade"
         :class="['px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition', activeGrade === grade ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
         @click="activeGrade = grade"
@@ -76,13 +76,13 @@ const activeGrade = ref('')
 
 onMounted(async () => {
   await poemStore.fetchPoems()
-  if (poemStore.grades.length > 0) {
-    activeGrade.value = poemStore.grades[0]
+  if (poemStore.allGrades.length > 0) {
+    activeGrade.value = poemStore.allGrades[0]
   }
 })
 
 const currentPoems = computed(() => {
-  return poemStore.poemsByGrade.get(activeGrade.value) ?? []
+  return poemStore.poems.filter(p => p.grade === activeGrade.value)
 })
 
 function enableAllGrade() {
