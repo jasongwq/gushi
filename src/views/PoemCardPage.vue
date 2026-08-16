@@ -68,8 +68,8 @@ const allPoems = computed(() => {
   return enabled
 })
 
-// 滑动中的诗列表：从盲盒来时只显示盲盒4首，否则显示全部
-const poems = computed(() => fromMystery.value ? mysteryPoems.value : allPoems.value)
+// 滑动中的诗列表：从盲盒来时只显示已开盒的诗，否则显示全部
+const poems = computed(() => fromMystery.value ? mysteryRevealedPoems.value : allPoems.value)
 
 // 当前卡片索引
 const currentIndex = ref(0)
@@ -390,9 +390,10 @@ const progressPercent = computed(() =>
 // 详情页的进度信息
 const detailProgress = computed(() => {
   if (!currentPoem.value) return { text: '', percent: 0 }
-  const navList = fromMystery.value ? mysteryRevealedPoems.value : poems.value
+  const navList = poems.value
   const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
   const total = navList.length
+  if (idx < 0) return { text: '', percent: 0 }
   return {
     text: `${idx + 1}/${total}`,
     percent: ((idx + 1) / total) * 100,
@@ -420,7 +421,7 @@ const detailProgress = computed(() => {
       <div class="shrink-0 p-4 pb-2">
         <div class="flex items-center justify-between mb-2">
           <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
-          <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
+          <span data-testid="detail-progress" class="text-xs text-gray-400">{{ detailProgress.text }}</span>
         </div>
         <!-- 进度条 -->
         <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -483,9 +484,9 @@ const detailProgress = computed(() => {
 
       <!-- 卡片区域 -->
       <div class="flex-1 min-h-0 p-4 overflow-hidden">
-        <!-- 盲盒模式 -->
+        <!-- 盲盒模式：用 v-show 保留状态 -->
         <MysteryBox
-          v-if="viewMode === 'mystery' && allPoems.length > 0"
+          v-show="viewMode === 'mystery' && allPoems.length > 0"
           ref="mysteryBoxRef"
           :poems="allPoems"
           @revealed="onMysteryRevealed"
@@ -493,7 +494,7 @@ const detailProgress = computed(() => {
         />
 
         <!-- 滑动模式 -->
-        <CardSwiper ref="cardSwiperRef" v-else-if="viewMode === 'swiper' && poems.length > 0" v-model="currentIndex" :count="poems.length">
+        <CardSwiper v-show="viewMode === 'swiper'" v-if="poems.length > 0" ref="cardSwiperRef" v-model="currentIndex" :count="poems.length">
           <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
             <PoemCard
               :poem="poem"

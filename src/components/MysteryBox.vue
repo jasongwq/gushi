@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Poem } from '@/types'
 
 const props = defineProps<{
@@ -33,6 +33,13 @@ function initBoxes() {
 }
 
 initBoxes()
+
+// 当 poems prop 从空变为有数据时，重新初始化
+watch(() => props.poems.length, (newLen, oldLen) => {
+  if (oldLen === 0 && newLen > 0 && boxes.value.length === 0) {
+    initBoxes()
+  }
+})
 
 function openBox(index: number) {
   const box = boxes.value[index]
@@ -72,6 +79,7 @@ defineExpose({ refresh, revealedPoems, boxes })
       <button
         v-for="(box, index) in boxes"
         :key="index"
+        :data-state="box.state"
         class="aspect-square rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-300 cursor-pointer"
         :class="{
           'bg-gradient-to-br from-indigo-400 to-purple-500 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95': box.state === 'closed',
