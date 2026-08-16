@@ -391,3 +391,60 @@ test('展开-缩回-再展开循环正常', async ({ page }) => {
   expanded = await getActiveSlideInfo(page)
   expect(expanded.width / containerWidth).toBeGreaterThan(0.9)
 })
+
+test('水平滑动切诗后 RecitationCard 内容更新为下一首', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  // 进入背诵（点击 active slide 中心的卡片）
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  // 记录当前诗标题
+  const titleBefore = await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active')
+    return active?.querySelector('.recitation-card h2')?.textContent?.trim() ?? ''
+  })
+  expect(titleBefore).toBeTruthy()
+
+  // 水平左滑切到下一首
+  const cdp = await page.context().newCDPSession(page)
+  const box = await page.locator('.card-swiper').boundingBox()
+  const cx = box!.x + box!.width / 2
+  const cy = box!.y + box!.height / 2
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx + 100, y: cy }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx + 100 - 20 * i, y: cy }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(800)
+
+  // 记录切换后标题
+  const titleAfter = await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active')
+    return active?.querySelector('.recitation-card h2')?.textContent?.trim() ?? ''
+  })
+
+  // 内容应切换为下一首诗
+  expect(titleAfter).toBeTruthy()
+  expect(titleAfter).not.toBe(titleBefore)
+
+  await cdp.detach()
+  await context.close()
+})

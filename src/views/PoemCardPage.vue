@@ -10,6 +10,7 @@ import RecitationCard from '@/components/RecitationCard.vue'
 import { SwiperSlide } from 'swiper/vue'
 import type { Poem, RecitationResult, SourceType } from '@/types'
 import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
+import { createSwipeState, swipeStart, swipeMove, swipeEnd } from '@/utils/swipe'
 
 const router = useRouter()
 const poemStore = usePoemStore()
@@ -26,7 +27,6 @@ const viewMode = ref<ViewMode>('swiper')
 const expandedPoemId = ref<string | null>(null)
 
 // 盲盒来源标记
-const mysteryPoems = ref<Poem[]>([])
 const mysteryRevealedPoems = ref<Poem[]>([])
 const fromMystery = ref(false)
 
@@ -106,49 +106,49 @@ const EXPAND_TRANSITION_MS = 350
 let navTimer: ReturnType<typeof setTimeout> | null = null
 let isNavigating = ref(false)
 
-// 上滑缩回阈值（px）
-const SwipeUpThreshold = 50
+// 上滑缩回阈值（px）——由 utils/swipe 统一管理
 // 滑动起点记录（用于判断上滑手势）
-let swipeStartY: number | null = null
-let swipeStartX: number | null = null
+const swipeState = createSwipeState()
 
-// 卡片区域容器（用于原生触摸监听检测上滑）
-const cardAreaRef = ref<HTMLElement | null>(null)
+// 页面根容器（不随 viewMode 重建，用于稳定绑定触摸监听）
+const pageRootRef = ref<HTMLElement | null>(null)
 
 onMounted(() => {
-  cardAreaRef.value?.addEventListener('touchstart', onAreaTouchStart, { passive: true })
-  cardAreaRef.value?.addEventListener('touchmove', onAreaTouchMove, { passive: true })
+  // 绑定到页面根容器（不会因 CardSwiper 重建而失效）
+  // 用 capture 阶段确保能收到卡片区域内的触摸事件
+  pageRootRef.value?.addEventListener('touchstart', onAreaTouchStart, { passive: true, capture: true })
+  pageRootRef.value?.addEventListener('touchmove', onAreaTouchMove, { passive: true, capture: true })
+  pageRootRef.value?.addEventListener('touchend', () => swipeEnd(swipeState), { capture: true })
+  pageRootRef.value?.addEventListener('touchcancel', () => swipeEnd(swipeState), { capture: true })
 })
 
 onBeforeUnmount(() => {
   if (navTimer) clearTimeout(navTimer)
-  cardAreaRef.value?.removeEventListener('touchstart', onAreaTouchStart)
-  cardAreaRef.value?.removeEventListener('touchmove', onAreaTouchMove)
+  swipeEnd(swipeState)
+  pageRootRef.value?.removeEventListener('touchstart', onAreaTouchStart, { capture: true })
+  pageRootRef.value?.removeEventListener('touchmove', onAreaTouchMove, { capture: true })
+  pageRootRef.value?.removeEventListener('touchend', () => swipeEnd(swipeState), { capture: true })
+  pageRootRef.value?.removeEventListener('touchcancel', () => swipeEnd(swipeState), { capture: true })
 })
 
-// 原生触摸：记录起点（不拦截按钮，靠移动阈值区分点击 vs 上滑）
+// 原生触摸：记录起点（仅背诵模式；不拦截按钮，靠移动阈值区分点击 vs 上滑）
 function onAreaTouchStart(e: TouchEvent) {
   if (!expandedPoemId.value || isNavigating.value) return
+  // 只处理卡片区域内的触摸（避开顶部返回条、底部进度条）
+  const target = e.target as HTMLElement | null
+  if (!target?.closest?.('.card-swiper')) return
   const touch = e.touches[0]
-  if (touch) {
-    swipeStartY = touch.clientY
-    swipeStartX = touch.clientX
-  }
+  if (touch) swipeStart(swipeState, touch.clientX, touch.clientY)
 }
 
 // 原生触摸：垂直上滑超过阈值则缩回
 // 点击按钮时手指几乎不动（dy 小），不会触发缩回
 function onAreaTouchMove(e: TouchEvent) {
   if (!expandedPoemId.value || isNavigating.value) return
-  if (swipeStartY === null) return
   const touch = e.touches[0]
   if (!touch) return
-  const dy = touch.clientY - swipeStartY
-  const dx = touch.clientX - (swipeStartX ?? touch.clientX)
-  // 上滑（dy < 0）且垂直位移大于水平位移，超过阈值才缩回
-  if (dy < -SwipeUpThreshold && Math.abs(dy) > Math.abs(dx)) {
+  if (swipeMove(swipeState, touch.clientX, touch.clientY)) {
     collapseSlide()
-    swipeStartY = null
   }
 }
 
@@ -176,13 +176,17 @@ function onCardClick(poem: Poem) {
 }
 
 // ========== 详情页提交/导航 ==========
+// 导航到指定诗：先缩回浏览模式，Swiper 重建后用 initial-slide 对齐目标，再进入背诵
 function navigateToPoem(targetIndex: number) {
+  if (isNavigating.value) return
   isNavigating.value = true
   if (navTimer) clearTimeout(navTimer)
+  // 先切回浏览模式（触发 Swiper 重建，旧实例销毁）
   collapseSlide()
+  // 设置目标索引：Swiper 重建时 initial-slide 用新值对齐
+  currentIndex.value = targetIndex
+  // 等 DOM 更新后进入背诵模式（触发第二次重建，新实例定位到目标诗）
   nextTick(() => {
-    currentIndex.value = targetIndex
-    // 回到背诵模式（Swiper 重建后 initial-slide 对齐到目标）
     navTimer = setTimeout(() => {
       viewMode.value = 'recite'
       isNavigating.value = false
@@ -237,14 +241,9 @@ function goBackToBrowse() {
 // ========== 盲盒相关 ==========
 const mysteryBoxRef = ref<InstanceType<typeof MysteryBox> | null>(null)
 
-function onMysteryRevealed(_poem: Poem) {
-  // 盲盒揭示时不做跳转
-}
-
 function onMysterySelectAndEnter(poem: Poem) {
   fromMystery.value = true
   if (mysteryBoxRef.value) {
-    mysteryPoems.value = [...mysteryBoxRef.value.revealedPoems]
     mysteryRevealedPoems.value = mysteryBoxRef.value.boxes
       ? mysteryBoxRef.value.boxes
           .filter((b: { state: string; poem: Poem | null }) => b.state === 'revealed' && b.poem)
@@ -293,7 +292,7 @@ const detailProgress = computed(() => {
 </script>
 
 <template>
-  <div class="poem-card-page w-full max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
+  <div ref="pageRootRef" class="poem-card-page w-full max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
     <div class="flex flex-col flex-1 min-h-0">
       <!-- 顶部：背诵模式只保留返回条，浏览/盲盒模式显示完整筛选栏 -->
       <div v-if="viewMode === 'recite'" class="px-3 py-2 bg-white border-b border-gray-100 flex items-center">
@@ -328,13 +327,12 @@ const detailProgress = computed(() => {
       </div>
 
       <!-- 卡片区域 -->
-      <div ref="cardAreaRef" class="flex-1 min-h-0 p-4 overflow-hidden">
+      <div class="flex-1 min-h-0 p-4 overflow-hidden">
         <!-- 盲盒模式：用 v-show 保留状态 -->
         <MysteryBox
           v-show="viewMode === 'mystery' && allPoems.length > 0"
           ref="mysteryBoxRef"
           :poems="allPoems"
-          @revealed="onMysteryRevealed"
           @select="onMysterySelectAndEnter"
         />
 

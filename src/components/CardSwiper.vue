@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { Swiper } from 'swiper/vue'
 import { EffectCoverflow, FreeMode } from 'swiper/modules'
 import type { Swiper as SwiperType } from 'swiper/types'
@@ -26,10 +26,17 @@ const currentIndex = computed({
   set: (val) => emit('update:modelValue', val),
 })
 
-// 背诵模式也允许水平滑动切诗
+// 两种模式都允许水平滑动（浏览切卡 / 背诵切诗）
 const allowTouchMove = true
 
 let swiperInstance: SwiperType | null = null
+
+// 洗牌动画定时器，用于组件卸载时清理
+let shuffleTimer: ReturnType<typeof setTimeout> | null = null
+
+onBeforeUnmount(() => {
+  if (shuffleTimer) clearTimeout(shuffleTimer)
+})
 
 function onSwiper(swiper: SwiperType) {
   swiperInstance = swiper
@@ -60,7 +67,7 @@ function shuffle() {
   function animateStep() {
     if (step >= steps) {
       swiperInstance!.slideToLoop(targetIndex, 300)
-      setTimeout(() => {
+      shuffleTimer = setTimeout(() => {
         isShuffling.value = false
       }, 350)
       return
@@ -74,7 +81,7 @@ function shuffle() {
 
     step++
     const delay = 60 + (step / steps) * 100
-    setTimeout(animateStep, delay)
+    shuffleTimer = setTimeout(animateStep, delay)
   }
 
   animateStep()
