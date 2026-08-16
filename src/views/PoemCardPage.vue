@@ -123,19 +123,19 @@ function expandSlide(slideIndex: number) {
   expandedPoemId.value = poemId
   viewMode.value = 'recite'
 
-  // Add expanded class for CSS transition
-  slide.classList.add('expanded')
+  // 禁用 Swiper，防止 coverflow setTranslate 持续覆盖我们的 transform
+  swiper.enabled = false
 
-  // Override Swiper's inline coverflow transform for the expanded slide
-  // CSS !important on .expanded class handles transform: none
-  // We still need to dim other slides inline since CSS can't target siblings by class
-  nextTick(() => {
-    // Dim other slides
-    swiper.slides.forEach((s: HTMLElement, i: number) => {
-      if (i !== slideIndex) {
-        s.style.opacity = '0.3'
-      }
-    })
+  // 添加 expanded 类 + 手动设置 transform
+  slide.classList.add('expanded')
+  slide.style.transform = 'none'
+  slide.style.zIndex = '10'
+
+  // Dim other slides
+  swiper.slides.forEach((s: HTMLElement, i: number) => {
+    if (i !== slideIndex) {
+      s.style.opacity = '0.3'
+    }
   })
 }
 
@@ -146,10 +146,15 @@ function collapseSlide() {
   if (!swiper) return
   swiper.slides.forEach((slide: HTMLElement) => {
     slide.classList.remove('expanded')
+    slide.style.transform = ''
+    slide.style.zIndex = ''
     slide.style.opacity = ''
   })
   expandedPoemId.value = null
   viewMode.value = 'swiper'
+  // 重新启用 Swiper，恢复 coverflow 效果
+  swiper.enabled = true
+  swiper.update()
 }
 
 // 点击 PoemCard → 展开进入背诵
