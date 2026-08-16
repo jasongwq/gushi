@@ -8,3 +8,9 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+declare module 'vue-focus-lock' {
+  import type { DefineComponent } from 'vue'
+  const FocusLock: DefineComponent<{ returnFocus?: boolean }, {}, any>
+  export default FocusLock
+}
