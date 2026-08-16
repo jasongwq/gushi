@@ -34,18 +34,22 @@ const quizTypeLabels: Record<string, string> = {
 function getPoemTitle(poemId: string): string {
   return poemStore.getPoemById(poemId)?.title ?? ''
 }
+
+const enabledWrongBook = computed(() => {
+  return learningStore.wrongBook.filter(entry => poemStore.isEnabled(entry.poemId))
+})
 </script>
 
 <template>
   <div class="w-full max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-6">错题本</h2>
 
-    <div v-if="learningStore.wrongBook.length === 0" class="text-center text-gray-400 py-12">
+    <div v-if="enabledWrongBook.length === 0" class="text-center text-gray-400 py-12">
       暂无错题
     </div>
 
     <div v-else class="mb-6">
-      <div v-for="entry in learningStore.wrongBook" :key="entry.poemId + entry.quizType" class="p-3 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm">
+      <div v-for="entry in enabledWrongBook" :key="entry.poemId + entry.quizType" class="p-3 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm">
         <div class="flex items-center gap-2 mb-2">
           <span class="font-bold flex-1 cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300" @click="togglePopup(entry.poemId)">{{ getPoemTitle(entry.poemId) }}</span>
           <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
