@@ -34,8 +34,9 @@ function getStuckButtons(wrapper: ReturnType<typeof mountCard>) {
 }
 
 // Helper: find all "不会" buttons for lines
+// Scoped to the scroll area because author/dynasty "不会" buttons now live in the title section
 function getForgotButtons(wrapper: ReturnType<typeof mountCard>) {
-  return wrapper.findAll('button').filter(b => b.text() === '不会')
+  return wrapper.findAll('.overflow-y-auto button').filter(b => b.text() === '不会')
 }
 
 // Helper: find the "下一首" button
@@ -72,6 +73,49 @@ describe('RecitationCard', () => {
     expect(wrapper.text()).toContain('静夜思')
     expect(wrapper.text()).toContain('李白')
     expect(wrapper.text()).toContain('唐')
+  })
+
+  it('布局：作者/朝代 [不会] 位于标题下方，正文区独立滚动，4 按钮在正文区之后', () => {
+    const wrapper = mountCard()
+    const root = wrapper.find('.recitation-card')
+    const rootClasses = root.classes().join(' ')
+
+    // 根节点为 flex 纵向布局
+    expect(rootClasses).toContain('flex')
+    expect(rootClasses).toContain('flex-col')
+    expect(rootClasses).toContain('h-full')
+
+    // 标题区：标题 h2 所在容器包含作者/朝代 [不会] 按钮
+    const titleH2 = wrapper.find('.recitation-card h2')
+    const titleSection = titleH2.element.parentElement
+    expect(titleSection?.textContent).toContain('李白')
+    expect(titleSection?.textContent).toContain('唐')
+    expect(titleSection?.textContent).toContain('不会')
+
+    // 正文区：独立滚动容器，包含逐句标记与译文
+    const scrollArea = wrapper.find('.recitation-card .overflow-y-auto')
+    expect(scrollArea.exists()).toBe(true)
+    const scrollText = scrollArea.element.textContent ?? ''
+    expect(scrollText).toContain('床前明月光')
+    expect(scrollText).toContain('显示译文')
+
+    // 4 按钮（熟练/完全不会/上一首/下一首）在正文区外层（flex 根节点的直接子级，位于正文区之后）
+    const rootChildren = Array.from(root.element.children).map(c => c.className)
+    const btnMastered = wrapper.findAll('button').find(b => b.text() === '熟练')!
+    // 熟练按钮的祖先链中，应有一个父元素是根节点的直接子级，且该父元素位于正文区容器之后
+    let btnSection = btnMastered.element.parentElement
+    while (btnSection && btnSection.parentElement !== root.element) {
+      btnSection = btnSection.parentElement
+    }
+    expect(btnSection).toBeTruthy()
+    const scrollSection = scrollArea.element.parentElement
+    const scrollIndex = rootChildren.indexOf(scrollSection?.className ?? '')
+    const btnIndex = rootChildren.indexOf(btnSection!.className)
+    expect(btnIndex).toBeGreaterThan(scrollIndex)
+
+    // 底部原作者/朝代区已删除：全文"李白"只出现一次（标题区）
+    const bodyText = root.element.textContent ?? ''
+    expect(bodyText.split('李白').length - 1).toBe(1)
   })
 
   it('renders all poem lines', () => {
