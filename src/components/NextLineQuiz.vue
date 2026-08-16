@@ -1,9 +1,11 @@
 <template>
   <div class="next-line-quiz">
-    <p class="poem-title">
-      <span class="cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300" @click="popupVisible = !popupVisible">{{ poem?.title }}</span>
-      — {{ poem?.dynasty }}·{{ poem?.author }}
-    </p>
+    <div class="text-center mb-4">
+      <h2 class="text-2xl font-bold mb-1">
+        <span class="cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300" @click="popupVisible = !popupVisible">{{ poem?.title }}</span>
+      </h2>
+      <p class="text-gray-500">{{ poem?.dynasty }} · {{ poem?.author }}</p>
+    </div>
     <p class="question-text">{{ question.prompt }}</p>
     <div class="options">
       <button
