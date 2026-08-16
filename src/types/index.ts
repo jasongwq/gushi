@@ -1,4 +1,4 @@
-export type QuizType = 'fillBlank' | 'nextLine' | 'recite'
+export type QuizType = 'fillBlank' | 'nextLine' | 'recite' | 'line' | 'author' | 'dynasty'
 export type MasteryLevel = '新' | '学' | '熟' | '固'
 export type TextType = '五言' | '七言' | '其他'
 export type SourceType = 'smart' | 'grade' | 'all' | 'review' | 'wrong' | 'unproficient'
