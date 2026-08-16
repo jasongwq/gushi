@@ -38,13 +38,44 @@ export function exportData(): string {
   return JSON.stringify(loadData(), null, 2)
 }
 
+const defaultRecord = {
+  poemId: '',
+  lastReviewDate: '',
+  reviewCount: 0,
+  nextReviewDate: '',
+  correctness: [] as number[],
+  reciteCorrectness: [] as number[],
+  masteryLevel: '新' as const,
+  unproficient: false,
+  unproficientCorrectStreak: 0,
+}
+
+const defaultWrongEntry = {
+  poemId: '',
+  quizType: 'fillBlank' as const,
+  wrongCount: 0,
+  lastWrongDate: '',
+  unproficient: false,
+}
+
 export function importData(json: string): boolean {
   try {
     const parsed = JSON.parse(json)
     if (typeof parsed !== 'object' || parsed === null) return false
     if (!Array.isArray(parsed.records)) return false
     if (!parsed.settings || typeof parsed.settings !== 'object') return false
-    saveData(parsed as UserData)
+
+    const defaults = getDefaultData()
+    const data: UserData = {
+      records: parsed.records
+        .map((r: any) => ({ ...defaultRecord, ...r }))
+        .filter((r: any) => r.poemId),
+      quizResults: parsed.quizResults ?? defaults.quizResults,
+      reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
+      wrongBook: (parsed.wrongBook ?? []).map((w: any) => ({ ...defaultWrongEntry, ...w })),
+      settings: { ...defaults.settings, ...parsed.settings },
+    }
+    saveData(data)
     return true
   } catch {
     return false
