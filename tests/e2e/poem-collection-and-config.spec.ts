@@ -146,6 +146,60 @@ test.describe('poem collection page', () => {
     await page.click('text=返回首页')
     await expect(page.locator('h1')).toContainText('古诗抽查')
   })
+
+  // Feature: 按诗人分类
+  test('has category mode toggle buttons', async ({ page }) => {
+    await expect(page.locator('text=按年级')).toBeVisible()
+    await expect(page.locator('text=按诗人')).toBeVisible()
+  })
+
+  test('default category mode is grade', async ({ page }) => {
+    const gradeBtn = page.locator('button:has-text("按年级")')
+    await expect(gradeBtn).toHaveClass(/bg-indigo-500/)
+  })
+
+  test('switching to author mode shows author tabs', async ({ page }) => {
+    await page.click('text=按诗人')
+    // Grade tabs should be replaced by author tabs
+    const authorTabs = page.locator('.grade-tabs button')
+    await expect(authorTabs.first()).toBeVisible({ timeout: 5000 })
+    // Should have more than 7 authors (many poets)
+    const count = await authorTabs.count()
+    expect(count).toBeGreaterThan(0)
+  })
+
+  test('switching to author mode shows different poems', async ({ page }) => {
+    // Get first poem in grade mode
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const firstPoemGrade = await page.locator('.space-y-2 > div').first().textContent()
+
+    // Switch to author mode
+    await page.click('text=按诗人')
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const firstPoemAuthor = await page.locator('.space-y-2 > div').first().textContent()
+
+    // Poems should be different (different grouping)
+    expect(firstPoemGrade).not.toBe(firstPoemAuthor)
+  })
+
+  test('switching author tabs shows different poems', async ({ page }) => {
+    await page.click('text=按诗人')
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const firstPoemBefore = await page.locator('.space-y-2 > div').first().textContent()
+
+    // Click second author tab
+    await page.locator('.grade-tabs button').nth(1).click()
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const firstPoemAfter = await page.locator('.space-y-2 > div').first().textContent()
+    expect(firstPoemBefore).not.toBe(firstPoemAfter)
+  })
+
+  test('switching back to grade mode restores grade tabs', async ({ page }) => {
+    await page.click('text=按诗人')
+    await page.click('text=按年级')
+    const gradeTabs = page.locator('.grade-tabs button')
+    await expect(gradeTabs).toHaveCount(7)
+  })
 })
 
 // === 古诗启用配置页 ===

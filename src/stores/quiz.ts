@@ -53,14 +53,13 @@ export const useQuizStore = defineStore('quiz', () => {
       case 'fillBlank': {
         const fullText = poem.text.join('')
         const chars = [...fullText].filter(ch => CJK_CHAR_REGEX.test(ch))
-        const blankCount = Math.min(3, Math.max(1, Math.floor(chars.length / 5)))
-        const positions = shuffleArray(chars.map((_, i) => i)).slice(0, blankCount).sort((a, b) => a - b)
-        const blankChar = chars[positions[0]]
+        const blankPosition = Math.floor(Math.random() * chars.length)
+        const blankChar = chars[blankPosition]
         const prompt = poem.text.join('\n')
         const options = generateFillBlankOptions(poem, allPoems, blankChar, 0)
         return {
           poemId: poem.id, quizType: 'fillBlank', prompt, options,
-          correctIndex: options.indexOf(blankChar), blankPositions: positions,
+          correctIndex: options.indexOf(blankChar), blankPositions: [blankPosition],
         }
       }
       case 'nextLine': {

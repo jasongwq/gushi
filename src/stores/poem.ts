@@ -92,6 +92,20 @@ export const usePoemStore = defineStore('poem', () => {
     return gradePoems.filter(p => ids.has(p.id)).length
   }
 
+  const poemsByAuthor = computed(() => {
+    const map = new Map<string, Poem[]>()
+    for (const poem of poems.value) {
+      const list = map.get(poem.author) ?? []
+      list.push(poem)
+      map.set(poem.author, list)
+    }
+    return map
+  })
+
+  const authors = computed(() => {
+    return [...new Set(poems.value.map(p => p.author))].sort()
+  })
+
   async function fetchPoems() {
     if (poems.value.length > 0) return
     loading.value = true
@@ -107,5 +121,5 @@ export const usePoemStore = defineStore('poem', () => {
     return poems.value.find(p => p.id === id)
   }
 
-  return { poems, loading, grades, poemsByGrade, enabledPoems, enabledCount, fetchPoems, getPoemById, isEnabled, togglePoem, toggleGrade, gradeEnabledCount }
+  return { poems, loading, grades, poemsByGrade, poemsByAuthor, authors, enabledPoems, enabledCount, fetchPoems, getPoemById, isEnabled, togglePoem, toggleGrade, gradeEnabledCount }
 })

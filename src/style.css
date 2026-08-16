@@ -33,7 +33,7 @@ body {
 }
 
 .poem-title {
-  @apply text-sm text-gray-500 mb-2;
+  @apply text-base text-gray-500 mb-2;
 }
 
 .question-text {

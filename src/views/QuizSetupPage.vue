@@ -1,32 +1,42 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import type { QuizType, SourceType } from '@/types'
 
 const router = useRouter()
+const route = useRoute()
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
+onMounted(() => poemStore.fetchPoems())
+
+const isParentMode = computed(() => route.query.mode === 'parent')
+
 const source = ref<SourceType>(learningStore.settings.source || 'smart')
-const quizTypes = ref<QuizType[]>(learningStore.settings.quizTypes.length > 0 ? learningStore.settings.quizTypes : ['fillBlank', 'nextLine'])
 const count = ref(learningStore.settings.quizCount || 10)
 const selectedGrades = ref<string[]>(learningStore.settings.selectedGrades || [])
 const errorMsg = ref('')
 
+// 家长抽查：古诗抽背 + 上下句接龙；自主练习：补字选择 + 上下句接龙
+const parentQuizTypes = ref<QuizType[]>(['recite'])
+const selfQuizTypes = ref<QuizType[]>(learningStore.settings.quizTypes.length > 0 ? learningStore.settings.quizTypes : ['fillBlank', 'nextLine'])
+
+const quizTypes = computed(() => isParentMode.value ? parentQuizTypes.value : selfQuizTypes.value)
+
 function saveSettings() {
   learningStore.updateSettings({
     source: source.value,
-    quizTypes: quizTypes.value,
+    quizTypes: isParentMode.value ? selfQuizTypes.value : quizTypes.value,
     quizCount: count.value,
     selectedGrades: selectedGrades.value,
   })
 }
 
-watch([source, quizTypes, count, selectedGrades], saveSettings, { deep: true })
+watch([source, selfQuizTypes, count, selectedGrades], saveSettings, { deep: true })
 
 const sourceOptions: { value: SourceType; label: string }[] = [
   { value: 'smart', label: '智能混合' },
@@ -37,7 +47,12 @@ const sourceOptions: { value: SourceType; label: string }[] = [
   { value: 'unproficient', label: '不熟练' },
 ]
 
-const quizTypeOptions: { value: QuizType; label: string }[] = [
+const parentQuizTypeOptions: { value: QuizType; label: string }[] = [
+  { value: 'recite', label: '古诗抽背' },
+  { value: 'nextLine', label: '上下句接龙' },
+]
+
+const selfQuizTypeOptions: { value: QuizType; label: string }[] = [
   { value: 'fillBlank', label: '补字选择' },
   { value: 'nextLine', label: '上下句接龙' },
 ]
@@ -53,9 +68,15 @@ const canStart = computed(() => {
 })
 
 function toggleQuizType(type: QuizType) {
-  const idx = quizTypes.value.indexOf(type)
-  if (idx >= 0) quizTypes.value.splice(idx, 1)
-  else quizTypes.value.push(type)
+  if (isParentMode.value) {
+    const idx = parentQuizTypes.value.indexOf(type)
+    if (idx >= 0) parentQuizTypes.value.splice(idx, 1)
+    else parentQuizTypes.value.push(type)
+  } else {
+    const idx = selfQuizTypes.value.indexOf(type)
+    if (idx >= 0) selfQuizTypes.value.splice(idx, 1)
+    else selfQuizTypes.value.push(type)
+  }
 }
 
 function toggleGrade(grade: string) {
@@ -68,18 +89,34 @@ function startQuiz() {
   if (!canStart.value) return
   errorMsg.value = ''
   const grades = source.value === 'grade' ? selectedGrades.value : undefined
-  const success = quizStore.startQuiz(source.value, quizTypes.value, count.value, grades)
-  if (!success) {
-    errorMsg.value = '没有符合条件的题目，请调整设置'
+
+  // 如果选中了古诗抽背，走背诵流程
+  if (quizTypes.value.includes('recite')) {
+    const success = quizStore.startRecitation(source.value, count.value, grades)
+    if (!success) {
+      errorMsg.value = '没有符合条件的古诗，请调整设置'
+      return
+    }
+    router.push({ name: 'recitation-play' })
     return
   }
-  router.push({ name: 'quiz-play' })
+
+  // 否则走普通测验流程
+  const normalTypes = quizTypes.value.filter(t => t !== 'recite') as QuizType[]
+  if (normalTypes.length > 0) {
+    const success = quizStore.startQuiz(source.value, normalTypes, count.value, grades)
+    if (!success) {
+      errorMsg.value = '没有符合条件的题目，请调整设置'
+      return
+    }
+    router.push({ name: 'quiz-play' })
+  }
 }
 </script>
 
 <template>
   <div class="max-w-md mx-auto p-4">
-    <h2 class="text-xl font-bold text-center mb-6">抽查设置</h2>
+    <h2 class="text-xl font-bold text-center mb-6">{{ isParentMode ? '家长抽查' : '抽查设置' }}</h2>
 
     <section class="mb-6">
       <h3 class="text-sm text-gray-500 mb-2">题目来源</h3>
@@ -107,7 +144,7 @@ function startQuiz() {
     <section class="mb-6">
       <h3 class="text-sm text-gray-500 mb-2">题目类型</h3>
       <div class="flex flex-col gap-2">
-        <label v-for="opt in quizTypeOptions" :key="opt.value" class="flex items-center gap-2 text-base cursor-pointer">
+        <label v-for="opt in (isParentMode ? parentQuizTypeOptions : selfQuizTypeOptions)" :key="opt.value" class="flex items-center gap-2 text-base cursor-pointer">
           <input
             type="checkbox"
             :checked="quizTypes.includes(opt.value)"

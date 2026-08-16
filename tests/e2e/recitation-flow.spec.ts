@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test'
 
-test('navigate to recitation setup from home', async ({ page }) => {
+// Feature: 古诗抽背 is now accessed via 家长抽查
+test('navigate to recitation setup via parent quiz', async ({ page }) => {
   await page.goto('/')
-  await page.click('text=古诗抽背')
-  await expect(page.locator('h2')).toContainText('抽背设置')
+  await page.click('text=家长抽查')
+  await expect(page.locator('h2')).toContainText('家长抽查')
 })
 
 test('recitation setup page shows source and count options', async ({ page }) => {

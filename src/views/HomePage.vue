@@ -16,10 +16,6 @@
         <div class="text-3xl mb-2">📝</div>
         <div class="font-medium">自主练习</div>
       </button>
-      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startRecitation">
-        <div class="text-3xl mb-2">📖</div>
-        <div class="font-medium">古诗抽背</div>
-      </button>
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="router.push({ name: 'recite' })">
         <div class="text-3xl mb-2">🎯</div>
         <div class="font-medium">自评背诵</div>
@@ -65,10 +61,6 @@ onMounted(() => poemStore.fetchPoems())
 
 function startReview() {
   router.push({ name: 'quiz-setup', query: { source: 'review' } })
-}
-
-function startRecitation() {
-  router.push({ name: 'recitation-setup' })
 }
 
 function startQuiz(mode: string) {

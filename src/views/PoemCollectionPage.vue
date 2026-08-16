@@ -2,16 +2,45 @@
   <div class="max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-4">古诗集合</h2>
 
-    <div class="grade-tabs flex overflow-x-auto gap-1 mb-4 pb-1">
+    <!-- 分类切换 -->
+    <div class="flex gap-2 mb-4">
       <button
-        v-for="grade in poemStore.grades"
-        :key="grade"
-        :class="['px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition', activeGrade === grade ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
-        @click="activeGrade = grade"
-      >
-        {{ grade }}
-      </button>
+        :class="['flex-1 p-2 rounded-lg text-sm font-medium transition', categoryMode === 'grade' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
+        @click="categoryMode = 'grade'"
+      >按年级</button>
+      <button
+        :class="['flex-1 p-2 rounded-lg text-sm font-medium transition', categoryMode === 'author' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
+        @click="categoryMode = 'author'"
+      >按诗人</button>
     </div>
+
+    <!-- 按年级 -->
+    <template v-if="categoryMode === 'grade'">
+      <div class="grade-tabs flex overflow-x-auto gap-1 mb-4 pb-1">
+        <button
+          v-for="grade in poemStore.grades"
+          :key="grade"
+          :class="['px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition', activeGrade === grade ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
+          @click="activeGrade = grade"
+        >
+          {{ grade }}
+        </button>
+      </div>
+    </template>
+
+    <!-- 按诗人 -->
+    <template v-else>
+      <div class="grade-tabs flex overflow-x-auto gap-1 mb-4 pb-1">
+        <button
+          v-for="author in poemStore.authors"
+          :key="author"
+          :class="['px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition', activeAuthor === author ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
+          @click="activeAuthor = author"
+        >
+          {{ author }}
+        </button>
+      </div>
+    </template>
 
     <div v-if="currentPoems.length === 0" class="text-center text-gray-400 py-12">
       暂无古诗
@@ -54,17 +83,26 @@ import type { Poem } from '@/types'
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
+const categoryMode = ref<'grade' | 'author'>('grade')
 const activeGrade = ref('')
+const activeAuthor = ref('')
 
 onMounted(async () => {
   await poemStore.fetchPoems()
   if (poemStore.grades.length > 0) {
     activeGrade.value = poemStore.grades[0]
   }
+  if (poemStore.authors.length > 0) {
+    activeAuthor.value = poemStore.authors[0]
+  }
 })
 
 const currentPoems = computed(() => {
-  return poemStore.poemsByGrade.get(activeGrade.value) ?? []
+  if (categoryMode.value === 'grade') {
+    return poemStore.poemsByGrade.get(activeGrade.value) ?? []
+  } else {
+    return poemStore.poemsByAuthor.get(activeAuthor.value) ?? []
+  }
 })
 
 const popupVisible = ref(false)

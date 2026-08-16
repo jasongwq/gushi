@@ -1,14 +1,37 @@
 import { test, expect } from '@playwright/test'
 
+// Helper: clear localStorage and reload to ensure clean state
+async function cleanState(page: import('@playwright/test').Page) {
+  await page.goto('/')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+  await page.waitForTimeout(500)
+}
+
 test('home page loads correctly', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('h1')).toContainText('古诗抽查')
 })
 
-test('navigate to quiz setup', async ({ page }) => {
+test('navigate to self quiz setup', async ({ page }) => {
   await page.goto('/')
   await page.click('text=自主练习')
   await expect(page.locator('h2')).toContainText('抽查设置')
+})
+
+test('navigate to parent quiz setup', async ({ page }) => {
+  await page.goto('/')
+  await page.click('text=家长抽查')
+  await expect(page.locator('h2')).toContainText('家长抽查')
+})
+
+test('home page has 3 mode buttons', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('text=家长抽查')).toBeVisible()
+  await expect(page.locator('text=自主练习')).toBeVisible()
+  await expect(page.locator('text=自评背诵')).toBeVisible()
+  // 古诗抽背 should NOT be on home page anymore
+  await expect(page.locator('text=古诗抽背')).not.toBeVisible()
 })
 
 test('wrong book page', async ({ page }) => {
@@ -26,7 +49,7 @@ test('settings page', async ({ page }) => {
   await expect(page.locator('h2')).toContainText('设置')
 })
 
-test('complete quiz flow', async ({ page }) => {
+test('complete quiz flow (self mode)', async ({ page }) => {
   await page.goto('/')
   await page.click('text=自主练习')
   await page.click('text=5')
@@ -41,7 +64,8 @@ test('complete quiz flow', async ({ page }) => {
 
 // Bug fix 1: Quiz setup config persists after navigating away
 test('quiz setup config persists when returning from home', async ({ page }) => {
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
+  await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
   await page.click('text=20')
   await page.click('text=补字选择')
@@ -61,11 +85,10 @@ test('quiz setup config persists when returning from home', async ({ page }) => 
 
 // Bug fix 2: Fill-blank quiz shows blanks (____) in poem text
 test('fill-blank quiz shows blanks in poem text', async ({ page }) => {
-  // Reset persisted config from previous test
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await cleanState(page)
 
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
+  await page.waitForSelector('select', { timeout: 10000 })
 
   // Select only fillBlank quiz type - uncheck 上下句接龙
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -84,14 +107,36 @@ test('fill-blank quiz shows blanks in poem text', async ({ page }) => {
   await expect(poemText).toContainText('____')
 })
 
+// Feature: Fill-blank quiz shows exactly one blank (____)
+test('fill-blank quiz shows exactly one blank', async ({ page }) => {
+  await cleanState(page)
+
+  await page.goto('/#/quiz/setup?mode=self')
+  await page.waitForSelector('select', { timeout: 10000 })
+
+  // Select only fillBlank quiz type
+  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  if (await nextLineCheckbox.isChecked()) {
+    await nextLineCheckbox.click()
+  }
+  await page.click('text=5')
+  await page.click('text=开始抽查')
+
+  await expect(page.locator('.option-btn').first()).toBeVisible({ timeout: 5000 })
+
+  const poemText = await page.locator('.poem-text').textContent()
+  // Count occurrences of ____ - should be exactly 1
+  const blankCount = (poemText?.match(/____/g) || []).length
+  expect(blankCount).toBe(1)
+})
+
 // Bug fix 3: Empty quiz shows error message instead of "答题完成"
 test('empty quiz source shows error message', async ({ page }) => {
-  // Go to app and clear data
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await cleanState(page)
 
   // Go to quiz setup and select "错题本" source (no wrong answers)
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
+  await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'wrong')
   await page.click('text=开始抽查')
 
@@ -103,10 +148,9 @@ test('empty quiz source shows error message', async ({ page }) => {
 // Bug fix 4: Wrong book can mark unproficient
 test('wrong book can mark entry as unproficient', async ({ page }) => {
   test.setTimeout(60000)
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await cleanState(page)
 
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -132,9 +176,10 @@ test('wrong book can mark entry as unproficient', async ({ page }) => {
   }
 })
 
-// Bug fix 5: SelectTitle quiz type is not available
-test('selectTitle quiz type is not available in setup', async ({ page }) => {
-  await page.goto('/#/quiz/setup')
+// Bug fix 5: SelectTitle quiz type is not available in self mode
+test('self quiz mode shows fillBlank and nextLine options', async ({ page }) => {
+  await page.goto('/#/quiz/setup?mode=self')
+  await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 })
   const checkboxes = page.locator('input[type="checkbox"]')
   await expect(checkboxes).toHaveCount(2)
   await expect(page.locator('text=补字选择')).toBeVisible()
@@ -142,13 +187,53 @@ test('selectTitle quiz type is not available in setup', async ({ page }) => {
   await expect(page.locator('text=选标题/作者/朝代')).not.toBeVisible()
 })
 
+// Feature: Parent quiz mode shows recite and nextLine options (no fillBlank)
+test('parent quiz mode shows recite and nextLine options only', async ({ page }) => {
+  await page.goto('/#/quiz/setup?mode=parent')
+  await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 })
+  const checkboxes = page.locator('input[type="checkbox"]')
+  await expect(checkboxes).toHaveCount(2)
+  await expect(page.locator('text=古诗抽背')).toBeVisible()
+  await expect(page.locator('text=上下句接龙')).toBeVisible()
+  // 补字选择 should NOT be in parent mode
+  await expect(page.locator('text=补字选择')).not.toBeVisible()
+})
+
+// Feature: Parent quiz mode defaults to 古诗抽背
+test('parent quiz mode defaults to recite checked', async ({ page }) => {
+  await page.goto('/#/quiz/setup?mode=parent')
+  await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 })
+  const reciteCheckbox = page.locator('input[type="checkbox"]').first()
+  await expect(reciteCheckbox).toBeChecked()
+})
+
+// Feature: Parent quiz mode starts recitation flow
+test('parent quiz mode starts recitation when recite is checked', async ({ page }) => {
+  test.setTimeout(60000)
+  await cleanState(page)
+
+  await page.goto('/#/quiz/setup?mode=parent')
+  await page.waitForSelector('select', { timeout: 10000 })
+  await page.selectOption('select', 'all')
+  await page.click('text=5')
+  await page.click('text=开始抽查')
+
+  // Should navigate to recitation play page (not quiz play)
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 10000 })
+})
+
+// Feature: Parent quiz mode title shows "家长抽查"
+test('parent quiz mode title shows 家长抽查', async ({ page }) => {
+  await page.goto('/#/quiz/setup?mode=parent')
+  await expect(page.locator('h2')).toContainText('家长抽查')
+})
+
 // Feature: Auto-navigate to result page after last question
 test('answering all questions auto-navigates to result page', async ({ page }) => {
   test.setTimeout(60000)
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await cleanState(page)
 
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
@@ -172,10 +257,9 @@ test('answering all questions auto-navigates to result page', async ({ page }) =
 // Feature: Result page shows prompt and user answer for all questions
 test('result page shows prompt and user answer for each question', async ({ page }) => {
   test.setTimeout(60000)
-  await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await cleanState(page)
 
-  await page.goto('/#/quiz/setup')
+  await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
   const nextLineCheckbox = page.locator('input[type="checkbox"]').last()

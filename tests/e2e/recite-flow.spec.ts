@@ -28,6 +28,45 @@ test('recite page: select all source and start', async ({ page }) => {
   await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 10000 })
 })
 
+// Feature: 自评背诵默认不显示作者和朝代
+test('recite page: author and dynasty are hidden before expanding', async ({ page }) => {
+  await page.goto('/#/recite')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await page.click('text=全部古诗')
+  await page.click('text=开始背诵')
+
+  await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 10000 })
+
+  // The poem title should be visible
+  await expect(page.locator('h2.text-3xl')).toBeVisible()
+
+  // Author/dynasty info should NOT be visible (it's hidden until expanded)
+  // The gray text with "·" is the author/dynasty line
+  const authorDynastyLine = page.locator('h2.text-3xl + p.text-gray-500')
+  await expect(authorDynastyLine).not.toBeVisible()
+})
+
+test('recite page: author and dynasty are shown after expanding', async ({ page }) => {
+  await page.goto('/#/recite')
+  await page.evaluate(() => localStorage.clear())
+  await page.reload()
+
+  await page.click('text=全部古诗')
+  await page.click('text=开始背诵')
+
+  await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 10000 })
+
+  // Click to expand
+  await page.click('text=查看原文')
+
+  // Now author/dynasty should be visible
+  const authorDynastyLine = page.locator('h2.text-3xl + p.text-gray-500')
+  await expect(authorDynastyLine).toBeVisible()
+  await expect(authorDynastyLine).toContainText('·')
+})
+
 test('recite flow: expand text and self-evaluate correct', async ({ page }) => {
   await page.goto('/#/recite')
   await page.evaluate(() => localStorage.clear())
