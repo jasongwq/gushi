@@ -477,6 +477,11 @@ test.describe('disabled poems are hidden from collection and home', () => {
   test('home page shows enabled poem count, not total', async ({ page }) => {
     // Go to home page first - should show total count
     await page.goto('/')
+    // Wait for poems to load (the count appears after fetchPoems)
+    await page.waitForFunction(() => {
+      const el = document.querySelector('a[href*="poems"] .text-indigo-500')
+      return el && Number(el.textContent) > 0
+    }, { timeout: 10000 })
     const countBefore = await page.locator('a[href*="poems"] .text-indigo-500').textContent()
 
     // Go to config and disable a poem
@@ -488,6 +493,11 @@ test.describe('disabled poems are hidden from collection and home', () => {
 
     // Go back to home page
     await page.goto('/')
+    // Wait for poems to load
+    await page.waitForFunction(() => {
+      const el = document.querySelector('a[href*="poems"] .text-indigo-500')
+      return el && Number(el.textContent) > 0
+    }, { timeout: 10000 })
     const countAfter = await page.locator('a[href*="poems"] .text-indigo-500').textContent()
 
     // Count should be one less
