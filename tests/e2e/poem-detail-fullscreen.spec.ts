@@ -462,6 +462,27 @@ test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ bro
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
   await page.waitForTimeout(500)
 
+  // 跳转到长诗《劝学》（63 句，poems.json index 150），验证正文确实可滚动
+  // 直接用 Swiper 实例的 slideToLoop（loop 模式下按真实 index 定位）
+  const nav = await page.evaluate(() => {
+    const swiper = (document.querySelector('.swiper') as any)?.swiper
+    if (!swiper) return null
+    swiper.slideToLoop(150, 0)
+    return { realIndex: swiper.realIndex }
+  })
+  expect(nav).toBeTruthy()
+  await page.waitForTimeout(800)
+
+  // 确认已定位到长诗
+  const landed = await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active')
+    const h2 = active?.querySelector('h2')?.textContent?.trim() ?? ''
+    const realIndex = (document.querySelector('.swiper') as any)?.swiper?.realIndex ?? -1
+    return { title: h2, realIndex }
+  })
+  expect(landed.title).toBe('劝学')
+  expect(landed.realIndex).toBe(150)
+
   // 进入背诵（点击 active slide 中心的卡片）
   await page.evaluate(() => {
     const active = document.querySelector('.swiper-slide-active') as HTMLElement
@@ -504,7 +525,8 @@ test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ bro
       // 底部按钮行紧贴卡片底边（卡片内按钮下方无残留内容）
       lastBtnNearCardBottom: cardBottom - lastBtnBottom < 40,
       // 卡片底部接近视口底部（卡片占满可用高度，而非只包住正文）
-      cardNearViewportBottom: viewportH - cardBottom < 120,
+      // 双向判断：若卡片超出视口底部（cardBottom > viewportH），差值变负但 Math.abs 依然可检测偏离
+      cardNearViewportBottom: Math.abs(viewportH - cardBottom) < 120,
       // 作者/朝代与标题同处标题区（h2 父容器包含「朝代 · 作者」）
       authorInTitle: (() => {
         if (!h2) return false
@@ -516,6 +538,8 @@ test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ bro
   const l = layout!
   expect(l.rootClasses).toContain('flex-col')
   expect(l.hasScrollArea).toBe(true)
+  // 长诗正文确实可滚动：内容高度 > 可视高度
+  expect(l.scrollHeight).toBeGreaterThan(l.scrollClientHeight)
   // 熟练按钮在正文滚动区下方（按钮区不在正文末尾、固定于卡片底部）
   expect(l.masteredBelowScrollArea).toBe(true)
   // 底部按钮行紧贴卡片底边，且卡片占满可用高度 → 按钮不会随正文滚动
@@ -524,5 +548,102 @@ test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ bro
   // 作者/朝代在标题下方（与标题同一标题区）
   expect(l.authorInTitle).toBe(true)
 
+  // 滚动正文后，按钮位置不变（固定在底部不随内容滚动）
+  // 注：此处用鼠标滚轮滚动正文（验证内容滚动且按钮固定）。
+  // 触屏上滑滚动受 PoemCardPage 页面级上滑缩回手势拦截会先触发缩回 —— 见下方 fixme 用例。
+  const scrollAreaBox = await page.evaluate(() => {
+    const scrollArea = document.querySelector('.swiper-slide-active .recitation-card .overflow-y-auto')!
+    return scrollArea.getBoundingClientRect()
+  })
+  await page.mouse.move(scrollAreaBox.x + scrollAreaBox.width / 2, scrollAreaBox.y + scrollAreaBox.height / 2)
+  await page.mouse.wheel(0, 300)
+  await page.waitForTimeout(500)
+
+  const afterScroll = await page.evaluate(() => {
+    const card = document.querySelector('.swiper-slide-active .recitation-card')
+    if (!card) return null
+    const scrollArea = card.querySelector('.overflow-y-auto')
+    const masteredBtn = [...card.querySelectorAll('button')].find(b => b.textContent?.trim() === '熟练')
+    return {
+      scrollTop: scrollArea?.scrollTop ?? 0,
+      masteredTop: masteredBtn ? Math.round(masteredBtn.getBoundingClientRect().top) : -1,
+    }
+  })
+  expect(afterScroll).toBeTruthy()
+  const a = afterScroll!
+  // 正文确实滚动了
+  expect(a.scrollTop).toBeGreaterThan(0)
+  // 熟练按钮位置不变（固定底部）
+  expect(a.masteredTop).toBe(l.masteredTop)
+
+  await context.close()
+})
+
+test.fixme('背诵模式长诗正文触屏上滑可滚动（待修复：上滑被页面手势拦截缩回）', async ({ browser }) => {
+  // 已知问题：正文滚动区位于 .card-swiper 内，页面根容器的 capture 阶段 touchmove 监听
+  // （PoemCardPage.onAreaTouchMove + swipeMove）会在原生滚动前把垂直上滑识别为「上滑缩回」，
+  // 导致在长诗正文里向上滑动时卡片直接缩回浏览模式，正文无法滚动。
+  // 修复方向：页面手势监听应忽略以 .overflow-y-auto 为起点的触摸（或滚动区 stopPropagation）。
+  // 该用例待修复后取消 fixme。
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  await page.evaluate(() => {
+    const swiper = (document.querySelector('.swiper') as any)?.swiper
+    if (swiper) swiper.slideToLoop(150, 0)
+  })
+  await page.waitForTimeout(800)
+
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  const scrollAreaBox = await page.evaluate(() => {
+    const scrollArea = document.querySelector('.swiper-slide-active .recitation-card .overflow-y-auto')!
+    return scrollArea.getBoundingClientRect()
+  })
+  const cdp = await page.context().newCDPSession(page)
+  // 在正文滚动区内向上滑动（touch 从滚动区底部滑向顶部）
+  const sx = scrollAreaBox.x + scrollAreaBox.width / 2
+  const syTop = scrollAreaBox.y + scrollAreaBox.height - 20
+  const syBottom = scrollAreaBox.y + 20
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: sx, y: syTop }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: sx, y: syTop - (syTop - syBottom) * i / 10 }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(500)
+
+  const result = await page.evaluate(() => {
+    const card = document.querySelector('.swiper-slide-active .recitation-card')
+    if (!card) return null
+    const scrollArea = card.querySelector('.overflow-y-auto')
+    const masteredBtn = [...card.querySelectorAll('button')].find(b => b.textContent?.trim() === '熟练')
+    return {
+      scrollTop: scrollArea?.scrollTop ?? 0,
+      masteredTop: masteredBtn ? Math.round(masteredBtn.getBoundingClientRect().top) : -1,
+    }
+  })
+  expect(result).toBeTruthy()
+  const r = result!
+  // 触屏上滑后正文应仍可滚动（不缩回）
+  expect(r.scrollTop).toBeGreaterThan(0)
+
+  await cdp.detach()
   await context.close()
 })
