@@ -10,6 +10,7 @@ import RecitationCard from '@/components/RecitationCard.vue'
 import { SwiperSlide } from 'swiper/vue'
 import type { Poem, RecitationResult, SourceType } from '@/types'
 import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
+import { useSwipeHandoff } from '@/composables/useSwipeHandoff'
 
 const router = useRouter()
 const poemStore = usePoemStore()
@@ -173,7 +174,7 @@ function onDetailGoPrev() {
 }
 
 // ========== 跟手拖拽返回 ==========
-const SWIPE_THRESHOLD = 100
+const SWIPE_THRESHOLD = 50
 
 type DragPhase = 'idle' | 'pending' | 'dragging' | 'transitioning' | 'handed-off'
 const dragPhase = ref<DragPhase>('idle')
@@ -182,6 +183,17 @@ let dragStartX = 0
 let dragStartY = 0
 let dragDirection: 'h' | 'v' | null = null
 const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
+
+const { handOffToSwiper: doHandOff } = useSwipeHandoff({
+  get dragPhase() { return dragPhase },
+  get dragStartX() { return dragStartX },
+  get dragStartY() { return dragStartY },
+  get viewLayer() { return viewLayer },
+  get currentIndex() { return currentIndex },
+  get currentPoemId() { return currentPoem.value?.id },
+  get poems() { return poems.value },
+  getSwiperInstance: () => cardSwiperRef.value?.getSwiperInstance?.() as any ?? null,
+})
 
 const dragProgress = computed(() =>
   Math.min(Math.abs(dragDeltaX.value) / SWIPE_THRESHOLD, 1)
@@ -257,7 +269,7 @@ function onDetailTouchMove(e: TouchEvent) {
 
   // 超过阈值 → 立即切换到浏览层，将手势转交给 Swiper
   if (Math.abs(dragDeltaX.value) >= SWIPE_THRESHOLD) {
-    handOffToSwiper(e)
+    doHandOff(touch)
   }
 }
 
@@ -286,49 +298,47 @@ function onDetailTouchEnd() {
   }
 }
 
-// 将手势转交给 Swiper：详情层消失，Swiper 接管触摸
-function handOffToSwiper(e: TouchEvent) {
-  dragPhase.value = 'handed-off'
-  viewLayer.value = 'browse'
-  const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
-  if (idx >= 0) currentIndex.value = idx
+// ========== Pointer 事件（桌面端鼠标拖拽） ==========
+function onDetailPointerDown(e: PointerEvent) {
+  if (e.pointerType === 'touch') return // 触摸设备由 touch 事件处理，避免双重触发
+  if (dragPhase.value !== 'idle' && dragPhase.value !== 'pending') return
+  dragStartX = e.clientX
+  dragStartY = e.clientY
+  dragDirection = null
+  dragPhase.value = 'pending'
+  dragDeltaX.value = 0
+}
 
-  // 在下一帧，向 Swiper 的 DOM 元素派发 touchstart，让 Swiper 开始追踪触摸
-  nextTick(() => {
-    const swiperEl = cardSwiperRef.value?.$el as HTMLElement
-    if (!swiperEl) {
-      dragPhase.value = 'idle'
-      return
-    }
+function onDetailPointerMove(e: PointerEvent) {
+  if (e.pointerType === 'touch') return
+  if (dragPhase.value !== 'pending' && dragPhase.value !== 'dragging') return
+  const deltaX = e.clientX - dragStartX
+  const deltaY = e.clientY - dragStartY
 
-    const touch = e.touches[0]
+  if (dragDirection === null) {
+    if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return
+    dragDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'h' : 'v'
+  }
 
-    // 派发 touchstart 到 Swiper 元素
-    const startTouch = new Touch({
-      identifier: touch.identifier,
-      target: swiperEl,
-      clientX: touch.clientX,
-      clientY: touch.clientY,
-      pageX: touch.pageX,
-      pageY: touch.pageY,
-      radiusX: touch.radiusX,
-      radiusY: touch.radiusY,
-      rotationAngle: touch.rotationAngle,
-      force: touch.force,
-    })
-
-    swiperEl.dispatchEvent(new TouchEvent('touchstart', {
-      touches: [startTouch],
-      targetTouches: [startTouch],
-      changedTouches: [startTouch],
-      bubbles: true,
-      cancelable: true,
-    }))
-
-    // 后续的 touchmove 和 touchend 会被 Swiper 自然接收
-    // 因为详情层已经消失，浏览层在下方
+  if (dragDirection === 'v') {
     dragPhase.value = 'idle'
-  })
+    return
+  }
+
+  dragPhase.value = 'dragging'
+  dragDeltaX.value = deltaX
+
+  if (Math.abs(dragDeltaX.value) >= SWIPE_THRESHOLD) {
+    doHandOff({
+      clientX: e.clientX,
+      clientY: e.clientY,
+      identifier: 0,
+    })
+  }
+}
+
+function onDetailPointerEnd(_e: PointerEvent) {
+  onDetailTouchEnd()
 }
 
 // ========== 盲盒相关 ==========
@@ -391,16 +401,20 @@ const detailProgress = computed(() => {
 </script>
 
 <template>
-  <div class="poem-card-page max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
+  <div class="poem-card-page w-full max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
     <!-- ====== 详情层（始终渲染，z-index 覆盖） ====== -->
     <div
       v-if="viewLayer === 'detail' && currentPoem"
       class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
       :style="detailLayerStyle"
-      @touchstart="onDetailTouchStart"
+      @touchstart.passive="onDetailTouchStart"
       @touchmove="onDetailTouchMove"
       @touchend="onDetailTouchEnd"
       @touchcancel="onDetailTouchEnd"
+      @pointerdown="onDetailPointerDown"
+      @pointermove="onDetailPointerMove"
+      @pointerup="onDetailPointerEnd"
+      @pointercancel="onDetailPointerEnd"
     >
       <!-- 顶部标题栏 - 固定高度 -->
       <div class="shrink-0 p-4 pb-2">

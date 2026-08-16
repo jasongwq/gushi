@@ -79,7 +79,11 @@ function goTo(index: number) {
   swiperInstance?.slideToLoop(index, 300)
 }
 
-defineExpose({ shuffle, goTo })
+function getSwiperInstance() {
+  return swiperInstance
+}
+
+defineExpose({ shuffle, goTo, getSwiperInstance })
 </script>
 
 <template>

@@ -13,6 +13,7 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   server: {
+    host: '0.0.0.0',
     allowedHosts: ['gushi-dev.ypwq.fun'],
   },
   plugins: [
