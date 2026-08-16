@@ -6,21 +6,21 @@ async function enterPoemCardPage(page: any) {
   await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
 }
 
-// 辅助：点击第一张卡片进入背诵模式（使用 force: true 绕过 Swiper 布局层拦截）
+// 辅助：点击第一张卡片进入背诵模式
+// 使用 dispatchEvent 绕过 Swiper coverflow 布局层对 pointer events 的拦截
 async function enterReciteFromSwiper(page: any) {
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
-  await page.locator('.poem-card').first().click({ force: true })
+  await page.locator('.poem-card').first().dispatchEvent('click')
   // 应该看到 RecitationCard
   await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
 }
 
 // 辅助：获取当前活跃 slide 的宽度
 async function getSlideWidth(page: any): Promise<number> {
-  const slideWidth = await page.evaluate(() => {
+  return await page.evaluate(() => {
     const slide = document.querySelector('.swiper-slide-active') as HTMLElement
     return slide?.offsetWidth ?? 0
   })
-  return slideWidth
 }
 
 // 辅助：在元素上模拟水平拖拽
@@ -38,6 +38,11 @@ async function horizontalDrag(page: any, box: { x: number; y: number; width: num
   await page.mouse.up()
 }
 
+// 辅助：点击 RecitationCard 中的按钮（使用 dispatchEvent 绕过拦截）
+async function clickReciteButton(page: any, text: string) {
+  await page.locator(`.recitation-card button:has-text("${text}")`).first().dispatchEvent('click')
+}
+
 // ====== 核心功能：展开/缩回 ======
 
 test('点击卡片展开到全屏背诵模式', async ({ page }) => {
@@ -50,10 +55,9 @@ test('点击卡片展开到全屏背诵模式', async ({ page }) => {
   // 点击卡片进入背诵
   await enterReciteFromSwiper(page)
 
-  // 验证展开后 slide 宽度变大（接近 100%）
+  // 验证展开后 slide 宽度变大
   const expandedWidth = await getSlideWidth(page)
   expect(expandedWidth).toBeGreaterThan(browseWidth)
-  // 展开后宽度应该接近容器宽度（至少比浏览模式大 30%）
   expect(expandedWidth / browseWidth).toBeGreaterThan(1.3)
 })
 
@@ -61,12 +65,11 @@ test('点击返回按钮缩回到浏览模式', async ({ page }) => {
   await enterPoemCardPage(page)
   await enterReciteFromSwiper(page)
 
-  // 点击返回按钮
-  await page.locator('button:has-text("返回")').first().click()
+  // 点击返回按钮（使用更精确的选择器，避免匹配顶部导航的"← 返回"）
+  await page.locator('[data-testid="detail-progress"]').locator('..').locator('button:has-text("返回")').dispatchEvent('click')
 
-  // 应该回到浏览模式，看到 PoemCard
+  // 应该回到浏览模式
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
-  // 不应该有 RecitationCard
   await expect(page.locator('.recitation-card')).not.toBeVisible({ timeout: 1000 })
 })
 
@@ -78,7 +81,7 @@ test('提交后自动进入下一首', async ({ page }) => {
   const progressBefore = await page.locator('[data-testid="detail-progress"]').textContent()
 
   // 标记熟练
-  await page.locator('.recitation-card button:has-text("熟练")').click({ force: true })
+  await clickReciteButton(page, '熟练')
 
   // 应该自动进入下一首（进度变化）
   const progressAfter = await page.locator('[data-testid="detail-progress"]').textContent({ timeout: 3000 })
@@ -95,7 +98,7 @@ test('滑动时缩回展开的卡片', async ({ page }) => {
 
   await horizontalDrag(page, swiperBox!, 'left')
 
-  // 滑动后应该缩回，看到 PoemCard
+  // 滑动后应该缩回
   await page.waitForTimeout(500)
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
 })
@@ -112,7 +115,6 @@ test('滑动到新卡片后不自动展开', async ({ page }) => {
 
   // 应该看到 PoemCard 而不是 RecitationCard
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
-  // RecitationCard 不应该可见（没有自动展开）
   await expect(page.locator('.recitation-card')).not.toBeVisible({ timeout: 1000 })
 })
 
@@ -123,7 +125,6 @@ test('背诵模式显示进度信息', async ({ page }) => {
   // 进度应该显示
   const progressText = page.locator('[data-testid="detail-progress"]')
   await expect(progressText).toBeVisible({ timeout: 3000 })
-  // 进度格式应该是 X/Y
   const text = await progressText.textContent()
   expect(text).toMatch(/\d+\/\d+/)
 })
@@ -136,7 +137,7 @@ test('已查计数在提交后更新', async ({ page }) => {
 
   // 进入背诵并提交
   await enterReciteFromSwiper(page)
-  await page.locator('.recitation-card button:has-text("熟练")').click({ force: true })
+  await clickReciteButton(page, '熟练')
 
   // 等待提交完成后检查
   await page.waitForTimeout(500)

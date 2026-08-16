@@ -117,19 +117,12 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
   width: 65%;
   height: 100%;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.3s ease;
+              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.card-swiper :deep(.swiper-slide.expanded) {
+/* 全屏模式（slide effect）下 slide 宽度为 100% */
+.card-swiper.is-fullscreen :deep(.swiper-slide) {
   width: 100%;
-  transform: none !important;
-  z-index: 10;
-}
-
-.card-swiper :deep(.swiper-slide.expanded ~ .swiper-slide),
-.card-swiper :deep(.swiper-slide:not(.expanded):not(.swiper-slide-duplicate-prev):not(.swiper-slide-duplicate-next)) {
-  /* Non-expanded slides are dimmed when one is expanded */
 }
 
 .card-swiper {

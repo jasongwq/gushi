@@ -110,12 +110,10 @@ onBeforeUnmount(() => {
   if (navTimer) clearTimeout(navTimer)
 })
 
-// 展开某个 slide：添加 expanded 类，内容切换为 RecitationCard
+// 展开某个 slide：切换 Swiper 为全屏模式，内容切换为 RecitationCard
 function expandSlide(slideIndex: number) {
   const swiper = cardSwiperRef.value?.getSwiperInstance?.()
   if (!swiper) return
-  const slide = swiper.slides[slideIndex] as HTMLElement
-  if (!slide) return
 
   const poemId = poems.value[swiper.realIndex]?.id
   if (!poemId) return
@@ -123,20 +121,17 @@ function expandSlide(slideIndex: number) {
   expandedPoemId.value = poemId
   viewMode.value = 'recite'
 
-  // 禁用 Swiper，防止 coverflow setTranslate 持续覆盖我们的 transform
-  swiper.enabled = false
+  // 禁止 Swiper 触摸交互，防止滑动干扰
+  swiper.allowTouchMove = false
 
-  // 添加 expanded 类 + 手动设置 transform
-  slide.classList.add('expanded')
-  slide.style.transform = 'none'
-  slide.style.zIndex = '10'
+  // 切换 Swiper 为全屏模式：effect 从 coverflow 改为 slide，slidesPerView 改为 1
+  // 这样 Swiper 自己会管理 slide 宽度为 100%，不需要手动覆盖 DOM
+  swiper.params.slidesPerView = 1
+  swiper.params.effect = 'slide'
+  swiper.update()
 
-  // Dim other slides
-  swiper.slides.forEach((s: HTMLElement, i: number) => {
-    if (i !== slideIndex) {
-      s.style.opacity = '0.3'
-    }
-  })
+  // 切换容器 CSS class
+  swiper.el.classList.add('is-fullscreen')
 }
 
 // 缩回当前展开的 slide
@@ -144,17 +139,23 @@ function collapseSlide() {
   if (!expandedPoemId.value) return
   const swiper = cardSwiperRef.value?.getSwiperInstance?.()
   if (!swiper) return
-  swiper.slides.forEach((slide: HTMLElement) => {
-    slide.classList.remove('expanded')
-    slide.style.transform = ''
-    slide.style.zIndex = ''
-    slide.style.opacity = ''
-  })
   expandedPoemId.value = null
   viewMode.value = 'swiper'
-  // 重新启用 Swiper，恢复 coverflow 效果
-  swiper.enabled = true
+  // 恢复 Swiper 触摸交互
+  swiper.allowTouchMove = true
+  // 恢复 coverflow 效果
+  swiper.params.slidesPerView = 'auto'
+  swiper.params.effect = 'coverflow'
   swiper.update()
+
+  // 切换容器 CSS class
+  swiper.el.classList.remove('is-fullscreen')
+
+  // 清除 Swiper update() 设置的 inline style width
+  // coverflow 模式下 CSS width: 65% 控制 slide 宽度，不需要 inline style
+  swiper.slides.forEach((slide: HTMLElement) => {
+    slide.style.width = ''
+  })
 }
 
 // 点击 PoemCard → 展开进入背诵
