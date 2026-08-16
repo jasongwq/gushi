@@ -19,7 +19,6 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [index: number]
-  'swiperTouchStart': [event: Event]
 }>()
 
 const currentIndex = computed({
@@ -27,14 +26,10 @@ const currentIndex = computed({
   set: (val) => emit('update:modelValue', val),
 })
 
-// 背诵模式（slide effect）下禁用触摸滑动，防止与 RecitationCard 内部按钮冲突
-const allowTouchMove = computed(() => props.effect === 'coverflow')
+// 背诵模式也允许水平滑动切诗
+const allowTouchMove = true
 
 let swiperInstance: SwiperType | null = null
-
-function onSwiperTouchStart(_swiper: SwiperType, event: Event) {
-  emit('swiperTouchStart', event)
-}
 
 function onSwiper(swiper: SwiperType) {
   swiperInstance = swiper
@@ -113,7 +108,6 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
     :class="effect === 'slide' ? 'is-fullscreen' : ''"
     @swiper="onSwiper"
     @slide-change="onSlideChange"
-    @touch-start="onSwiperTouchStart"
   >
     <slot />
   </Swiper>

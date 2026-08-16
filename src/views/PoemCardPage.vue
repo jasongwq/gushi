@@ -106,9 +106,51 @@ const EXPAND_TRANSITION_MS = 350
 let navTimer: ReturnType<typeof setTimeout> | null = null
 let isNavigating = ref(false)
 
+// 上滑缩回阈值（px）
+const SwipeUpThreshold = 50
+// 滑动起点记录（用于判断上滑手势）
+let swipeStartY: number | null = null
+let swipeStartX: number | null = null
+
+// 卡片区域容器（用于原生触摸监听检测上滑）
+const cardAreaRef = ref<HTMLElement | null>(null)
+
+onMounted(() => {
+  cardAreaRef.value?.addEventListener('touchstart', onAreaTouchStart, { passive: true })
+  cardAreaRef.value?.addEventListener('touchmove', onAreaTouchMove, { passive: true })
+})
+
 onBeforeUnmount(() => {
   if (navTimer) clearTimeout(navTimer)
+  cardAreaRef.value?.removeEventListener('touchstart', onAreaTouchStart)
+  cardAreaRef.value?.removeEventListener('touchmove', onAreaTouchMove)
 })
+
+// 原生触摸：记录起点（不拦截按钮，靠移动阈值区分点击 vs 上滑）
+function onAreaTouchStart(e: TouchEvent) {
+  if (!expandedPoemId.value || isNavigating.value) return
+  const touch = e.touches[0]
+  if (touch) {
+    swipeStartY = touch.clientY
+    swipeStartX = touch.clientX
+  }
+}
+
+// 原生触摸：垂直上滑超过阈值则缩回
+// 点击按钮时手指几乎不动（dy 小），不会触发缩回
+function onAreaTouchMove(e: TouchEvent) {
+  if (!expandedPoemId.value || isNavigating.value) return
+  if (swipeStartY === null) return
+  const touch = e.touches[0]
+  if (!touch) return
+  const dy = touch.clientY - swipeStartY
+  const dx = touch.clientX - (swipeStartX ?? touch.clientX)
+  // 上滑（dy < 0）且垂直位移大于水平位移，超过阈值才缩回
+  if (dy < -SwipeUpThreshold && Math.abs(dy) > Math.abs(dx)) {
+    collapseSlide()
+    swipeStartY = null
+  }
+}
 
 // 展开某个 slide：切换到背诵模式（Swiper 通过 key 重建为 slide 全宽效果）
 function expandSlide(slideIndex: number) {
@@ -131,16 +173,6 @@ function collapseSlide() {
 function onCardClick(poem: Poem) {
   const idx = poems.value.findIndex(p => p.id === poem.id)
   if (idx >= 0) expandSlide(idx)
-}
-
-// Swiper touchStart → 如果有展开的 slide，先缩回
-// 但在导航过渡期间不缩回，避免竞态
-// 如果触摸目标是背诵卡片内的交互元素（button），则不缩回，让按钮正常响应
-function onSwiperTouchStart(event?: { target?: EventTarget | null }) {
-  if (!expandedPoemId.value || isNavigating.value) return
-  const target = event?.target as HTMLElement | null
-  if (target?.closest?.('.recitation-card button')) return
-  collapseSlide()
 }
 
 // ========== 详情页提交/导航 ==========
@@ -296,7 +328,7 @@ const detailProgress = computed(() => {
       </div>
 
       <!-- 卡片区域 -->
-      <div class="flex-1 min-h-0 p-4 overflow-hidden">
+      <div ref="cardAreaRef" class="flex-1 min-h-0 p-4 overflow-hidden">
         <!-- 盲盒模式：用 v-show 保留状态 -->
         <MysteryBox
           v-show="viewMode === 'mystery' && allPoems.length > 0"
@@ -315,7 +347,6 @@ const detailProgress = computed(() => {
           v-model="currentIndex"
           :count="poems.length"
           :effect="viewMode === 'recite' ? 'slide' : 'coverflow'"
-          @swiper-touch-start="onSwiperTouchStart"
         >
           <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
             <RecitationCard

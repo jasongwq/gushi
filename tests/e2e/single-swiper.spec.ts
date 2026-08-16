@@ -6,11 +6,16 @@ async function enterPoemCardPage(page: any) {
   await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
 }
 
-// 辅助：点击第一张卡片进入背诵模式
-// 使用 dispatchEvent 绕过 Swiper coverflow 布局层对 pointer events 的拦截
+// 辅助：进入背诵模式（点击 active slide 中心的卡片）
 async function enterReciteFromSwiper(page: any) {
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
-  await page.locator('.poem-card').first().dispatchEvent('click')
+  // 点击 active slide 中心的卡片（避免匹配到屏幕外的复制 slide）
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
   // 应该看到 RecitationCard
   await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
 }
@@ -88,19 +93,56 @@ test('提交后自动进入下一首', async ({ page }) => {
   expect(progressAfter).not.toBe(progressBefore)
 })
 
-test('滑动时缩回展开的卡片', async ({ page }) => {
+test('水平滑动切诗不缩回，上滑缩回', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
   await enterPoemCardPage(page)
   await enterReciteFromSwiper(page)
 
-  // 在 Swiper 上模拟水平拖拽
+  // 用 CDP 模拟真实触摸
+  const cdp = await page.context().newCDPSession(page)
   const swiperBox = await page.locator('.card-swiper').first().boundingBox()
   expect(swiperBox).toBeTruthy()
+  const cx = swiperBox!.x + swiperBox!.width / 2
+  // 用卡片 40% 高度处（避开中间按钮区域）
+  const cy = swiperBox!.y + swiperBox!.height * 0.4
 
-  await horizontalDrag(page, swiperBox!, 'left')
+  const progressBefore = await page.locator('[data-testid="detail-progress"]').textContent()
 
-  // 滑动后应该缩回
-  await page.waitForTimeout(500)
+  // 水平左滑 → 应切诗（进度变化），不缩回
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx + 100, y: cy }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx + 100 - 20 * i, y: cy }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(600)
+
+  // 仍在背诵模式（没缩回）
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  // 进度变化 = 切到下一首
+  const progressAfter = await page.locator('[data-testid="detail-progress"]').textContent()
+  expect(progressAfter).not.toBe(progressBefore)
+
+  // 上滑 → 应缩回浏览模式
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: cy - 20 * i }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(600)
+
+  // 应缩回到浏览模式
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
+  await expect(page.locator('.recitation-card')).not.toBeVisible({ timeout: 1000 })
+
+  await cdp.detach()
+  await context.close()
 })
 
 test('滑动到新卡片后不自动展开', async ({ page }) => {

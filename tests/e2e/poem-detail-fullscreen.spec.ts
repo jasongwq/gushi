@@ -6,11 +6,16 @@ async function enterPoemCardPage(page: any) {
   await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
 }
 
-// 辅助：点击第一张卡片进入背诵模式
-// 使用 dispatchEvent 绕过 Swiper coverflow 布局层对 pointer events 的拦截
+// 辅助：进入背诵模式（点击 active slide 中心的卡片）
 async function enterReciteFromSwiper(page: any) {
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
-  await page.locator('.poem-card').first().dispatchEvent('click')
+  // 点击 active slide 中心的卡片（避免匹配到屏幕外的复制 slide）
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
   await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
 }
 
@@ -249,7 +254,68 @@ test('背诵模式点击熟练按钮提交后不误缩回', async ({ browser }) 
   await context.close()
 })
 
-test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
+test('背诵模式水平滑动切诗、上滑缩回', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  // 进入背诵
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  const cdp = await page.context().newCDPSession(page)
+  const box = await page.locator('.card-swiper').boundingBox()
+  const cx = box!.x + box!.width / 2
+  const cy = box!.y + box!.height / 2
+
+  // 1. 水平左滑 → 切诗（进度变化），不缩回
+  const progressBefore = await page.locator('[data-testid="detail-progress"]').textContent()
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx + 100, y: cy }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx + 100 - 20 * i, y: cy }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(600)
+
+  // 不缩回（仍在背诵）
+  expect(await page.locator('.recitation-card').count()).toBeGreaterThan(0)
+  // 进度变化 = 切到下一首
+  const progressAfter = await page.locator('[data-testid="detail-progress"]').textContent()
+  expect(progressAfter).not.toBe(progressBefore)
+
+  // 2. 上滑 → 缩回浏览模式
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy }] })
+  for (let i = 1; i <= 10; i++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: cy - 20 * i }] })
+    await new Promise(r => setTimeout(r, 16))
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  await page.waitForTimeout(600)
+
+  // 应缩回浏览模式
+  expect(await page.locator('.recitation-card').count()).toBe(0)
+  expect(await page.locator('.poem-card').count()).toBeGreaterThan(0)
+
+  await cdp.detach()
+  await context.close()
+})
+
+test('背诵模式允许水平滑动切诗（allowTouchMove 为 true）', async ({ page }) => {
   await enterPoemCardPage(page)
 
   // 初始 allowTouchMove 为 true（coverflow 浏览模式）
@@ -263,12 +329,12 @@ test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   await enterReciteFromSwiper(page)
   await page.waitForTimeout(500)
 
-  // 展开后 allowTouchMove 应为 false（背诵模式禁止滑动干扰按钮）
+  // 背诵模式也允许水平滑动切诗
   const touchAfter = await page.evaluate(() => {
     const swiper = (document.querySelector('.swiper') as any)?.swiper
     return swiper?.allowTouchMove
   })
-  expect(touchAfter).toBe(false)
+  expect(touchAfter).toBe(true)
 })
 
 test('点击返回按钮缩回到浏览模式（宽度恢复 65%、coverflow 恢复）', async ({ page }) => {
