@@ -36,3 +36,4 @@ coverage
 __pycache__/
 .superpowers/
 test-results/
+.codebuddy/worktrees/
