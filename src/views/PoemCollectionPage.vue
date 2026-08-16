@@ -37,7 +37,7 @@
           :class="['px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition', activeAuthor === author ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
           @click="activeAuthor = author"
         >
-          {{ author }}
+          {{ author }}({{ poemStore.poemsByAuthor.get(author)?.length ?? 0 }})
         </button>
       </div>
     </template>

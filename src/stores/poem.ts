@@ -99,11 +99,35 @@ export const usePoemStore = defineStore('poem', () => {
       list.push(poem)
       map.set(poem.author, list)
     }
+    // Group single-poem authors into "其他"
+    const otherPoems: Poem[] = []
+    const toRemove: string[] = []
+    for (const [author, poems] of map) {
+      if (poems.length <= 1) {
+        otherPoems.push(...poems)
+        toRemove.push(author)
+      }
+    }
+    for (const author of toRemove) {
+      map.delete(author)
+    }
+    if (otherPoems.length > 0) {
+      map.set('其他', otherPoems)
+    }
     return map
   })
 
   const authors = computed(() => {
-    return [...new Set(poems.value.map(p => p.author))].sort()
+    const countMap = new Map<string, number>()
+    for (const poem of poems.value) {
+      countMap.set(poem.author, (countMap.get(poem.author) ?? 0) + 1)
+    }
+    const multiAuthor = [...countMap.entries()]
+      .filter(([, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1])
+      .map(([author]) => author)
+    const hasSingle = [...countMap.entries()].some(([, count]) => count <= 1)
+    return hasSingle ? [...multiAuthor, '其他'] : multiAuthor
   })
 
   async function fetchPoems() {

@@ -240,7 +240,7 @@ const detailProgress = computed(() => {
 </script>
 
 <template>
-  <div class="poem-card-page max-w-md mx-auto h-screen flex flex-col bg-gray-50 relative overflow-hidden">
+  <div class="poem-card-page max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
     <!-- ====== 详情层 ====== -->
     <Transition name="card-zoom">
       <div v-if="viewLayer === 'detail' && currentPoem" class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
@@ -284,7 +284,7 @@ const detailProgress = computed(() => {
     </Transition>
 
     <!-- ====== 浏览层 ====== -->
-    <div v-if="viewLayer !== 'detail'" class="flex flex-col flex-1 min-h-0">
+    <div v-show="viewLayer !== 'detail'" class="flex flex-col flex-1 min-h-0">
       <!-- 顶部筛选栏 -->
       <div class="p-3 bg-white border-b border-gray-100">
         <div class="flex items-center gap-2 mb-2">

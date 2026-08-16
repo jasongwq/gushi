@@ -1,8 +1,10 @@
 <template>
-  <router-view />
-  <footer class="text-center text-xs text-gray-400 py-3 select-none">
-    v{{ version }} · {{ buildTime }} · {{ gitHash }}
-  </footer>
+  <div class="h-dvh flex flex-col overflow-hidden">
+    <router-view class="flex-1 min-h-0" />
+    <footer class="shrink-0 text-center text-xs text-gray-400 py-3 select-none">
+      v{{ version }} · {{ buildTime }} · {{ gitHash }}
+    </footer>
+  </div>
 </template>
 
 <script setup lang="ts">
