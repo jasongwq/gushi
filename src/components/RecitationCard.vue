@@ -94,18 +94,18 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 </script>
 
 <template>
-  <div class="recitation-card">
-    <div class="text-center mb-6">
-      <h2 class="text-3xl font-bold mb-2">{{ poem.title }}</h2>
-      <p class="text-gray-500">{{ poem.dynasty }} · {{ poem.author }}</p>
+  <div class="recitation-card py-2">
+    <div class="text-center mb-4">
+      <h2 class="text-2xl font-bold mb-1">{{ poem.title }}</h2>
+      <p class="text-gray-500 text-sm">{{ poem.dynasty }} · {{ poem.author }}</p>
     </div>
 
     <!-- 全诗原文 + 逐句标记 -->
-    <div class="mb-6">
+    <div class="mb-4">
       <div
         v-for="(line, index) in poem.text"
         :key="index"
-        class="flex items-center gap-2 py-3 border-b border-gray-100 last:border-b-0"
+        class="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0"
       >
         <span :class="['flex-1 text-lg', lineStatuses[index].status === 'forgot' ? 'text-red-400' : lineStatuses[index].status === 'stuck' ? 'text-yellow-600' : '']">{{ line }}</span>
         <div class="flex gap-1 shrink-0">
@@ -122,7 +122,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     </div>
 
     <!-- 译文 -->
-    <div class="mb-4 text-center">
+    <div class="mb-3 text-center">
       <button
         :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
         @click="toggleYiwen"
@@ -130,12 +130,12 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
         {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
       </button>
     </div>
-    <div v-if="showYiwen" class="mb-4 p-3 bg-gray-50 rounded-lg text-center">
+    <div v-if="showYiwen" class="mb-3 p-3 bg-gray-50 rounded-lg text-center">
       <p class="text-sm leading-relaxed text-gray-500">{{ poem.yiwen }}</p>
     </div>
 
     <!-- 作者/朝代标记 -->
-    <div class="mb-6 flex items-center gap-4">
+    <div class="mb-4 flex items-center gap-4">
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-600">{{ poem.author }}</span>
         <button
@@ -153,15 +153,15 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     </div>
 
     <!-- 操作按钮 -->
-    <div class="flex gap-3 mb-4">
+    <div class="flex gap-3 mb-3">
       <button
-        class="flex-1 p-4 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-lg cursor-pointer hover:bg-green-100 transition"
+        class="flex-1 p-3 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-base cursor-pointer hover:bg-green-100 transition"
         @click="markMastered"
       >
         熟练
       </button>
       <button
-        class="flex-1 p-4 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-lg cursor-pointer hover:bg-red-100 transition"
+        class="flex-1 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-base cursor-pointer hover:bg-red-100 transition"
         @click="markForgot"
       >
         完全不会
@@ -172,12 +172,12 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     <div class="flex gap-3">
       <button
         :disabled="!props.canGoPrev"
-        :class="['flex-1 p-4 rounded-lg text-lg font-medium cursor-pointer transition', props.canGoPrev ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-100 text-gray-300 cursor-not-allowed']"
+        :class="['flex-1 p-3 rounded-lg text-base font-medium cursor-pointer transition', props.canGoPrev ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-100 text-gray-300 cursor-not-allowed']"
         @click="emit('goPrev')"
       >上一首</button>
       <button
         :disabled="!hasAnyIssue"
-        :class="['flex-1 p-4 rounded-lg text-lg font-medium cursor-pointer transition', hasAnyIssue ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
+        :class="['flex-1 p-3 rounded-lg text-base font-medium cursor-pointer transition', hasAnyIssue ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed']"
         @click="submit"
       >下一首</button>
     </div>

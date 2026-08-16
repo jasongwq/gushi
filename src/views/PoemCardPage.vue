@@ -247,24 +247,27 @@ const detailProgress = computed(() => {
         @touchstart="onDetailTouchStart"
         @touchend="onDetailSwipe"
       >
-        <div class="flex-1 flex flex-col overflow-y-auto p-4">
+        <!-- 顶部标题栏 - 固定高度 -->
+        <div class="shrink-0 p-4 pb-2">
           <div class="flex items-center justify-between mb-2">
             <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
             <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
           </div>
           <!-- 进度条 -->
-          <div class="h-1 bg-gray-100 rounded-full mb-4 overflow-hidden">
+          <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
             <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
           </div>
-          <RecitationCard
-            :poem="currentPoem"
-            :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
-            @submit="onDetailSubmit"
-            @go-prev="onDetailGoPrev"
-          />
         </div>
-        <!-- 底部区域 -->
-        <div class="p-3 bg-white border-t border-gray-100 text-center">
+        <!-- 古诗正文区域 - flex-1 占剩余空间，内部可滚动 -->
+        <RecitationCard
+          class="flex-1 min-h-0 overflow-y-auto px-4"
+          :poem="currentPoem"
+          :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
+          @submit="onDetailSubmit"
+          @go-prev="onDetailGoPrev"
+        />
+        <!-- 底部区域 - 固定高度 -->
+        <div class="shrink-0 p-3 bg-white border-t border-gray-100 text-center">
           <span class="text-xs text-gray-300">左右滑动返回卡片浏览</span>
           <button
             v-if="fromMystery"
