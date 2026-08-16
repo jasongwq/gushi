@@ -108,8 +108,7 @@ describe('RecitationCard', () => {
       btnSection = btnSection.parentElement
     }
     expect(btnSection).toBeTruthy()
-    const scrollSection = scrollArea.element.parentElement
-    const scrollIndex = rootChildren.indexOf(scrollSection?.className ?? '')
+    const scrollIndex = rootChildren.indexOf(scrollArea.element.className)
     const btnIndex = rootChildren.indexOf(btnSection!.className)
     expect(btnIndex).toBeGreaterThan(scrollIndex)
 
