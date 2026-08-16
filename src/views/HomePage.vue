@@ -8,7 +8,7 @@
     </div>
 
     <div class="grid grid-cols-2 gap-4 mb-6">
-      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('parent')">
+      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="router.push({ name: 'poem-card' })">
         <div class="text-3xl mb-2">👨‍👩‍👧</div>
         <div class="font-medium">家长抽查</div>
       </button>

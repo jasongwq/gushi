@@ -90,6 +90,12 @@ function startQuiz() {
   errorMsg.value = ''
   const grades = source.value === 'grade' ? selectedGrades.value : undefined
 
+  // 家长模式下古诗抽背跳转到新的抽卡页面
+  if (isParentMode.value) {
+    router.push({ name: 'poem-card' })
+    return
+  }
+
   // 如果选中了古诗抽背，走背诵流程
   if (quizTypes.value.includes('recite')) {
     const success = quizStore.startRecitation(source.value, count.value, grades)

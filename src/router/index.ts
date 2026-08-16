@@ -1,5 +1,10 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
+export const ROUTE_STORAGE_KEY = 'poem-quiz-route'
+
+// Routes that have session state and should be restored after refresh
+export const RESTORABLE_ROUTES = new Set(['quiz-play', 'recitation-play', 'recite'])
+
 const routes = [
   { path: '/', name: 'home', component: () => import('@/views/HomePage.vue') },
   { path: '/quiz/setup', name: 'quiz-setup', component: () => import('@/views/QuizSetupPage.vue') },
@@ -13,6 +18,7 @@ const routes = [
   { path: '/settings', name: 'settings', component: () => import('@/views/SettingsPage.vue') },
   { path: '/poems', name: 'poem-collection', component: () => import('@/views/PoemCollectionPage.vue') },
   { path: '/settings/poems', name: 'poem-config', component: () => import('@/views/PoemConfigPage.vue') },
+  { path: '/poem-card', name: 'poem-card', component: () => import('@/views/PoemCardPage.vue') },
   { path: '/recite', name: 'recite', component: () => import('@/views/RecitePage.vue') },
   { path: '/recite/result', name: 'recite-result', component: () => import('@/views/ReciteResultPage.vue') },
   { path: '/poem/:id', name: 'poem-detail', component: () => import('@/views/PoemDetailPage.vue') },
@@ -21,6 +27,15 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(),
   routes,
+})
+
+// Save current route to sessionStorage when on restorable pages
+router.afterEach((to) => {
+  if (RESTORABLE_ROUTES.has(to.name as string)) {
+    sessionStorage.setItem(ROUTE_STORAGE_KEY, to.fullPath)
+  } else {
+    sessionStorage.removeItem(ROUTE_STORAGE_KEY)
+  }
 })
 
 export default router
