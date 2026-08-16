@@ -86,7 +86,7 @@ defineExpose({ shuffle, goTo })
   <Swiper
     :modules="[EffectCoverflow, FreeMode]"
     :effect="'coverflow'"
-    :coverflow-effect="{ rotate: 0, stretch: 40, depth: 200, modifier: 1, scale: 1, slideShadows: false }"
+    :coverflow-effect="{ rotate: 0, stretch: 30, depth: 150, modifier: 1, scale: 1, slideShadows: false }"
     :free-mode="{ enabled: true, sticky: true, minimumVelocity: 0.2 }"
     :slides-per-view="'auto'"
     :centered-slides="true"

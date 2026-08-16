@@ -358,7 +358,7 @@ const detailProgress = computed(() => {
       </div>
       <!-- 古诗正文区域 - flex-1 占剩余空间，内部可滚动 -->
       <RecitationCard
-        class="flex-1 min-h-0 overflow-y-auto px-4"
+        class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4"
         :poem="currentPoem"
         :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
         @submit="onDetailSubmit"

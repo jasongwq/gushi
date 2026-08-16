@@ -94,7 +94,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 </script>
 
 <template>
-  <div class="recitation-card py-2">
+  <div class="recitation-card py-2 w-full">
     <div class="text-center mb-4">
       <h2 class="text-2xl font-bold mb-1">{{ poem.title }}</h2>
       <p class="text-gray-500 text-sm">{{ poem.dynasty }} · {{ poem.author }}</p>
@@ -107,7 +107,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
         :key="index"
         class="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0"
       >
-        <span :class="['flex-1 text-lg', lineStatuses[index].status === 'forgot' ? 'text-red-400' : lineStatuses[index].status === 'stuck' ? 'text-yellow-600' : '']">{{ line }}</span>
+        <span :class="['flex-1 text-lg min-w-0 break-all', lineStatuses[index].status === 'forgot' ? 'text-red-400' : lineStatuses[index].status === 'stuck' ? 'text-yellow-600' : '']">{{ line }}</span>
         <div class="flex gap-1 shrink-0">
           <button
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'stuck' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 bg-white text-gray-400']"
