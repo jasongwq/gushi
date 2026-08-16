@@ -8,6 +8,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   revealed: [poem: Poem]
+  select: [poem: Poem]
 }>()
 
 // 盲盒状态
@@ -18,14 +19,12 @@ const isReady = ref(false)
 
 function initBoxes() {
   if (props.poems.length === 0) return
-  // 从诗列表中随机选4首（不重复）
   const available = [...props.poems]
   const selected: Poem[] = []
   for (let i = 0; i < 4 && available.length > 0; i++) {
     const idx = Math.floor(Math.random() * available.length)
     selected.push(available.splice(idx, 1)[0])
   }
-  // 不够4首则用已有的循环填充
   while (selected.length < 4) {
     selected.push(props.poems[Math.floor(Math.random() * props.poems.length)])
   }
@@ -33,7 +32,6 @@ function initBoxes() {
   isReady.value = true
 }
 
-// 初始化
 initBoxes()
 
 function openBox(index: number) {
@@ -42,7 +40,6 @@ function openBox(index: number) {
 
   box.state = 'opening'
 
-  // 动画结束后显示结果
   setTimeout(() => {
     box.state = 'revealed'
     if (box.poem) {
@@ -51,11 +48,22 @@ function openBox(index: number) {
   }, 800)
 }
 
+function selectBox(index: number) {
+  const box = boxes.value[index]
+  if (!box || box.state !== 'revealed' || !box.poem) return
+  emit('select', box.poem)
+}
+
 function refresh() {
   initBoxes()
 }
 
 const allRevealed = computed(() => boxes.value.length > 0 && boxes.value.every(b => b.state === 'revealed'))
+
+// 暴露盲盒中的诗列表供外部使用
+const revealedPoems = computed(() => boxes.value.filter(b => b.poem).map(b => b.poem!))
+
+defineExpose({ refresh, revealedPoems })
 </script>
 
 <template>
@@ -68,10 +76,9 @@ const allRevealed = computed(() => boxes.value.length > 0 && boxes.value.every(b
         :class="{
           'bg-gradient-to-br from-indigo-400 to-purple-500 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95': box.state === 'closed',
           'bg-gradient-to-br from-indigo-300 to-purple-400 animate-pulse': box.state === 'opening',
-          'bg-gradient-to-br from-amber-50 to-yellow-50 shadow-md ring-2 ring-amber-300': box.state === 'revealed',
+          'bg-gradient-to-br from-amber-50 to-yellow-50 shadow-md ring-2 ring-amber-300 hover:shadow-lg hover:scale-105': box.state === 'revealed',
         }"
-        :disabled="box.state !== 'closed'"
-        @click="openBox(index)"
+        @click="box.state === 'closed' ? openBox(index) : selectBox(index)"
       >
         <!-- 关闭状态：问号盒子 -->
         <template v-if="box.state === 'closed'">
