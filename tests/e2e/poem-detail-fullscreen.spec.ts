@@ -169,6 +169,86 @@ test('点击卡片后 RecitationCard 高度占满可用空间', async ({ page })
   expect(i.recBottom).toBeLessThanOrEqual(i.bottomBarTop + 1)
 })
 
+test('背诵模式点击卡顿按钮不缩回且能标记', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  // 进入背诵（点击 active slide 中心的卡片）
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  // 触摸点击卡顿按钮
+  const stuckBtn = page.locator('.swiper-slide-active').locator('.recitation-card').locator('button', { hasText: '卡顿' }).first()
+  const box = await stuckBtn.boundingBox()
+  expect(box).toBeTruthy()
+  await page.touchscreen.tap(box!.x + box!.width / 2, box!.y + box!.height / 2)
+  await page.waitForTimeout(500)
+
+  // 应该仍在背诵模式（没有缩回）
+  expect(await page.locator('.recitation-card').count()).toBeGreaterThan(0)
+
+  // 卡顿按钮应被标记（黄色边框）
+  const stuckMarked = await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('.recitation-card button')]
+      .find(b => b.textContent === '卡顿' && (b as HTMLElement).getBoundingClientRect().left >= 0)
+    return btn ? [...btn.classList].includes('border-yellow-500') : false
+  })
+  expect(stuckMarked).toBe(true)
+
+  await context.close()
+})
+
+test('背诵模式点击熟练按钮提交后不误缩回', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+
+  await page.goto('/#/poem-card')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.waitForTimeout(500)
+
+  // 进入背诵
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  await page.waitForTimeout(600)
+
+  // 鼠标点击熟练按钮（应提交成功，不缩回浏览）
+  const masterBtn = page.locator('.swiper-slide-active').locator('.recitation-card').locator('button', { hasText: '熟练' }).first()
+  const box = await masterBtn.boundingBox()
+  expect(box).toBeTruthy()
+  await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2)
+  await page.waitForTimeout(500)
+
+  // 不应缩回浏览模式
+  expect(await page.locator('.recitation-card').count()).toBeGreaterThan(0)
+
+  await context.close()
+})
+
 test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   await enterPoemCardPage(page)
 

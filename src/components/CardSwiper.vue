@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [index: number]
-  'swiperTouchStart': []
+  'swiperTouchStart': [event: Event]
 }>()
 
 const currentIndex = computed({
@@ -32,8 +32,8 @@ const allowTouchMove = computed(() => props.effect === 'coverflow')
 
 let swiperInstance: SwiperType | null = null
 
-function onSwiperTouchStart() {
-  emit('swiperTouchStart')
+function onSwiperTouchStart(_swiper: SwiperType, event: Event) {
+  emit('swiperTouchStart', event)
 }
 
 function onSwiper(swiper: SwiperType) {

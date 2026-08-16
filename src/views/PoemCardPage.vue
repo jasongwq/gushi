@@ -135,10 +135,12 @@ function onCardClick(poem: Poem) {
 
 // Swiper touchStart → 如果有展开的 slide，先缩回
 // 但在导航过渡期间不缩回，避免竞态
-function onSwiperTouchStart() {
-  if (expandedPoemId.value && !isNavigating.value) {
-    collapseSlide()
-  }
+// 如果触摸目标是背诵卡片内的交互元素（button），则不缩回，让按钮正常响应
+function onSwiperTouchStart(event?: { target?: EventTarget | null }) {
+  if (!expandedPoemId.value || isNavigating.value) return
+  const target = event?.target as HTMLElement | null
+  if (target?.closest?.('.recitation-card button')) return
+  collapseSlide()
 }
 
 // ========== 详情页提交/导航 ==========
