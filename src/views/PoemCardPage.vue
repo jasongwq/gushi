@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
@@ -98,9 +98,20 @@ function saveResult(result: RecitationResult) {
 }
 
 // ========== 进入详情 ==========
+const detailEnterAnim = ref(false)
+
 function enterDetail(poem: Poem) {
   currentPoem.value = poem
+  // 同步浏览层索引到当前诗
+  const idx = poems.value.findIndex(p => p.id === poem.id)
+  if (idx >= 0) currentIndex.value = idx
+
+  // 进入动画：初始 scale(0.85) opacity(0)，nextTick 后 transition 到正常
+  detailEnterAnim.value = true
   viewLayer.value = 'detail'
+  nextTick(() => {
+    detailEnterAnim.value = false
+  })
 }
 
 // 返回浏览层
@@ -161,23 +172,106 @@ function onDetailGoPrev() {
   }
 }
 
-// ========== 滑动手势 ==========
-const SWIPE_THRESHOLD = 100 // 最小滑动距离
+// ========== 跟手拖拽返回 ==========
+const SWIPE_THRESHOLD = 100
 
-// 详情层：左右滑动返回浏览
-function onDetailSwipe(e: TouchEvent) {
-  const touch = e.changedTouches[0]
-  const startX = (e.target as HTMLElement).dataset.swipeStartX
-  if (startX == null) return
-  const deltaX = touch.clientX - Number(startX)
-  if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
-    goBackToBrowse()
+type DragPhase = 'idle' | 'pending' | 'dragging' | 'settling'
+const dragPhase = ref<DragPhase>('idle')
+const dragDeltaX = ref(0)
+let dragStartX = 0
+let dragStartY = 0
+let dragDirection: 'h' | 'v' | null = null
+
+const dragProgress = computed(() =>
+  Math.min(Math.abs(dragDeltaX.value) / SWIPE_THRESHOLD, 1)
+)
+
+const dragScale = computed(() =>
+  1 - dragProgress.value * 0.15 // 1.0 → 0.85
+)
+
+const dragOpacity = computed(() =>
+  1 - dragProgress.value // 1.0 → 0.0
+)
+
+const detailLayerStyle = computed(() => {
+  if (dragPhase.value === 'idle') {
+    if (detailEnterAnim.value) {
+      return { transform: 'scale(0.85)', opacity: '0', transition: 'none' }
+    }
+    return {}
   }
-}
+  if (dragPhase.value === 'settling') {
+    // settling 时用 CSS transition，目标值由 dragDeltaX 决定
+    return {
+      transform: `scale(${dragScale.value})`,
+      opacity: String(dragOpacity.value),
+      transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s cubic-bezier(0.4,0,0.2,1)',
+    }
+  }
+  // dragging 时无 transition，跟手
+  return {
+    transform: `scale(${dragScale.value})`,
+    opacity: String(dragOpacity.value),
+    transition: 'none',
+  }
+})
 
 function onDetailTouchStart(e: TouchEvent) {
+  if (dragPhase.value === 'settling') return
   const touch = e.touches[0]
-  ;(e.target as HTMLElement).dataset.swipeStartX = String(touch.clientX)
+  dragStartX = touch.clientX
+  dragStartY = touch.clientY
+  dragDirection = null
+  dragPhase.value = 'pending'
+  dragDeltaX.value = 0
+}
+
+function onDetailTouchMove(e: TouchEvent) {
+  if (dragPhase.value !== 'pending' && dragPhase.value !== 'dragging') return
+  const touch = e.touches[0]
+  const deltaX = touch.clientX - dragStartX
+  const deltaY = touch.clientY - dragStartY
+
+  // 方向判断（仅首次）
+  if (dragDirection === null) {
+    if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return
+    dragDirection = Math.abs(deltaX) > Math.abs(deltaY) ? 'h' : 'v'
+  }
+
+  if (dragDirection === 'v') {
+    // 垂直方向，放弃拖拽，恢复正常滚动
+    dragPhase.value = 'idle'
+    return
+  }
+
+  // 水平方向，阻止默认行为（防止滚动），进入拖拽
+  e.preventDefault()
+  dragPhase.value = 'dragging'
+  dragDeltaX.value = deltaX
+}
+
+function onDetailTouchEnd() {
+  if (dragPhase.value !== 'dragging' && dragPhase.value !== 'pending') return
+
+  if (dragPhase.value === 'pending' || Math.abs(dragDeltaX.value) < SWIPE_THRESHOLD) {
+    // 未达阈值，弹回
+    dragPhase.value = 'settling'
+    dragDeltaX.value = 0
+    setTimeout(() => {
+      dragPhase.value = 'idle'
+    }, 260)
+    return
+  }
+
+  // 达到阈值，完成返回
+  dragPhase.value = 'settling'
+  dragDeltaX.value = dragDeltaX.value > 0 ? SWIPE_THRESHOLD : -SWIPE_THRESHOLD
+  setTimeout(() => {
+    dragPhase.value = 'idle'
+    dragDeltaX.value = 0
+    goBackToBrowse()
+  }, 260)
 }
 
 // ========== 盲盒相关 ==========
@@ -241,50 +335,53 @@ const detailProgress = computed(() => {
 
 <template>
   <div class="poem-card-page max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
-    <!-- ====== 详情层 ====== -->
-    <Transition name="card-zoom">
-      <div v-if="viewLayer === 'detail' && currentPoem" class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
-        @touchstart="onDetailTouchStart"
-        @touchend="onDetailSwipe"
-      >
-        <!-- 顶部标题栏 - 固定高度 -->
-        <div class="shrink-0 p-4 pb-2">
-          <div class="flex items-center justify-between mb-2">
-            <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
-            <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
-          </div>
-          <!-- 进度条 -->
-          <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
-            <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
-          </div>
+    <!-- ====== 详情层（始终渲染，z-index 覆盖） ====== -->
+    <div
+      v-if="viewLayer === 'detail' && currentPoem"
+      class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
+      :style="detailLayerStyle"
+      @touchstart="onDetailTouchStart"
+      @touchmove="onDetailTouchMove"
+      @touchend="onDetailTouchEnd"
+      @touchcancel="onDetailTouchEnd"
+    >
+      <!-- 顶部标题栏 - 固定高度 -->
+      <div class="shrink-0 p-4 pb-2">
+        <div class="flex items-center justify-between mb-2">
+          <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
+          <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
         </div>
-        <!-- 古诗正文区域 - flex-1 占剩余空间，内部可滚动 -->
-        <RecitationCard
-          class="flex-1 min-h-0 overflow-y-auto px-4"
-          :poem="currentPoem"
-          :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
-          @submit="onDetailSubmit"
-          @go-prev="onDetailGoPrev"
-        />
-        <!-- 底部区域 - 固定高度 -->
-        <div class="shrink-0 p-3 bg-white border-t border-gray-100 text-center">
-          <span class="text-xs text-gray-300">左右滑动返回卡片浏览</span>
-          <button
-            v-if="fromMystery"
-            class="ml-3 text-xs text-purple-400 cursor-pointer"
-            @click="viewLayer = 'browse'; viewMode = 'mystery'"
-          >返回盲盒</button>
-          <button
-            v-if="fromMystery"
-            class="ml-2 text-xs text-indigo-400 cursor-pointer"
-            @click="switchToGlobal"
-          >全部古诗</button>
+        <!-- 进度条 -->
+        <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
         </div>
       </div>
-    </Transition>
+      <!-- 古诗正文区域 - flex-1 占剩余空间，内部可滚动 -->
+      <RecitationCard
+        class="flex-1 min-h-0 overflow-y-auto px-4"
+        :poem="currentPoem"
+        :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
+        @submit="onDetailSubmit"
+        @go-prev="onDetailGoPrev"
+      />
+      <!-- 底部区域 - 固定高度 -->
+      <div class="shrink-0 p-3 bg-white border-t border-gray-100 text-center">
+        <span class="text-xs text-gray-300">左右滑动返回卡片浏览</span>
+        <button
+          v-if="fromMystery"
+          class="ml-3 text-xs text-purple-400 cursor-pointer"
+          @click="viewLayer = 'browse'; viewMode = 'mystery'"
+        >返回盲盒</button>
+        <button
+          v-if="fromMystery"
+          class="ml-2 text-xs text-indigo-400 cursor-pointer"
+          @click="switchToGlobal"
+        >全部古诗</button>
+      </div>
+    </div>
 
-    <!-- ====== 浏览层 ====== -->
-    <div v-show="viewLayer !== 'detail'" class="flex flex-col flex-1 min-h-0">
+    <!-- ====== 浏览层（始终渲染，在详情层下方） ====== -->
+    <div class="flex flex-col flex-1 min-h-0">
       <!-- 顶部筛选栏 -->
       <div class="p-3 bg-white border-b border-gray-100">
         <div class="flex items-center gap-2 mb-2">
@@ -377,27 +474,7 @@ const detailProgress = computed(() => {
 </template>
 
 <style scoped>
-/* 详情层进入：卡片放大 */
-.card-zoom-enter-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-zoom-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.card-zoom-enter-from {
-  transform: scale(0.85);
-  opacity: 0;
-}
-.card-zoom-enter-to {
-  transform: scale(1);
-  opacity: 1;
-}
-.card-zoom-leave-from {
-  transform: scale(1);
-  opacity: 1;
-}
-.card-zoom-leave-to {
-  transform: scale(0.85);
-  opacity: 0;
+.detail-layer {
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 </style>
