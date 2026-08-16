@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
@@ -283,9 +283,7 @@ describe('poemStore.getPoemById', () => {
 
 describe('poemStore integration: disabling poem hides from all views', () => {
   it('disabling a poem removes it from grades, poemsByGrade, poemsByAuthor, authors', () => {
-    const { poemStore, learningStore } = setupStore()
-
-    // Before: 三年级 has 1 poem
+    const { poemStore } = setupStore()
     expect(poemStore.grades).toContain('三年级')
     expect(poemStore.poemsByGrade.has('三年级')).toBe(true)
 
