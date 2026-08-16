@@ -105,7 +105,7 @@ const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
 function expandSlide(slideIndex: number) {
   const swiper = cardSwiperRef.value?.getSwiperInstance?.()
   if (!swiper) return
-  const slide = swiper.slides[slideIndex]
+  const slide = swiper.slides[slideIndex] as HTMLElement
   if (!slide) return
 
   const poemId = poems.value[swiper.realIndex]?.id
@@ -113,7 +113,22 @@ function expandSlide(slideIndex: number) {
 
   expandedPoemId.value = poemId
   viewMode.value = 'recite'
+
+  // Add expanded class for CSS transition
   slide.classList.add('expanded')
+
+  // Override Swiper's inline coverflow transform for the expanded slide
+  nextTick(() => {
+    slide.style.transform = 'none'
+    slide.style.zIndex = '10'
+    // Dim other slides
+    swiper.slides.forEach((s: HTMLElement, i: number) => {
+      if (i !== slideIndex) {
+        s.style.opacity = '0.3'
+      }
+    })
+    swiper.update()
+  })
 }
 
 // 缩回当前展开的 slide
@@ -123,9 +138,15 @@ function collapseSlide() {
   if (!swiper) return
   swiper.slides.forEach((slide: HTMLElement) => {
     slide.classList.remove('expanded')
+    slide.style.transform = ''
+    slide.style.zIndex = ''
+    slide.style.opacity = ''
   })
   expandedPoemId.value = null
   viewMode.value = 'swiper'
+  nextTick(() => {
+    swiper.update()
+  })
 }
 
 // 点击 PoemCard → 展开进入背诵
