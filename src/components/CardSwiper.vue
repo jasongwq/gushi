@@ -116,6 +116,11 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
 .card-swiper :deep(.swiper-slide) {
   width: 65%;
   height: 100%;
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-swiper :deep(.swiper-slide.expanded) {
+  width: 100%;
 }
 
 .card-swiper {
