@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4 overflow-x-hidden">
     <h2 class="text-xl font-bold text-center mb-4">古诗配置</h2>
 
     <div class="grade-tabs flex overflow-x-auto gap-1 mb-3 pb-1">

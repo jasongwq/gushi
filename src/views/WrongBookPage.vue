@@ -37,7 +37,7 @@ function getPoemTitle(poemId: string): string {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-6">错题本</h2>
 
     <div v-if="learningStore.wrongBook.length === 0" class="text-center text-gray-400 py-12">

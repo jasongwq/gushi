@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page max-w-md mx-auto p-4">
+  <div class="home-page w-full max-w-md mx-auto p-4">
     <h1 class="text-2xl font-bold text-center mb-6">古诗抽查</h1>
 
     <div v-if="reviewDueCount > 0" class="review-banner mb-4 p-4 bg-indigo-50 rounded-lg cursor-pointer" @click="startReview">
@@ -15,10 +15,6 @@
       <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="startQuiz('self')">
         <div class="text-3xl mb-2">📝</div>
         <div class="font-medium">自主练习</div>
-      </button>
-      <button class="mode-btn p-6 bg-white rounded-lg shadow hover:shadow-md transition" @click="router.push({ name: 'recite' })">
-        <div class="text-3xl mb-2">🎯</div>
-        <div class="font-medium">自评背诵</div>
       </button>
     </div>
 

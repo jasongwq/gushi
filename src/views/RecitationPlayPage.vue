@@ -38,7 +38,7 @@ function goPrev() {
 </script>
 
 <template>
-  <div class="recitation-play max-w-md mx-auto p-4">
+  <div class="recitation-play w-full max-w-md mx-auto p-4">
     <template v-if="currentPoem && !quizStore.isFinished">
       <div class="progress-bar">
         <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>

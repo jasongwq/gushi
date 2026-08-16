@@ -112,7 +112,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-6">学习进度</h2>
 
     <div class="text-center p-4 bg-white border border-gray-200 rounded-lg shadow-sm mb-4">

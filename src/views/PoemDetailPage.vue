@@ -124,7 +124,7 @@ watch(poemId, () => {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4">
     <template v-if="poem">
       <h2 class="text-xl font-bold text-center mb-2">{{ poem.title }}</h2>
       <p class="text-center text-gray-500 mb-4">{{ poem.dynasty }} · {{ poem.author }} · {{ poem.grade }}</p>

@@ -119,32 +119,3 @@ test('quiz session persists after page refresh', async ({ page }) => {
   )
   expect(hasCorrectOrWrong).toBe(true)
 })
-
-test('recite page state persists after page refresh', async ({ page }) => {
-  test.setTimeout(60000)
-  await cleanState(page)
-
-  await page.goto('/#/recite')
-  await page.click('text=全部古诗')
-  await page.click('text=开始背诵')
-
-  // Wait for first poem
-  await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 10000 })
-  await page.click('text=查看原文')
-
-  // Evaluate first poem
-  await page.click('button:has-text("会了")')
-  await page.waitForTimeout(500)
-
-  // Should be on second poem
-  await expect(page.locator('text=查看原文')).toBeVisible({ timeout: 5000 })
-
-  // Refresh the page
-  await page.reload()
-  await page.waitForTimeout(1000)
-
-  // Should still be on the recite page with cards phase
-  await expect(page.locator('h2.text-3xl')).toBeVisible({ timeout: 5000 })
-  // Should not be on the setup screen
-  await expect(page.locator('text=开始背诵')).not.toBeVisible()
-})

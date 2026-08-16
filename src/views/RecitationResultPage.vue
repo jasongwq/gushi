@@ -49,7 +49,7 @@ function tryAgain() {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-4">抽背结果</h2>
 
     <div class="text-center mb-6">

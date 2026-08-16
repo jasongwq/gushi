@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4 overflow-x-hidden">
     <h2 class="text-xl font-bold text-center mb-4">古诗集合</h2>
 
     <!-- 分类切换 -->

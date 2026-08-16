@@ -47,7 +47,7 @@ function clearData() {
 </script>
 
 <template>
-  <div class="max-w-md mx-auto p-4">
+  <div class="w-full max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-6">设置</h2>
 
     <div class="flex flex-col gap-3 mb-6">
