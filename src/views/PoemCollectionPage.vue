@@ -2,8 +2,30 @@
   <div class="max-w-md mx-auto p-4">
     <h2 class="text-xl font-bold text-center mb-4">古诗集合</h2>
 
+    <!-- 搜索框 -->
+    <div class="relative mb-4">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="搜索古诗…"
+        class="w-full pl-9 pr-8 py-2 bg-gray-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-300 transition"
+      />
+      <button
+        v-if="searchQuery"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        @click="clearSearch"
+      >
+        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
     <!-- 分类切换 -->
-    <div class="flex gap-2 mb-4">
+    <div v-if="!isSearching" class="flex gap-2 mb-4">
       <button
         :class="['flex-1 p-2 rounded-lg text-sm font-medium transition', categoryMode === 'grade' ? 'bg-indigo-500 text-white' : 'bg-gray-100 text-gray-600']"
         @click="categoryMode = 'grade'"
@@ -15,7 +37,7 @@
     </div>
 
     <!-- 按年级 -->
-    <template v-if="categoryMode === 'grade'">
+    <template v-if="!isSearching && categoryMode === 'grade'">
       <div class="grade-tabs flex overflow-x-auto gap-1 mb-4 pb-1">
         <button
           v-for="grade in poemStore.grades"
@@ -29,7 +51,7 @@
     </template>
 
     <!-- 按诗人 -->
-    <template v-else>
+    <template v-else-if="!isSearching">
       <div class="grade-tabs flex overflow-x-auto gap-1 mb-4 pb-1">
         <button
           v-for="author in poemStore.authors"
@@ -42,12 +64,12 @@
       </div>
     </template>
 
-    <div v-if="currentPoems.length === 0" class="text-center text-gray-400 py-12">
-      暂无古诗
+    <div v-if="displayPoems.length === 0" class="text-center text-gray-400 py-12">
+      {{ isSearching ? '未找到相关古诗' : '暂无古诗' }}
     </div>
 
     <div v-else class="space-y-2">
-      <div v-for="poem in currentPoems" :key="poem.id" class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+      <div v-for="poem in displayPoems" :key="poem.id" class="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
         <div class="flex items-center gap-2">
           <span
             class="font-bold flex-1 cursor-pointer text-indigo-600 hover:text-indigo-800 underline decoration-indigo-300"
@@ -79,6 +101,7 @@ import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import PoemPopup from '@/components/PoemPopup.vue'
 import type { Poem } from '@/types'
+import { searchPoems } from '@/utils/search'
 
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
@@ -87,6 +110,28 @@ const categoryMode = ref<'grade' | 'author'>('grade')
 const activeGrade = ref('')
 const activeAuthor = ref('')
 
+const searchQuery = ref('')
+
+const isSearching = computed(() => searchQuery.value.trim().length > 0)
+
+const searchResults = computed(() => {
+  if (!isSearching.value) return []
+  return searchPoems(poemStore.enabledPoems, searchQuery.value.trim())
+})
+
+const displayPoems = computed(() => {
+  if (isSearching.value) return searchResults.value
+  if (categoryMode.value === 'grade') {
+    return poemStore.poemsByGrade.get(activeGrade.value) ?? []
+  } else {
+    return poemStore.poemsByAuthor.get(activeAuthor.value) ?? []
+  }
+})
+
+function clearSearch() {
+  searchQuery.value = ''
+}
+
 onMounted(async () => {
   await poemStore.fetchPoems()
   if (poemStore.grades.length > 0) {
@@ -94,14 +139,6 @@ onMounted(async () => {
   }
   if (poemStore.authors.length > 0) {
     activeAuthor.value = poemStore.authors[0]
-  }
-})
-
-const currentPoems = computed(() => {
-  if (categoryMode.value === 'grade') {
-    return poemStore.poemsByGrade.get(activeGrade.value) ?? []
-  } else {
-    return poemStore.poemsByAuthor.get(activeAuthor.value) ?? []
   }
 })
 
