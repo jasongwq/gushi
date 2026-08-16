@@ -98,6 +98,24 @@ describe('recordAnswer', () => {
   })
 })
 
+describe('getOrCreateRecord', () => {
+  it('sets firstLearnDate to today on creation', () => {
+    const store = useLearningStore()
+    const today = new Date().toISOString().split('T')[0]
+    store.recordAnswer('p001', 'fillBlank', true)
+    const record = store.getRecord('p001')
+    expect(record!.firstLearnDate).toBe(today)
+  })
+
+  it('preserves firstLearnDate on subsequent answers', () => {
+    const store = useLearningStore()
+    store.recordAnswer('p001', 'fillBlank', true)
+    const firstDate = store.getRecord('p001')!.firstLearnDate
+    store.recordAnswer('p001', 'nextLine', true)
+    expect(store.getRecord('p001')!.firstLearnDate).toBe(firstDate)
+  })
+})
+
 describe('recordRecite', () => {
   it('creates a new record on correct recite', () => {
     const store = useLearningStore()

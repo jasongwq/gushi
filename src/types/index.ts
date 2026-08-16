@@ -25,6 +25,7 @@ export interface LearningRecord {
   unproficient: boolean
   unproficientCorrectStreak: number
   lastLearnDate?: string
+  firstLearnDate?: string  // 首次学习日期，用于遗忘曲线时间线
 }
 
 export interface QuizResult {

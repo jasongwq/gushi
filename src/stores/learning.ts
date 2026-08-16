@@ -26,6 +26,7 @@ export const useLearningStore = defineStore('learning', () => {
         poemId, lastReviewDate: today, reviewCount: 0,
         nextReviewDate: today, correctness: [], reciteCorrectness: [], masteryLevel: '新',
         unproficient: false, unproficientCorrectStreak: 0,
+        firstLearnDate: today,
       }
       data.value.records.push(record)
     }
