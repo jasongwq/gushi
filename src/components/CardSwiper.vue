@@ -105,6 +105,6 @@ defineExpose({ shuffle, goTo })
 <style scoped>
 .card-swiper :deep(.swiper-slide) {
   width: 65%;
-  height: 75%;
+  height: 100%;
 }
 </style>
