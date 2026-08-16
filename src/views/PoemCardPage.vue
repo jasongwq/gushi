@@ -175,12 +175,13 @@ function onDetailGoPrev() {
 // ========== 跟手拖拽返回 ==========
 const SWIPE_THRESHOLD = 100
 
-type DragPhase = 'idle' | 'pending' | 'dragging' | 'settling'
+type DragPhase = 'idle' | 'pending' | 'dragging' | 'transitioning' | 'handed-off'
 const dragPhase = ref<DragPhase>('idle')
 const dragDeltaX = ref(0)
 let dragStartX = 0
 let dragStartY = 0
 let dragDirection: 'h' | 'v' | null = null
+const cardSwiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
 
 const dragProgress = computed(() =>
   Math.min(Math.abs(dragDeltaX.value) / SWIPE_THRESHOLD, 1)
@@ -201,13 +202,17 @@ const detailLayerStyle = computed(() => {
     }
     return {}
   }
-  if (dragPhase.value === 'settling') {
+  if (dragPhase.value === 'transitioning') {
     // settling 时用 CSS transition，目标值由 dragDeltaX 决定
     return {
       transform: `scale(${dragScale.value})`,
       opacity: String(dragOpacity.value),
       transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1), opacity 0.25s cubic-bezier(0.4,0,0.2,1)',
     }
+  }
+  if (dragPhase.value === 'handed-off') {
+    // 已转交给 Swiper，详情层保持缩小状态
+    return { transform: 'scale(0.85)', opacity: '0', transition: 'none' }
   }
   // dragging 时无 transition，跟手
   return {
@@ -218,7 +223,7 @@ const detailLayerStyle = computed(() => {
 })
 
 function onDetailTouchStart(e: TouchEvent) {
-  if (dragPhase.value === 'settling') return
+  if (dragPhase.value !== 'idle' && dragPhase.value !== 'pending') return
   const touch = e.touches[0]
   dragStartX = touch.clientX
   dragStartY = touch.clientY
@@ -249,29 +254,81 @@ function onDetailTouchMove(e: TouchEvent) {
   e.preventDefault()
   dragPhase.value = 'dragging'
   dragDeltaX.value = deltaX
+
+  // 超过阈值 → 立即切换到浏览层，将手势转交给 Swiper
+  if (Math.abs(dragDeltaX.value) >= SWIPE_THRESHOLD) {
+    handOffToSwiper(e)
+  }
 }
 
 function onDetailTouchEnd() {
-  if (dragPhase.value !== 'dragging' && dragPhase.value !== 'pending') return
-
-  if (dragPhase.value === 'pending' || Math.abs(dragDeltaX.value) < SWIPE_THRESHOLD) {
-    // 未达阈值，弹回
-    dragPhase.value = 'settling'
-    dragDeltaX.value = 0
-    setTimeout(() => {
-      dragPhase.value = 'idle'
-    }, 260)
+  if (dragPhase.value === 'pending' || dragPhase.value === 'idle') {
+    dragPhase.value = 'idle'
     return
   }
 
-  // 达到阈值，完成返回
-  dragPhase.value = 'settling'
-  dragDeltaX.value = dragDeltaX.value > 0 ? SWIPE_THRESHOLD : -SWIPE_THRESHOLD
-  setTimeout(() => {
+  if (dragPhase.value === 'dragging') {
+    // 拖拽中松手但没到阈值 → 弹回
+    if (Math.abs(dragDeltaX.value) < SWIPE_THRESHOLD) {
+      dragPhase.value = 'transitioning'
+      dragDeltaX.value = 0
+      setTimeout(() => {
+        dragPhase.value = 'idle'
+      }, 260)
+    }
+    // 到了阈值的情况已经在 touchMove 中处理了（handed-off）
+    return
+  }
+
+  if (dragPhase.value === 'transitioning') {
+    // settling 中松手，等待动画完成
+    return
+  }
+}
+
+// 将手势转交给 Swiper：详情层消失，Swiper 接管触摸
+function handOffToSwiper(e: TouchEvent) {
+  dragPhase.value = 'handed-off'
+  viewLayer.value = 'browse'
+  const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
+  if (idx >= 0) currentIndex.value = idx
+
+  // 在下一帧，向 Swiper 的 DOM 元素派发 touchstart，让 Swiper 开始追踪触摸
+  nextTick(() => {
+    const swiperEl = cardSwiperRef.value?.$el as HTMLElement
+    if (!swiperEl) {
+      dragPhase.value = 'idle'
+      return
+    }
+
+    const touch = e.touches[0]
+
+    // 派发 touchstart 到 Swiper 元素
+    const startTouch = new Touch({
+      identifier: touch.identifier,
+      target: swiperEl,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      pageX: touch.pageX,
+      pageY: touch.pageY,
+      radiusX: touch.radiusX,
+      radiusY: touch.radiusY,
+      rotationAngle: touch.rotationAngle,
+      force: touch.force,
+    })
+
+    swiperEl.dispatchEvent(new TouchEvent('touchstart', {
+      touches: [startTouch],
+      targetTouches: [startTouch],
+      changedTouches: [startTouch],
+      bubbles: true,
+      cancelable: true,
+    }))
+
+    // 后续的 touchmove 和 touchend 会被 Swiper 自然接收
+    // 因为详情层已经消失，浏览层在下方
     dragPhase.value = 'idle'
-    dragDeltaX.value = 0
-    goBackToBrowse()
-  }, 260)
+  })
 }
 
 // ========== 盲盒相关 ==========
@@ -422,7 +479,7 @@ const detailProgress = computed(() => {
         />
 
         <!-- 滑动模式 -->
-        <CardSwiper v-else-if="viewMode === 'swiper' && poems.length > 0" v-model="currentIndex" :count="poems.length">
+        <CardSwiper ref="cardSwiperRef" v-else-if="viewMode === 'swiper' && poems.length > 0" v-model="currentIndex" :count="poems.length">
           <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
             <PoemCard
               :poem="poem"
