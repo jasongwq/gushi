@@ -5,8 +5,9 @@ import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import CardSwiper from '@/components/CardSwiper.vue'
 import PoemCard from '@/components/PoemCard.vue'
+import MysteryBox from '@/components/MysteryBox.vue'
 import { SwiperSlide } from 'swiper/vue'
-import type { RecitationResult, SourceType } from '@/types'
+import type { Poem, RecitationResult, SourceType } from '@/types'
 import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
 
 const router = useRouter()
@@ -14,6 +15,10 @@ const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
 onMounted(() => poemStore.fetchPoems())
+
+// 模式切换：swiper / mystery
+type ViewMode = 'swiper' | 'mystery'
+const viewMode = ref<ViewMode>('swiper')
 
 // 筛选
 const source = ref<SourceType>('all')
@@ -94,11 +99,14 @@ function saveResult(result: RecitationResult) {
   }
 }
 
-// 随机抽卡
-const swiperRef = ref<InstanceType<typeof CardSwiper> | null>(null)
+// 盲盒模式：抽到诗后跳转到 swiper 对应位置
+const mysteryBoxRef = ref<InstanceType<typeof MysteryBox> | null>(null)
 
-function shuffleCards() {
-  swiperRef.value?.shuffle()
+function onMysteryRevealed(poem: Poem) {
+  const idx = poems.value.findIndex(p => p.id === poem.id)
+  if (idx >= 0) {
+    currentIndex.value = idx
+  }
 }
 
 // 统计
@@ -138,7 +146,16 @@ const totalCount = computed(() => poems.value.length)
 
     <!-- 卡片区域 -->
     <div class="flex-1 min-h-0 p-4">
-      <CardSwiper v-if="poems.length > 0" ref="swiperRef" v-model="currentIndex" :count="poems.length">
+      <!-- 盲盒模式 -->
+      <MysteryBox
+        v-if="viewMode === 'mystery' && poems.length > 0"
+        ref="mysteryBoxRef"
+        :poems="poems"
+        @revealed="onMysteryRevealed"
+      />
+
+      <!-- 滑动模式 -->
+      <CardSwiper v-else-if="viewMode === 'swiper' && poems.length > 0" ref="swiperRef" v-model="currentIndex" :count="poems.length">
         <SwiperSlide v-for="(poem, index) in poems" :key="poem.id">
           <PoemCard
             :ref="(el: any) => { if (el) poemCardRefs[index] = el }"
@@ -147,19 +164,27 @@ const totalCount = computed(() => poems.value.length)
           />
         </SwiperSlide>
       </CardSwiper>
+
       <div v-else class="h-full flex items-center justify-center text-gray-400">
         没有符合条件的古诗
       </div>
     </div>
 
     <!-- 底部工具栏 -->
-    <div class="p-4 bg-white border-t border-gray-100">
+    <div class="p-4 bg-white border-t border-gray-100 flex gap-3">
       <button
         :disabled="poems.length === 0"
-        :class="['w-full py-3 rounded-xl text-base font-medium cursor-pointer transition', poems.length > 0 ? 'bg-indigo-500 text-white hover:bg-indigo-600 active:scale-95' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
-        @click="shuffleCards"
+        :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' ? 'bg-indigo-500 text-white' : poems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+        @click="viewMode = 'swiper'"
       >
-        🎲 随机抽卡
+        📇 滑动
+      </button>
+      <button
+        :disabled="poems.length === 0"
+        :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'mystery' ? 'bg-purple-500 text-white' : poems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+        @click="viewMode = 'mystery'"
+      >
+        🎁 盲盒
       </button>
     </div>
   </div>
