@@ -200,6 +200,89 @@ test.describe('poem collection page', () => {
     const gradeTabs = page.locator('.grade-tabs button')
     await expect(gradeTabs).toHaveCount(7)
   })
+
+  // Feature: 搜索功能
+  test.describe('search', () => {
+    test('search input is visible with placeholder', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await expect(searchInput).toBeVisible()
+      await expect(searchInput).toHaveAttribute('placeholder', '搜索古诗…')
+    })
+
+    test('typing in search hides category tabs', async ({ page }) => {
+      await expect(page.locator('text=按年级')).toBeVisible()
+      await expect(page.locator('.grade-tabs button').first()).toBeVisible()
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('静')
+      await expect(page.locator('text=按年级')).not.toBeVisible()
+      await expect(page.locator('.grade-tabs button')).toHaveCount(0)
+    })
+
+    test('search shows matching results', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('静夜思')
+      const poemCards = page.locator('.space-y-2 > div')
+      await expect(poemCards.first()).toBeVisible()
+      // Should find at least 静夜思
+      const titles = await poemCards.locator('span.font-bold').allTextContents()
+      expect(titles.some(t => t.includes('静夜思'))).toBe(true)
+    })
+
+    test('search with no results shows empty state', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('zzz_nonexistent_poem')
+      await expect(page.locator('text=未找到相关古诗')).toBeVisible()
+    })
+
+    test('clear button appears when search has text', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      const clearBtn = page.locator('button[aria-label="清除搜索"]')
+      await expect(clearBtn).not.toBeVisible()
+      await searchInput.fill('春')
+      await expect(clearBtn).toBeVisible()
+    })
+
+    test('clear button clears search and restores category view', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('春')
+      // Category tabs hidden during search
+      await expect(page.locator('text=按年级')).not.toBeVisible()
+      // Click clear button
+      const clearBtn = page.locator('button[aria-label="清除搜索"]')
+      await clearBtn.click()
+      // Category tabs should reappear
+      await expect(page.locator('text=按年级')).toBeVisible()
+      await expect(page.locator('.grade-tabs button').first()).toBeVisible()
+      // Search input should be empty
+      await expect(searchInput).toHaveValue('')
+    })
+
+    test('clearing search by deleting text restores category view', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('春')
+      await expect(page.locator('text=按年级')).not.toBeVisible()
+      await searchInput.clear()
+      await expect(page.locator('text=按年级')).toBeVisible()
+    })
+
+    test('search by author name returns results', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('李白')
+      const poemCards = page.locator('.space-y-2 > div')
+      await expect(poemCards.first()).toBeVisible()
+      const count = await poemCards.count()
+      expect(count).toBeGreaterThan(0)
+    })
+
+    test('search by content text returns results', async ({ page }) => {
+      const searchInput = page.locator('input[aria-label="搜索古诗"]')
+      await searchInput.fill('明月')
+      const poemCards = page.locator('.space-y-2 > div')
+      await expect(poemCards.first()).toBeVisible()
+      const count = await poemCards.count()
+      expect(count).toBeGreaterThan(0)
+    })
+  })
 })
 
 // === 古诗启用配置页 ===
