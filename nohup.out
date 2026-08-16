@@ -1,0 +1,655 @@
+
+> gushi-choucha@0.1.0 dev
+> vite
+
+Port 5173 is in use, trying another one...
+
+  VITE v6.4.3  ready in 1209 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
+
+> gushi-choucha@0.1.0 dev
+> vite
+
+
+  VITE v6.4.3  ready in 679 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+
+> gushi-choucha@0.1.0 dev
+> vite
+
+
+  VITE v6.4.3  ready in 651 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.18.0.20:5173/
+6:27:09 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+6:27:10 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+6:28:48 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+6:28:48 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+6:30:49 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+6:32:43 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:32:55 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:33:56 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:36:56 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:38:41 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:38:50 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:39:49 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+6:39:53 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+6:40:02 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+6:40:10 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:41:12 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:41:17 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:44:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+6:51:51 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+6:51:51 AM [vite] vite.config.ts changed, restarting server...
+6:51:51 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css, /src/views/PoemCardPage.vue?vue&type=style&index=0&scoped=17d338e1&lang.css
+6:51:51 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css, /src/views/PoemCardPage.vue?vue&type=style&index=0&scoped=17d338e1&lang.css
+6:51:51 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+6:52:01 AM [vite] vite.config.ts changed, restarting server...
+6:52:01 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.18.0.20:5173/
+6:58:44 AM [vite] (client) page reload coverage/index.html
+6:58:44 AM [vite] (client) page reload coverage/stores/index.html
+6:58:44 AM [vite] (client) page reload coverage/stores/learning.ts.html
+6:58:44 AM [vite] (client) page reload coverage/stores/poem.ts.html
+6:58:44 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+6:58:44 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+6:58:44 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+6:58:44 AM [vite] (client) page reload coverage/utils/index.html
+6:58:44 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+6:58:44 AM [vite] (client) page reload coverage/utils/retention.ts.html
+6:58:44 AM [vite] (client) page reload coverage/utils/storage.ts.html
+6:58:44 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+6:58:44 AM [vite] (client) page reload coverage/views/index.html
+6:58:44 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+6:58:44 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+6:58:44 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+6:58:44 AM [vite] (client) page reload coverage/components/index.html
+6:58:44 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+6:58:55 AM [vite] (client) page reload coverage/index.html
+6:58:55 AM [vite] (client) page reload coverage/index.html
+6:58:55 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+6:58:55 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+6:58:55 AM [vite] (client) page reload coverage/components/index.html
+6:58:55 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+6:58:55 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+6:58:55 AM [vite] (client) page reload coverage/composables/index.html
+6:58:55 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+6:58:55 AM [vite] (client) page reload coverage/stores/index.html
+6:58:55 AM [vite] (client) page reload coverage/stores/learning.ts.html
+6:58:55 AM [vite] (client) page reload coverage/stores/poem.ts.html
+6:58:55 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/index.html
+6:58:55 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/retention.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/storage.ts.html
+6:58:55 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+6:58:55 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+6:58:55 AM [vite] (client) page reload coverage/views/index.html
+6:59:00 AM [vite] (client) page reload coverage/index.html
+6:59:00 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+6:59:00 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+6:59:00 AM [vite] (client) page reload coverage/components/index.html
+6:59:00 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+6:59:00 AM [vite] (client) page reload coverage/composables/index.html
+6:59:00 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+6:59:00 AM [vite] (client) page reload coverage/stores/index.html
+6:59:00 AM [vite] (client) page reload coverage/stores/learning.ts.html
+6:59:00 AM [vite] (client) page reload coverage/stores/poem.ts.html
+6:59:00 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/index.html
+6:59:00 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/retention.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/storage.ts.html
+6:59:00 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+6:59:00 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+6:59:00 AM [vite] (client) page reload coverage/views/index.html
+7:01:30 AM [vite] (client) page reload coverage/index.html
+7:01:30 AM [vite] (client) page reload coverage/index.html
+7:01:30 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:01:30 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:01:30 AM [vite] (client) page reload coverage/components/index.html
+7:01:30 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:01:30 AM [vite] (client) page reload coverage/composables/index.html
+7:01:30 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:01:30 AM [vite] (client) page reload coverage/stores/index.html
+7:01:30 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:01:30 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:01:30 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/index.html
+7:01:30 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:01:30 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:01:30 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:01:30 AM [vite] (client) page reload coverage/views/index.html
+7:01:47 AM [vite] (client) page reload coverage/index.html
+7:01:47 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:01:47 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:01:47 AM [vite] (client) page reload coverage/components/index.html
+7:01:47 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:01:47 AM [vite] (client) page reload coverage/composables/index.html
+7:01:47 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:01:47 AM [vite] (client) page reload coverage/stores/index.html
+7:01:47 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:01:47 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:01:47 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/index.html
+7:01:47 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:01:47 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:01:47 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:01:47 AM [vite] (client) page reload coverage/views/index.html
+7:02:15 AM [vite] (client) page reload coverage/index.html
+7:02:15 AM [vite] (client) page reload coverage/index.html
+7:02:15 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:02:15 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:02:15 AM [vite] (client) page reload coverage/components/index.html
+7:02:15 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:02:15 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:02:15 AM [vite] (client) page reload coverage/composables/index.html
+7:02:15 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:02:15 AM [vite] (client) page reload coverage/stores/index.html
+7:02:15 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:02:15 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:02:15 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/index.html
+7:02:15 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:02:15 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:02:15 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:02:15 AM [vite] (client) page reload coverage/views/index.html
+7:02:37 AM [vite] (client) page reload coverage/index.html
+7:02:37 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:02:37 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:02:37 AM [vite] (client) page reload coverage/components/index.html
+7:02:37 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:02:37 AM [vite] (client) page reload coverage/composables/index.html
+7:02:37 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:02:37 AM [vite] (client) page reload coverage/stores/index.html
+7:02:37 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:02:37 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:02:37 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/index.html
+7:02:37 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:02:37 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:02:37 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:02:37 AM [vite] (client) page reload coverage/views/index.html
+7:02:48 AM [vite] (client) page reload coverage/index.html
+7:02:48 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:02:48 AM [vite] (client) page reload coverage/components/index.html
+7:02:48 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:02:48 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:02:48 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:02:48 AM [vite] (client) page reload coverage/composables/index.html
+7:02:48 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:02:48 AM [vite] (client) page reload coverage/stores/index.html
+7:02:48 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:02:48 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:02:48 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/index.html
+7:02:48 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:02:48 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:02:48 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:02:48 AM [vite] (client) page reload coverage/views/index.html
+7:02:54 AM [vite] (client) page reload coverage/index.html
+7:02:54 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:02:54 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:02:54 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:02:54 AM [vite] (client) page reload coverage/composables/index.html
+7:02:54 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:02:54 AM [vite] (client) page reload coverage/stores/index.html
+7:02:54 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:02:54 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:02:54 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/index.html
+7:02:54 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:02:54 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:02:54 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:02:54 AM [vite] (client) page reload coverage/views/index.html
+7:02:54 AM [vite] (client) page reload coverage/components/index.html
+7:03:05 AM [vite] (client) page reload coverage/index.html
+7:03:05 AM [vite] (client) page reload coverage/index.html
+7:03:05 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:03:05 AM [vite] (client) page reload coverage/components/index.html
+7:03:05 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:03:05 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:03:05 AM [vite] (client) page reload coverage/composables/index.html
+7:03:05 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:03:05 AM [vite] (client) page reload coverage/stores/index.html
+7:03:05 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:03:05 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:03:05 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/index.html
+7:03:05 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:03:05 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:03:05 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:03:05 AM [vite] (client) page reload coverage/views/index.html
+7:03:38 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+7:03:50 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+7:03:53 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+7:03:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+7:04:28 AM [vite] (client) page reload coverage/index.html
+7:04:28 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+7:04:28 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+7:04:28 AM [vite] (client) page reload coverage/components/index.html
+7:04:28 AM [vite] (client) page reload coverage/composables/index.html
+7:04:28 AM [vite] (client) page reload coverage/composables/useSwipeHandoff.ts.html
+7:04:28 AM [vite] (client) page reload coverage/stores/index.html
+7:04:28 AM [vite] (client) page reload coverage/stores/learning.ts.html
+7:04:28 AM [vite] (client) page reload coverage/stores/poem.ts.html
+7:04:28 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/index.html
+7:04:28 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/retention.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/storage.ts.html
+7:04:28 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+7:04:28 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+7:04:28 AM [vite] (client) page reload coverage/views/index.html
+7:04:28 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+7:04:29 AM [vite] (client) page reload coverage/index.html
+7:04:29 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:04:29 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:04:36 AM [vite] (client) page reload coverage/index.html
+7:04:36 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:04:44 AM [vite] (client) page reload coverage/index.html
+7:04:44 AM [vite] (client) page reload coverage/index.html
+7:04:44 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:04:44 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/index.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/FillBlankQuiz.vue.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/NextLineQuiz.vue.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/PoemPopup.vue.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/index.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/index.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/learning.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/poem.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/quiz.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/distractor.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/ebbinghaus.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/index.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/quiz.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/retention.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/search.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/storage.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/unproficient.ts.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/QuizPlayPage.vue.html
+7:07:50 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/index.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/index.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/FillBlankQuiz.vue.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/NextLineQuiz.vue.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/PoemPopup.vue.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/index.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/index.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/learning.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/poem.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/quiz.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/distractor.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/ebbinghaus.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/index.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/quiz.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/retention.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/search.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/storage.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/unproficient.ts.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/QuizPlayPage.vue.html
+7:10:20 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/index.html
+7:11:33 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+7:11:33 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:11:33 AM [vite] vite.config.ts changed, restarting server...
+7:11:33 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+7:11:45 AM [vite] vite.config.ts changed, restarting server...
+7:11:45 AM [vite] vite.config.ts changed, restarting server...
+7:11:45 AM [vite] server restarted.
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.18.0.20:5173/
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.18.0.20:5173/
+7:11:56 AM [vite] (client) page reload coverage/index.html
+7:11:56 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:11:58 AM [vite] (client) page reload coverage/index.html
+7:11:58 AM [vite] (client) page reload coverage/index.html
+7:11:58 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:11:58 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+7:13:37 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+7:13:38 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+7:23:01 AM [vite] (client) hmr update /src/views/PoemCollectionPage.vue, /src/style.css
+7:23:04 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+7:24:45 AM [vite] (client) hmr update /src/views/RecitePage.vue, /src/style.css
+7:24:48 AM [vite] (client) page reload src/router/index.ts
+7:24:52 AM [vite] (client) page reload src/router/index.ts
+7:24:59 AM [vite] (client) hmr update /src/views/HomePage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/ProgressPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/PoemCollectionPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/HomePage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/SettingsPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+7:25:50 AM [vite] (client) hmr update /src/views/QuizSetupPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/ProgressPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/PoemCollectionPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/SettingsPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+7:25:59 AM [vite] (client) hmr update /src/views/QuizSetupPage.vue, /src/style.css
+7:36:16 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+7:36:20 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+7:36:24 AM [vite] (client) hmr update /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+7:36:27 AM [vite] (client) hmr update /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+7:36:37 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:36:39 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:36:42 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:36:44 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:36:47 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:36:51 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+7:40:45 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:00:40 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:00:55 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+8:01:02 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+8:01:12 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+8:02:02 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:11:34 AM [vite] (client) hmr update /src/views/PoemCollectionPage.vue, /src/style.css
+8:12:14 AM [vite] changed tsconfig file detected: /root/古诗抽查/.codebuddy/worktrees/poem-search/tsconfig.json - Clearing cache and forcing full-reload to ensure TypeScript is compiled with updated config values.
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/index.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/index.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/views/QuizPlayPage.vue.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/distractor.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/ebbinghaus.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/index.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/quiz.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/retention.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/search.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/storage.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/utils/unproficient.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/quiz.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/index.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/learning.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/stores/poem.ts.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/PoemPopup.vue.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/FillBlankQuiz.vue.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/NextLineQuiz.vue.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/coverage/components/index.html
+8:12:14 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/index.html
+8:12:15 AM [vite] (client) page reload .codebuddy/worktrees/poem-search/dist/index.html
+8:29:18 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:29:25 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:29:37 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:29:41 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+8:29:47 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:43:46 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCollectionPage.vue, /src/views/HomePage.vue, /src/views/PoemCardPage.vue, /src/views/WrongBookPage.vue, /src/views/ProgressPage.vue, /src/views/PoemConfigPage.vue, /src/views/QuizSetupPage.vue, /src/views/QuizPlayPage.vue, /src/components/NextLineQuiz.vue, /src/components/FillBlankQuiz.vue
+8:45:10 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+8:45:14 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+8:45:17 AM [vite] (client) hmr update /src/views/PoemConfigPage.vue, /src/style.css
+8:45:49 AM [vite] (client) hmr update /src/views/HomePage.vue, /src/style.css
+8:46:03 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+8:46:06 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+8:46:10 AM [vite] (client) hmr update /src/views/WrongBookPage.vue, /src/style.css
+8:49:44 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:49:52 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:49:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:50:00 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:50:05 AM [vite] (client) page reload coverage/index.html
+8:50:05 AM [vite] (client) page reload coverage/useSwipeHandoff.ts.html
+8:50:17 AM [vite] (client) page reload coverage/index.html
+8:50:17 AM [vite] (client) page reload coverage/index.html
+8:50:17 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+8:50:17 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+8:50:17 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:50:17 AM [vite] (client) page reload coverage/components/index.html
+8:50:17 AM [vite] (client) page reload coverage/composables/index.html
+8:50:17 AM [vite] (client) page reload coverage/composables/usePoemCardPageLogic.ts.html
+8:50:17 AM [vite] (client) page reload coverage/stores/index.html
+8:50:17 AM [vite] (client) page reload coverage/stores/learning.ts.html
+8:50:17 AM [vite] (client) page reload coverage/stores/poem.ts.html
+8:50:17 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/index.html
+8:50:17 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/retention.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/search.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/storage.ts.html
+8:50:17 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+8:50:17 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+8:50:17 AM [vite] (client) page reload coverage/views/index.html
+8:50:24 AM [vite] (client) page reload coverage/index.html
+8:50:24 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+8:50:24 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+8:50:24 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:50:24 AM [vite] (client) page reload coverage/components/index.html
+8:50:24 AM [vite] (client) page reload coverage/stores/index.html
+8:50:24 AM [vite] (client) page reload coverage/stores/learning.ts.html
+8:50:24 AM [vite] (client) page reload coverage/stores/poem.ts.html
+8:50:24 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/index.html
+8:50:24 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/retention.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/search.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/storage.ts.html
+8:50:24 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+8:50:24 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+8:50:24 AM [vite] (client) page reload coverage/views/index.html
+8:50:24 AM [vite] (client) page reload coverage/composables/index.html
+8:50:24 AM [vite] (client) page reload coverage/composables/usePoemCardPageLogic.ts.html
+8:51:00 AM [vite] (client) page reload coverage/index.html
+8:51:00 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+8:51:00 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+8:51:00 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:51:00 AM [vite] (client) page reload coverage/components/index.html
+8:51:00 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:51:00 AM [vite] (client) page reload coverage/composables/index.html
+8:51:00 AM [vite] (client) page reload coverage/composables/usePoemCardPageLogic.ts.html
+8:51:00 AM [vite] (client) page reload coverage/stores/index.html
+8:51:00 AM [vite] (client) page reload coverage/stores/learning.ts.html
+8:51:00 AM [vite] (client) page reload coverage/stores/poem.ts.html
+8:51:00 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/index.html
+8:51:00 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/retention.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/search.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/storage.ts.html
+8:51:00 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+8:51:00 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+8:51:00 AM [vite] (client) page reload coverage/views/index.html
+8:51:06 AM [vite] (client) page reload coverage/index.html
+8:51:06 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+8:51:06 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+8:51:06 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:51:06 AM [vite] (client) page reload coverage/components/index.html
+8:51:06 AM [vite] (client) page reload coverage/composables/index.html
+8:51:06 AM [vite] (client) page reload coverage/composables/usePoemCardPageLogic.ts.html
+8:51:06 AM [vite] (client) page reload coverage/stores/index.html
+8:51:06 AM [vite] (client) page reload coverage/stores/learning.ts.html
+8:51:06 AM [vite] (client) page reload coverage/stores/poem.ts.html
+8:51:06 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/index.html
+8:51:06 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/retention.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/search.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/storage.ts.html
+8:51:06 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+8:51:06 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+8:51:06 AM [vite] (client) page reload coverage/views/index.html
+8:51:42 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCollectionPage.vue, /src/views/HomePage.vue, /src/views/PoemCardPage.vue, /src/views/WrongBookPage.vue, /src/views/ProgressPage.vue, /src/views/PoemConfigPage.vue, /src/views/QuizSetupPage.vue, /src/views/QuizPlayPage.vue, /src/components/NextLineQuiz.vue, /src/components/FillBlankQuiz.vue
+8:52:52 AM [vite] (client) page reload coverage/index.html
+8:52:52 AM [vite] (client) page reload coverage/components/FillBlankQuiz.vue.html
+8:52:52 AM [vite] (client) page reload coverage/components/NextLineQuiz.vue.html
+8:52:52 AM [vite] (client) page reload coverage/components/index.html
+8:52:52 AM [vite] (client) page reload coverage/components/PoemPopup.vue.html
+8:52:52 AM [vite] (client) page reload coverage/composables/index.html
+8:52:52 AM [vite] (client) page reload coverage/composables/usePoemCardPageLogic.ts.html
+8:52:52 AM [vite] (client) page reload coverage/stores/index.html
+8:52:52 AM [vite] (client) page reload coverage/stores/learning.ts.html
+8:52:52 AM [vite] (client) page reload coverage/stores/poem.ts.html
+8:52:52 AM [vite] (client) page reload coverage/stores/quiz.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/distractor.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/ebbinghaus.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/index.html
+8:52:52 AM [vite] (client) page reload coverage/utils/quiz.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/retention.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/search.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/storage.ts.html
+8:52:52 AM [vite] (client) page reload coverage/utils/unproficient.ts.html
+8:52:52 AM [vite] (client) page reload coverage/views/QuizPlayPage.vue.html
+8:52:52 AM [vite] (client) page reload coverage/views/index.html
+8:54:07 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+8:54:35 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+8:54:35 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+8:54:35 AM [vite] (client) page reload src/composables/useSwipeHandoff.ts
+8:54:35 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+8:54:35 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css, /src/views/PoemCardPage.vue?vue&type=style&index=0&scoped=17d338e1&lang.css
+8:54:55 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+8:54:55 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+8:54:55 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:54:55 AM [vite] (client) page reload src/composables/useSwipeHandoff.ts
+8:54:55 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+8:55:10 AM [vite] (client) Pre-transform error: [vue/compiler-sfc] Unexpected token (43:0)
+
+/root/古诗抽查/src/components/MysteryBox.vue
+40 |      initBoxes()
+41 |    }
+42 |  })
+   |     ^
+43 |  }
+   |  ^
+44 |  
+  Plugin: vite:vue
+  File: /root/古诗抽查/src/components/MysteryBox.vue:43:0
+  37 |  // 当 poems prop 从空变为有数据时，重新初始化
+  38 |  watch(() => props.poems.length, (newLen, oldLen) => {
+  39 |    if (oldLen === 0 && newLen > 0 && boxes.value.length === 0) {
+     |                                                                 ^
+  40 |      initBoxes()
+  41 |    }
+8:55:10 AM [vite] Internal server error: [vue/compiler-sfc] Unexpected token (43:0)
+
+/root/古诗抽查/src/components/MysteryBox.vue
+40 |      initBoxes()
+41 |    }
+42 |  })
+   |     ^
+43 |  }
+   |  ^
+44 |  
+  Plugin: vite:vue
+  File: /root/古诗抽查/src/components/MysteryBox.vue:43:0
+  37 |  // 当 poems prop 从空变为有数据时，重新初始化
+  38 |  watch(() => props.poems.length, (newLen, oldLen) => {
+  39 |    if (oldLen === 0 && newLen > 0 && boxes.value.length === 0) {
+     |                                                                 ^
+  40 |      initBoxes()
+  41 |    }
+      at constructor (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:369:19)
+      at TypeScriptParserMixin.raise (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:6620:19)
+      at TypeScriptParserMixin.unexpected (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:6640:16)
+      at TypeScriptParserMixin.parseExprAtom (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11468:22)
+      at TypeScriptParserMixin.parseExprSubscripts (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11102:23)
+      at TypeScriptParserMixin.parseUpdate (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11087:21)
+      at TypeScriptParserMixin.parseMaybeUnary (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:11067:23)
+      at TypeScriptParserMixin.parseMaybeUnary (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:9858:18)
+      at TypeScriptParserMixin.parseMaybeUnaryOrPrivate (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:10920:61)
+      at TypeScriptParserMixin.parseExprOps (/root/古诗抽查/node_modules/@babel/parser/lib/index.js:10925:23)
+8:55:14 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+8:56:43 AM [vite] (client) page reload src/composables/useSwipeHandoff.ts
+8:56:43 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+8:56:43 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+8:56:43 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css, /src/views/PoemCardPage.vue?vue&type=style&index=0&scoped=17d338e1&lang.css
+8:56:43 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+8:57:43 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:57:52 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+8:57:56 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:00:48 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:00:48 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+9:00:48 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+9:00:48 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+9:00:48 AM [vite] (client) page reload src/composables/useSwipeHandoff.ts
+9:00:59 AM [vite] (client) page reload src/composables/useSwipeHandoff.ts
+9:00:59 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+9:00:59 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+9:00:59 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+9:01:52 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+9:01:59 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:08:27 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+9:08:27 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:08:27 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+9:08:27 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+9:08:27 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+9:13:00 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+9:13:06 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:14:45 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:17:41 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+9:17:41 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+9:17:41 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css, /src/components/CardSwiper.vue?vue&type=style&index=0&scoped=c71ffd1d&lang.css
+9:17:41 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css, /src/components/MysteryBox.vue?vue&type=style&index=0&scoped=1ed39e86&lang.css
+9:17:41 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+9:17:41 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css, /src/views/PoemCardPage.vue?vue&type=style&index=0&scoped=17d338e1&lang.css
+9:18:46 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:18:53 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:18:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:19:03 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
+9:19:15 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+9:22:18 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+9:22:26 AM [vite] (client) hmr update /src/components/MysteryBox.vue, /src/style.css
+10:23:28 AM [vite] (client) page reload demo-zoom-transition.html
+10:33:49 AM [vite] (client) hmr update /src/views/HomePage.vue, /src/style.css
+10:35:10 AM [vite] (client) page reload demo-zoom-transition.html
+10:38:11 AM [vite] (client) page reload demo-zoom-transition.html
+11:03:55 AM [vite] (client) page reload demo-zoom-transition.html
+11:12:44 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+11:12:56 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+11:12:59 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css
+11:13:00 AM [vite] (client) hmr update /src/style.css, /src/views/PoemCardPage.vue
+11:13:01 AM [vite] (client) hmr update /src/components/CardSwiper.vue, /src/style.css

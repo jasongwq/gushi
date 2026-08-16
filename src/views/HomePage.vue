@@ -50,7 +50,7 @@ const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
 const reviewDueCount = computed(() => learningStore.reviewDueCount)
-const wrongCount = computed(() => learningStore.wrongCount)
+const wrongCount = computed(() => learningStore.wrongBook.filter(w => poemStore.isEnabled(w.poemId)).length)
 const learnedCount = computed(() => learningStore.records.filter(r => r.reviewCount > 0).length)
 
 onMounted(() => poemStore.fetchPoems())

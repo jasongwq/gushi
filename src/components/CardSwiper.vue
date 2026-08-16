@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [index: number]
+  'swiperTouchStart': []
 }>()
 
 const currentIndex = computed({
@@ -25,6 +26,10 @@ const currentIndex = computed({
 })
 
 let swiperInstance: SwiperType | null = null
+
+function onSwiperTouchStart() {
+  emit('swiperTouchStart')
+}
 
 function onSwiper(swiper: SwiperType) {
   swiperInstance = swiper
@@ -101,6 +106,7 @@ defineExpose({ shuffle, goTo, getSwiperInstance })
     class="card-swiper h-full"
     @swiper="onSwiper"
     @slide-change="onSlideChange"
+    @touch-start="onSwiperTouchStart"
   >
     <slot />
   </Swiper>
