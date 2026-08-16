@@ -695,3 +695,4 @@ Port 5173 is in use, trying another one...
 11:20:45 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
 11:20:57 AM [vite] (client) hmr update /src/views/PoemCardPage.vue, /src/style.css
 11:21:06 AM [vite] (client) hmr update /src/components/PoemCard.vue, /src/style.css
+11:24:26 AM [vite] (client) page reload src/composables/usePoemCardPageLogic.ts
