@@ -63,7 +63,7 @@ const allRevealed = computed(() => boxes.value.length > 0 && boxes.value.every(b
 // 暴露盲盒中的诗列表供外部使用
 const revealedPoems = computed(() => boxes.value.filter(b => b.poem).map(b => b.poem!))
 
-defineExpose({ refresh, revealedPoems })
+defineExpose({ refresh, revealedPoems, boxes })
 </script>
 
 <template>

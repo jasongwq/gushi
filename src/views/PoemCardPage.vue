@@ -29,6 +29,7 @@ const currentPoem = ref<Poem | null>(null)
 
 // 盲盒来源标记：从盲盒进入详情时，滑动只显示盲盒4首
 const mysteryPoems = ref<Poem[]>([])
+const mysteryRevealedPoems = ref<Poem[]>([]) // 仅已开盲盒中的诗
 const fromMystery = ref(false)
 
 // ========== 筛选 ==========
@@ -102,6 +103,13 @@ function enterDetail(poem: Poem) {
   viewLayer.value = 'detail'
 }
 
+// 返回浏览层
+function goBackToBrowse() {
+  viewLayer.value = 'browse'
+  const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
+  if (idx >= 0) currentIndex.value = idx
+}
+
 // 滑动模式点击卡片
 function onCardClick(poem: Poem) {
   enterDetail(poem)
@@ -115,6 +123,19 @@ function onMysteryRevealed(_poem: Poem) {
 // ========== 详情页 ==========
 function onDetailSubmit(result: RecitationResult) {
   saveResult(result)
+  // 盲盒模式下，只在已开盲盒之间切换，不跳到未开盲盒
+  if (fromMystery.value) {
+    const navList = mysteryRevealedPoems.value
+    const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
+    if (idx >= 0 && idx < navList.length - 1) {
+      currentPoem.value = navList[idx + 1]
+    } else {
+      // 已开盲盒都查完了，返回盲盒页面
+      viewLayer.value = 'browse'
+      viewMode.value = 'mystery'
+    }
+    return
+  }
   // 标记后自动进入下一首
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx >= 0 && idx < poems.value.length - 1) {
@@ -126,54 +147,37 @@ function onDetailSubmit(result: RecitationResult) {
 }
 
 function onDetailGoPrev() {
+  if (fromMystery.value) {
+    const navList = mysteryRevealedPoems.value
+    const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
+    if (idx > 0) {
+      currentPoem.value = navList[idx - 1]
+    }
+    return
+  }
   const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
   if (idx > 0) {
     currentPoem.value = poems.value[idx - 1]
   }
 }
 
-// 长按底部返回滑动
-let longPressTimer: ReturnType<typeof setTimeout> | null = null
-const detailBottomRef = ref<HTMLElement | null>(null)
+// ========== 滑动手势 ==========
+const SWIPE_THRESHOLD = 100 // 最小滑动距离
 
-function onDetailTouchStart() {
-  longPressTimer = setTimeout(() => {
-    viewLayer.value = 'browse'
-    // 同步滑动索引到当前诗
-    const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
-    if (idx >= 0) currentIndex.value = idx
-    longPressTimer = null
-  }, 500)
-}
-
-function onDetailTouchEnd() {
-  if (longPressTimer) {
-    clearTimeout(longPressTimer)
-    longPressTimer = null
+// 详情层：左右滑动返回浏览
+function onDetailSwipe(e: TouchEvent) {
+  const touch = e.changedTouches[0]
+  const startX = (e.target as HTMLElement).dataset.swipeStartX
+  if (startX == null) return
+  const deltaX = touch.clientX - Number(startX)
+  if (Math.abs(deltaX) >= SWIPE_THRESHOLD) {
+    goBackToBrowse()
   }
 }
 
-// 滑动模式长按底部进入详情
-function onBrowseLongPress() {
-  if (poems.value.length > 0) {
-    enterDetail(poems.value[currentIndex.value])
-  }
-}
-
-let browseLongPressTimer: ReturnType<typeof setTimeout> | null = null
-
-function onBrowseTouchStart() {
-  browseLongPressTimer = setTimeout(() => {
-    onBrowseLongPress()
-    browseLongPressTimer = null
-  }, 500)
-}
-
-function onBrowseTouchEnd() {
-  if (browseLongPressTimer) {
-    clearTimeout(browseLongPressTimer)
-    browseLongPressTimer = null
-  }
+function onDetailTouchStart(e: TouchEvent) {
+  const touch = e.touches[0]
+  ;(e.target as HTMLElement).dataset.swipeStartX = String(touch.clientX)
 }
 
 // ========== 盲盒相关 ==========
@@ -185,8 +189,14 @@ function onMysterySelectAndEnter(poem: Poem) {
   if (mysteryBoxRef.value) {
     mysteryPoems.value = [...mysteryBoxRef.value.revealedPoems]
   }
-  // 同步当前诗到盲盒列表索引
-  const idx = mysteryPoems.value.findIndex(p => p.id === poem.id)
+  // 只记录已开盲盒中的诗（用于详情页导航）
+  mysteryRevealedPoems.value = mysteryBoxRef.value?.boxes
+    ? mysteryBoxRef.value.boxes
+        .filter((b: { state: string; poem: Poem | null }) => b.state === 'revealed' && b.poem)
+        .map((b: { poem: Poem | null }) => b.poem!)
+    : []
+  // 同步当前诗到已开盲盒列表索引
+  const idx = mysteryRevealedPoems.value.findIndex(p => p.id === poem.id)
   if (idx >= 0) currentIndex.value = idx
   enterDetail(poem)
 }
@@ -219,8 +229,9 @@ const progressPercent = computed(() =>
 // 详情页的进度信息
 const detailProgress = computed(() => {
   if (!currentPoem.value) return { text: '', percent: 0 }
-  const idx = poems.value.findIndex(p => p.id === currentPoem.value?.id)
-  const total = poems.value.length
+  const navList = fromMystery.value ? mysteryRevealedPoems.value : poems.value
+  const idx = navList.findIndex(p => p.id === currentPoem.value?.id)
+  const total = navList.length
   return {
     text: `${idx + 1}/${total}`,
     percent: ((idx + 1) / total) * 100,
@@ -229,140 +240,184 @@ const detailProgress = computed(() => {
 </script>
 
 <template>
-  <div class="poem-card-page max-w-md mx-auto h-screen flex flex-col bg-gray-50">
+  <div class="poem-card-page max-w-md mx-auto h-screen flex flex-col bg-gray-50 relative overflow-hidden">
     <!-- ====== 详情层 ====== -->
-    <template v-if="viewLayer === 'detail' && currentPoem">
-      <div class="flex-1 flex flex-col overflow-y-auto p-4">
-        <div class="flex items-center justify-between mb-2">
-          <button class="text-gray-400 text-sm" @click="viewLayer = 'browse'">← 返回</button>
-          <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
-        </div>
-        <!-- 进度条 -->
-        <div class="h-1 bg-gray-100 rounded-full mb-4 overflow-hidden">
-          <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
-        </div>
-        <RecitationCard
-          :poem="currentPoem"
-          :can-go-prev="poems.findIndex(p => p.id === currentPoem?.id) > 0"
-          @submit="onDetailSubmit"
-          @go-prev="onDetailGoPrev"
-        />
-      </div>
-      <!-- 底部长按区域 -->
-      <div
-        ref="detailBottomRef"
-        class="p-3 bg-white border-t border-gray-100 text-center"
+    <Transition name="card-zoom">
+      <div v-if="viewLayer === 'detail' && currentPoem" class="detail-layer absolute inset-0 flex flex-col bg-gray-50 z-10"
         @touchstart="onDetailTouchStart"
-        @touchend="onDetailTouchEnd"
-        @touchcancel="onDetailTouchEnd"
+        @touchend="onDetailSwipe"
       >
-        <span class="text-xs text-gray-300">长按返回卡片浏览</span>
-        <button
-          v-if="fromMystery"
-          class="ml-3 text-xs text-purple-400 cursor-pointer"
-          @click="viewLayer = 'browse'; viewMode = 'mystery'"
-        >返回盲盒</button>
-        <button
-          v-if="fromMystery"
-          class="ml-2 text-xs text-indigo-400 cursor-pointer"
-          @click="switchToGlobal"
-        >全部古诗</button>
+        <div class="flex-1 flex flex-col overflow-y-auto p-4">
+          <div class="flex items-center justify-between mb-2">
+            <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
+            <span class="text-xs text-gray-400">{{ detailProgress.text }}</span>
+          </div>
+          <!-- 进度条 -->
+          <div class="h-1 bg-gray-100 rounded-full mb-4 overflow-hidden">
+            <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
+          </div>
+          <RecitationCard
+            :poem="currentPoem"
+            :can-go-prev="fromMystery ? mysteryRevealedPoems.findIndex(p => p.id === currentPoem?.id) > 0 : poems.findIndex(p => p.id === currentPoem?.id) > 0"
+            @submit="onDetailSubmit"
+            @go-prev="onDetailGoPrev"
+          />
+        </div>
+        <!-- 底部区域 -->
+        <div class="p-3 bg-white border-t border-gray-100 text-center">
+          <span class="text-xs text-gray-300">左右滑动返回卡片浏览</span>
+          <button
+            v-if="fromMystery"
+            class="ml-3 text-xs text-purple-400 cursor-pointer"
+            @click="viewLayer = 'browse'; viewMode = 'mystery'"
+          >返回盲盒</button>
+          <button
+            v-if="fromMystery"
+            class="ml-2 text-xs text-indigo-400 cursor-pointer"
+            @click="switchToGlobal"
+          >全部古诗</button>
+        </div>
       </div>
-    </template>
+    </Transition>
 
     <!-- ====== 浏览层 ====== -->
-    <template v-else>
-      <!-- 顶部筛选栏 -->
-      <div class="p-3 bg-white border-b border-gray-100">
-        <div class="flex items-center gap-2 mb-2">
-          <button class="text-gray-400 text-sm" @click="router.push({ name: 'home' })">← 返回</button>
-          <span class="text-sm text-gray-500 ml-auto">已查 {{ checkedCount }} / {{ totalCount }} 首</span>
-        </div>
-        <div class="flex gap-2 overflow-x-auto pb-1">
-          <button
-            v-for="opt in sourceOptions"
-            :key="opt.value"
-            :class="['px-3 py-1.5 text-xs rounded-full border whitespace-nowrap cursor-pointer transition', source === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-500']"
-            @click="source = opt.value"
-          >
-            {{ opt.label }}
-          </button>
-        </div>
-        <div v-if="showGradeSelector" class="flex flex-wrap gap-2 mt-2">
-          <button
-            v-for="grade in poemStore.grades"
-            :key="grade"
-            :class="['px-2 py-1 text-xs rounded border cursor-pointer transition', selectedGrades.includes(grade) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-400']"
-            @click="toggleGrade(grade)"
-          >
-            {{ grade }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 卡片区域 -->
-      <div class="flex-1 min-h-0 p-4">
-        <!-- 盲盒模式 -->
-        <MysteryBox
-          v-if="viewMode === 'mystery' && allPoems.length > 0"
-          ref="mysteryBoxRef"
-          :poems="allPoems"
-          @revealed="onMysteryRevealed"
-          @select="onMysterySelectAndEnter"
-        />
-
-        <!-- 滑动模式 -->
-        <CardSwiper v-else-if="viewMode === 'swiper' && poems.length > 0" v-model="currentIndex" :count="poems.length">
-          <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
-            <PoemCard
-              :poem="poem"
-              :checked="checkedPoemIds.has(poem.id)"
-              @click="onCardClick(poem)"
-            />
-          </SwiperSlide>
-        </CardSwiper>
-
-        <div v-else class="h-full flex items-center justify-center text-gray-400">
-          没有符合条件的古诗
-        </div>
-      </div>
-
-      <!-- 底部工具栏 -->
-      <div class="bg-white border-t border-gray-100">
-        <!-- 滑动模式：进度条 + 长按 -->
-        <div v-if="viewMode === 'swiper' && poems.length > 0" class="px-4 pt-2 pb-1">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-xs text-gray-400">{{ currentIndex + 1 }}/{{ poems.length }} {{ currentPoemTitle }}</span>
-            <span v-if="fromMystery" class="text-xs text-purple-400 cursor-pointer" @click="viewMode = 'mystery'">返回盲盒</span>
+    <Transition name="card-shrink">
+      <div v-if="viewLayer !== 'detail'" class="flex flex-col flex-1 min-h-0">
+        <!-- 顶部筛选栏 -->
+        <div class="p-3 bg-white border-b border-gray-100">
+          <div class="flex items-center gap-2 mb-2">
+            <button class="text-gray-400 text-sm" @click="router.push({ name: 'home' })">← 返回</button>
+            <span class="text-sm text-gray-500 ml-auto">已查 {{ checkedCount }} / {{ totalCount }} 首</span>
           </div>
-          <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden"
-            @touchstart="onBrowseTouchStart"
-            @touchend="onBrowseTouchEnd"
-            @touchcancel="onBrowseTouchEnd"
-          >
-            <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+          <div class="flex gap-2 overflow-x-auto pb-1">
+            <button
+              v-for="opt in sourceOptions"
+              :key="opt.value"
+              :class="['px-3 py-1.5 text-xs rounded-full border whitespace-nowrap cursor-pointer transition', source === opt.value ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-500']"
+              @click="source = opt.value"
+            >
+              {{ opt.label }}
+            </button>
           </div>
-          <p class="text-center text-xs text-gray-300 mt-1">长按进度条进入详情</p>
+          <div v-if="showGradeSelector" class="flex flex-wrap gap-2 mt-2">
+            <button
+              v-for="grade in poemStore.grades"
+              :key="grade"
+              :class="['px-2 py-1 text-xs rounded border cursor-pointer transition', selectedGrades.includes(grade) ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-gray-200 bg-white text-gray-400']"
+              @click="toggleGrade(grade)"
+            >
+              {{ grade }}
+            </button>
+          </div>
         </div>
 
-        <!-- 模式切换按钮 -->
-        <div class="p-3 flex gap-3">
-          <button
-            :disabled="allPoems.length === 0"
-            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
-            @click="viewMode = 'swiper'; fromMystery = false"
-          >
-            📇 滑动
-          </button>
-          <button
-            :disabled="allPoems.length === 0"
-            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'mystery' ? 'bg-purple-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
-            @click="viewMode = 'mystery'"
-          >
-            🎁 盲盒
-          </button>
+        <!-- 卡片区域 -->
+        <div class="flex-1 min-h-0 p-4">
+          <!-- 盲盒模式 -->
+          <MysteryBox
+            v-if="viewMode === 'mystery' && allPoems.length > 0"
+            ref="mysteryBoxRef"
+            :poems="allPoems"
+            @revealed="onMysteryRevealed"
+            @select="onMysterySelectAndEnter"
+          />
+
+          <!-- 滑动模式 -->
+          <CardSwiper v-else-if="viewMode === 'swiper' && poems.length > 0" v-model="currentIndex" :count="poems.length">
+            <SwiperSlide v-for="(poem, index) in poems" :key="poem.id + '-' + index">
+              <PoemCard
+                :poem="poem"
+                :checked="checkedPoemIds.has(poem.id)"
+                @click="onCardClick(poem)"
+              />
+            </SwiperSlide>
+          </CardSwiper>
+
+          <div v-else class="h-full flex items-center justify-center text-gray-400">
+            没有符合条件的古诗
+          </div>
+        </div>
+
+        <!-- 底部工具栏 -->
+        <div class="bg-white border-t border-gray-100">
+          <!-- 滑动模式：进度条 -->
+          <div v-if="viewMode === 'swiper' && poems.length > 0" class="px-4 pt-2 pb-1">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-gray-400">{{ currentIndex + 1 }}/{{ poems.length }} {{ currentPoemTitle }}</span>
+              <span v-if="fromMystery" class="text-xs text-purple-400 cursor-pointer" @click="viewMode = 'mystery'">返回盲盒</span>
+            </div>
+            <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: progressPercent + '%' }"></div>
+            </div>
+            <p class="text-center text-xs text-gray-300 mt-1">点击卡片进入详情</p>
+          </div>
+
+          <!-- 模式切换按钮 -->
+          <div class="p-3 flex gap-3">
+            <button
+              :disabled="allPoems.length === 0"
+              :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+              @click="viewMode = 'swiper'; fromMystery = false"
+            >
+              📇 滑动
+            </button>
+            <button
+              :disabled="allPoems.length === 0"
+              :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'mystery' ? 'bg-purple-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+              @click="viewMode = 'mystery'"
+            >
+              🎁 盲盒
+            </button>
+          </div>
         </div>
       </div>
-    </template>
+    </Transition>
   </div>
 </template>
+
+<style scoped>
+/* 卡片放大进入详情 */
+.card-zoom-enter-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-zoom-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-zoom-enter-from {
+  transform: scale(0.85);
+  opacity: 0;
+  border-radius: 16px;
+}
+.card-zoom-enter-to {
+  transform: scale(1);
+  opacity: 1;
+}
+.card-zoom-leave-from {
+  transform: scale(1);
+  opacity: 1;
+}
+.card-zoom-leave-to {
+  transform: scale(1.05);
+  opacity: 0;
+}
+
+/* 浏览层缩小退出 */
+.card-shrink-enter-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-shrink-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-shrink-enter-from {
+  transform: scale(1.05);
+  opacity: 0;
+}
+.card-shrink-leave-from {
+  transform: scale(1);
+  opacity: 1;
+}
+.card-shrink-leave-to {
+  transform: scale(0.85);
+  opacity: 0;
+}
+</style>
