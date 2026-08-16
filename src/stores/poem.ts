@@ -17,17 +17,17 @@ export const usePoemStore = defineStore('poem', () => {
     return [...new Set(poems.value.map(p => p.grade))].sort((a, b) => (GRADE_ORDER[a] ?? 99) - (GRADE_ORDER[b] ?? 99))
   })
 
-  // 基于已启用古诗的年级列表
-  const grades = computed(() => {
-    return [...new Set(enabledPoems.value.map(p => p.grade))].sort((a, b) => (GRADE_ORDER[a] ?? 99) - (GRADE_ORDER[b] ?? 99))
-  })
-
   const enabledPoems = computed(() => {
     const learningStore = useLearningStore()
     const enabledSet = learningStore.settings.enabledPoems
     if (enabledSet.length === 0) return poems.value
     const ids = new Set(enabledSet)
     return poems.value.filter(p => ids.has(p.id))
+  })
+
+  // 基于已启用古诗的年级列表
+  const grades = computed(() => {
+    return [...new Set(enabledPoems.value.map(p => p.grade))].sort((a, b) => (GRADE_ORDER[a] ?? 99) - (GRADE_ORDER[b] ?? 99))
   })
 
   // 基于已启用古诗按年级分组
