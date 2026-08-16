@@ -477,7 +477,7 @@ test.describe('disabled poems are hidden from collection and home', () => {
   test('home page shows enabled poem count, not total', async ({ page }) => {
     // Go to home page first - should show total count
     await page.goto('/')
-    const countBefore = await page.locator('a[href="/poems"] .text-indigo-500').textContent()
+    const countBefore = await page.locator('a[href*="poems"] .text-indigo-500').textContent()
 
     // Go to config and disable a poem
     await page.goto('/#/settings/poems')
@@ -488,7 +488,7 @@ test.describe('disabled poems are hidden from collection and home', () => {
 
     // Go back to home page
     await page.goto('/')
-    const countAfter = await page.locator('a[href="/poems"] .text-indigo-500').textContent()
+    const countAfter = await page.locator('a[href*="poems"] .text-indigo-500').textContent()
 
     // Count should be one less
     expect(Number(countAfter)).toBe(Number(countBefore) - 1)
