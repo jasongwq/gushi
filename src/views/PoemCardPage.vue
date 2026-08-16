@@ -239,7 +239,12 @@ function onDetailGoPrev() {
 
 // 返回浏览（从背诵模式）
 function goBackToBrowse() {
-  collapseSlide()
+  if (fromMystery.value) {
+    expandedPoemId.value = null
+    viewMode.value = 'mystery'
+  } else {
+    collapseSlide()
+  }
 }
 
 // ========== 盲盒相关 ==========

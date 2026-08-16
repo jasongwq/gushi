@@ -4,7 +4,8 @@ import { test, expect } from '@playwright/test'
 test('navigate to recitation setup via parent quiz', async ({ page }) => {
   await page.goto('/')
   await page.click('text=家长抽查')
-  await expect(page.locator('h2')).toContainText('家长抽查')
+  // 家长抽查 now goes directly to poem-card page
+  await expect(page.locator('.poem-card-page')).toBeVisible({ timeout: 5000 })
 })
 
 test('recitation setup page shows source and count options', async ({ page }) => {

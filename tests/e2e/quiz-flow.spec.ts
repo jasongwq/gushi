@@ -22,16 +22,14 @@ test('navigate to self quiz setup', async ({ page }) => {
 test('navigate to parent quiz setup', async ({ page }) => {
   await page.goto('/')
   await page.click('text=家长抽查')
-  await expect(page.locator('h2')).toContainText('家长抽查')
+  // 家长抽查 now goes directly to poem-card page
+  await expect(page.locator('.poem-card-page')).toBeVisible({ timeout: 5000 })
 })
 
-test('home page has 3 mode buttons', async ({ page }) => {
+test('home page has 2 mode buttons', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('text=家长抽查')).toBeVisible()
   await expect(page.locator('text=自主练习')).toBeVisible()
-  await expect(page.locator('text=自评背诵')).toBeVisible()
-  // 古诗抽背 should NOT be on home page anymore
-  await expect(page.locator('text=古诗抽背')).not.toBeVisible()
 })
 
 test('wrong book page', async ({ page }) => {
@@ -207,7 +205,7 @@ test('parent quiz mode defaults to recite checked', async ({ page }) => {
   await expect(reciteCheckbox).toBeChecked()
 })
 
-// Feature: Parent quiz mode starts recitation flow
+// Feature: Parent quiz mode starts recitation flow (navigates to poem-card page)
 test('parent quiz mode starts recitation when recite is checked', async ({ page }) => {
   test.setTimeout(60000)
   await cleanState(page)
@@ -218,8 +216,8 @@ test('parent quiz mode starts recitation when recite is checked', async ({ page 
   await page.click('text=5')
   await page.click('text=开始抽查')
 
-  // Should navigate to recitation play page (not quiz play)
-  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 10000 })
+  // Should navigate to poem-card page (parent mode)
+  await expect(page.locator('.poem-card-page')).toBeVisible({ timeout: 10000 })
 })
 
 // Feature: Parent quiz mode title shows "家长抽查"

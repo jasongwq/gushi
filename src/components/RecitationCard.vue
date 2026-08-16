@@ -155,12 +155,14 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     <!-- 操作按钮 -->
     <div class="flex gap-3 mb-3">
       <button
+        data-testid="btn-mastered"
         class="flex-1 p-3 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-base cursor-pointer hover:bg-green-100 transition"
         @click="markMastered"
       >
         熟练
       </button>
       <button
+        data-testid="btn-forgot"
         class="flex-1 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-base cursor-pointer hover:bg-red-100 transition"
         @click="markForgot"
       >
