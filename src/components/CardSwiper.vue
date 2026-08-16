@@ -20,24 +20,26 @@ const currentIndex = computed({
 
 // 滑动状态
 const containerRef = ref<HTMLElement | null>(null)
-const offsetX = ref(0) // 当前拖拽偏移量 (px)
+const offsetX = ref(0)
 const isDragging = ref(false)
 const isAnimating = ref(false)
 
-// Touch 事件处理
+// 速度追踪：记录最近几帧的位置和时间，用于计算瞬时速度
 let startX = 0
 let startY = 0
-let startTime = 0
 let isHorizontal: boolean | null = null
+const velocityTracker: { x: number; t: number }[] = []
 
 function onTouchStart(e: TouchEvent) {
   if (isAnimating.value) return
   const touch = e.touches[0]
   startX = touch.clientX
   startY = touch.clientY
-  startTime = Date.now()
   isDragging.value = true
   isHorizontal = null
+  offsetX.value = 0
+  velocityTracker.length = 0
+  velocityTracker.push({ x: touch.clientX, t: Date.now() })
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -46,7 +48,6 @@ function onTouchMove(e: TouchEvent) {
   const dx = touch.clientX - startX
   const dy = touch.clientY - startY
 
-  // 判断滑动方向（只判断一次）
   if (isHorizontal === null) {
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       isHorizontal = Math.abs(dx) > Math.abs(dy)
@@ -57,26 +58,53 @@ function onTouchMove(e: TouchEvent) {
 
   e.preventDefault()
   offsetX.value = dx
+
+  // 记录速度采样（最多保留最近 5 帧）
+  velocityTracker.push({ x: touch.clientX, t: Date.now() })
+  if (velocityTracker.length > 5) velocityTracker.shift()
 }
 
 function onTouchEnd() {
   if (!isDragging.value) return
   isDragging.value = false
 
-  const velocity = Math.abs(offsetX.value) / (Date.now() - startTime)
-  const threshold = containerRef.value ? containerRef.value.offsetWidth * 0.2 : 80
+  // 计算瞬时速度 (px/ms)
+  const velocity = getVelocity()
+  const containerWidth = containerRef.value?.offsetWidth ?? 320
 
-  if (Math.abs(offsetX.value) > threshold || velocity > 0.3) {
-    if (offsetX.value < 0 && currentIndex.value < props.count - 1) {
-      goTo(currentIndex.value + 1)
-    } else if (offsetX.value > 0 && currentIndex.value > 0) {
-      goTo(currentIndex.value - 1)
+  // 速度阈值：0.3 px/ms ≈ 轻滑，1.0+ ≈ 快速甩
+  // 惯性跳卡数：速度越快跳越多
+  const skipCount = velocity > 1.5 ? 3 : velocity > 0.8 ? 2 : 1
+  const distanceThreshold = containerWidth * 0.15 // 距离阈值降低到 15%
+
+  if (Math.abs(offsetX.value) > distanceThreshold || velocity > 0.2) {
+    const direction = offsetX.value < 0 ? 1 : -1
+    let targetIndex = currentIndex.value + direction * skipCount
+
+    // 快速甩的时候根据速度额外跳
+    if (velocity > 2.0) {
+      targetIndex = currentIndex.value + direction * Math.min(5, props.count - 1)
+    }
+
+    targetIndex = Math.max(0, Math.min(props.count - 1, targetIndex))
+
+    if (targetIndex !== currentIndex.value) {
+      goTo(targetIndex)
     } else {
       snapBack()
     }
   } else {
     snapBack()
   }
+}
+
+function getVelocity(): number {
+  if (velocityTracker.length < 2) return 0
+  const first = velocityTracker[0]
+  const last = velocityTracker[velocityTracker.length - 1]
+  const dt = last.t - first.t
+  if (dt === 0) return 0
+  return Math.abs(last.x - first.x) / dt
 }
 
 function snapBack() {
@@ -87,9 +115,10 @@ function goTo(index: number) {
   isAnimating.value = true
   currentIndex.value = index
   offsetX.value = 0
+  // 动画时长根据跳卡距离缩短
   setTimeout(() => {
     isAnimating.value = false
-  }, 350)
+  }, 250)
 }
 
 // 洗牌动画
@@ -100,19 +129,17 @@ function shuffle() {
   isShuffling.value = true
 
   const targetIndex = Math.floor(Math.random() * props.count)
-  const steps = 8 + Math.floor(Math.random() * 6) // 8-13 步
+  const steps = 8 + Math.floor(Math.random() * 6)
   let step = 0
 
   function animateStep() {
     if (step >= steps) {
-      // 最后一步：跳到目标
       currentIndex.value = targetIndex
       offsetX.value = 0
       isShuffling.value = false
       return
     }
 
-    // 来回快速移动
     const direction = step % 2 === 0 ? 1 : -1
     const jumpSize = Math.min(2, props.count - 1)
     let next = currentIndex.value + direction * jumpSize
@@ -121,8 +148,7 @@ function shuffle() {
     offsetX.value = 0
 
     step++
-    // 速度递减：从 80ms 到 200ms
-    const delay = 80 + (step / steps) * 120
+    const delay = 60 + (step / steps) * 100
     setTimeout(animateStep, delay)
   }
 
@@ -136,20 +162,21 @@ function cardStyle(index: number) {
   const effectiveDiff = diff - dragRatio
 
   const absDiff = Math.abs(effectiveDiff)
-  const scale = absDiff === 0 ? 1 : absDiff === 1 ? 0.85 : 0.7
-  const opacity = absDiff === 0 ? 1 : absDiff === 1 ? 0.6 : 0.3
-  const translateX = effectiveDiff * 75 // 75% of card width spacing
+  // 用连续值做平滑缩放
+  const scale = absDiff === 0 ? 1 : absDiff <= 1 ? 1 - absDiff * 0.12 : 0.76 - (absDiff - 1) * 0.08
+  const opacity = absDiff === 0 ? 1 : absDiff <= 1 ? 1 - absDiff * 0.3 : 0.4 - (absDiff - 1) * 0.15
+  const translateX = effectiveDiff * 70
 
   return {
     transform: `translateX(${translateX}%) scale(${scale})`,
-    opacity: absDiff > 2 ? 0 : opacity,
-    transition: isDragging.value ? 'none' : 'transform 0.35s ease, opacity 0.35s ease',
+    opacity: absDiff > 2.5 ? 0 : opacity,
+    transition: isDragging.value ? 'none' : 'transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease',
     zIndex: 10 - Math.round(absDiff),
     position: 'absolute' as const,
     left: '50%',
     top: '0',
-    width: '80%',
-    marginLeft: '-40%',
+    width: '70%',
+    marginLeft: '-35%',
   }
 }
 
