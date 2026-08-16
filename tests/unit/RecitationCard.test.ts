@@ -58,15 +58,15 @@ function getYiwenButton(wrapper: ReturnType<typeof mountCard>) {
   return wrapper.findAll('button').find(b => b.text().includes('译文'))!
 }
 
-// Helper: find author/dynasty "不会" buttons (the ones after author/dynasty text)
+// Helper: find author/dynasty "不会" buttons (the ones next to author/dynasty text)
 function getAuthorDynastyButtons(wrapper: ReturnType<typeof mountCard>) {
-  // The author and dynasty "不会" buttons are in the author/dynasty section
-  // There are 2 "不会" buttons in that section (after author text and dynasty text)
-  const allForgot = wrapper.findAll('button').filter(b => b.text() === '不会')
-  // Line "不会" buttons come first (4), then author "不会", then dynasty "不会"
+  // Author "不会" is in a row containing "李白", dynasty "不会" in a row containing "唐"
+  // Line-level "不会" buttons are in rows with poem line text only
+  const buttons = wrapper.findAll('button').filter(b => b.text() === '不会')
+  const findInRow = (text: string) => buttons.find(b => b.element.parentElement?.textContent?.includes(text))
   return {
-    authorForgot: allForgot[mockPoem.text.length],
-    dynastyForgot: allForgot[mockPoem.text.length + 1],
+    authorForgot: findInRow('李白'),
+    dynastyForgot: findInRow('唐'),
   }
 }
 
