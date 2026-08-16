@@ -75,6 +75,20 @@ describe('recordAnswer', () => {
     expect(record!.reviewCount).toBe(2)
   })
 
+  it('clears all wrongBook entries for poem when recite correct', () => {
+    const store = useLearningStore()
+    // Simulate: poem had line/author/dynasty wrong entries
+    store.data.wrongBook.push(
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+      { poemId: 'p001', quizType: 'author' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+      { poemId: 'p001', quizType: 'dynasty' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+    )
+    expect(store.data.wrongBook).toHaveLength(3)
+    // Correct recite answer clears all entries for this poem
+    store.recordAnswer('p001', 'recite', true)
+    expect(store.data.wrongBook).toHaveLength(0)
+  })
+
   it('nextReviewDate is based on today, not stale lastReviewDate', () => {
     const store = useLearningStore()
     // Create a record with a stale lastReviewDate

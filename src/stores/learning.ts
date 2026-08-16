@@ -52,6 +52,9 @@ export const useLearningStore = defineStore('learning', () => {
       const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === quizType)
       if (existing) { existing.wrongCount++; existing.lastWrongDate = result.date }
       else { data.value.wrongBook.push({ poemId, quizType: quizType as WrongEntry['quizType'], wrongCount: 1, lastWrongDate: result.date, unproficient: false }) }
+    } else if (quizType === 'recite') {
+      // 背诵正确时清除该诗所有 wrongBook 条目（包括 line/author/dynasty）
+      data.value.wrongBook = data.value.wrongBook.filter(w => w.poemId !== poemId)
     } else {
       data.value.wrongBook = data.value.wrongBook.filter(w => !(w.poemId === poemId && w.quizType === quizType))
     }
