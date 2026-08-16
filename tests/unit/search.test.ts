@@ -26,6 +26,26 @@ describe('fuzzyMatch', () => {
   it('returns true for empty query', () => {
     expect(fuzzyMatch('静夜思', '')).toBe(true)
   })
+
+  it('returns false for empty target with non-empty query', () => {
+    expect(fuzzyMatch('', 'abc')).toBe(false)
+  })
+
+  it('returns true for empty target and empty query', () => {
+    expect(fuzzyMatch('', '')).toBe(true)
+  })
+
+  it('matches single character query', () => {
+    expect(fuzzyMatch('静夜思', '思')).toBe(true)
+  })
+
+  it('matches repeated characters in query', () => {
+    expect(fuzzyMatch('鹅，鹅，鹅，', '鹅鹅')).toBe(true)
+  })
+
+  it('returns false for whitespace-only query against Chinese text', () => {
+    expect(fuzzyMatch('静夜思', '  ')).toBe(false)
+  })
 })
 
 describe('searchPoems', () => {
@@ -70,5 +90,36 @@ describe('searchPoems', () => {
   it('preserves original order within same priority level', () => {
     const results = searchPoems(poems, '李白')
     expect(results.map(p => p.id)).toEqual(['p001', 'p003'])
+  })
+
+  it('returns empty array for empty poems input', () => {
+    const results = searchPoems([], '李白')
+    expect(results).toEqual([])
+  })
+
+  it('returns a copy for empty query (not the same reference)', () => {
+    const results = searchPoems(poems, '')
+    expect(results).toEqual(poems)
+    expect(results).not.toBe(poems)
+  })
+
+  it('deduplicates poem matching in title, author, and content simultaneously', () => {
+    // Poem where title, author, and content all contain '白'
+    const whitePoems: Poem[] = [
+      { id: 'w001', title: '白云歌', author: '白居易', dynasty: '唐', grade: '一年级', text: ['白日依山尽，', '黄河入海流。'], textType: '五言', yiwen: '译文' },
+    ]
+    const results = searchPoems(whitePoems, '白')
+    expect(results.length).toBe(1)
+    expect(results[0].id).toBe('w001')
+  })
+
+  it('author matches appear before content matches', () => {
+    const mixedPoems: Poem[] = [
+      { id: 'm001', title: '登高', author: '杜甫', dynasty: '唐', grade: '三年级', text: ['风急天高猿啸哀，'], textType: '七言', yiwen: '译文' },
+      { id: 'm002', title: '春望', author: '张三', dynasty: '唐', grade: '三年级', text: ['国破山河在，杜甫诗中愁。'], textType: '五言', yiwen: '译文' },
+    ]
+    const results = searchPoems(mixedPoems, '杜甫')
+    // m001 matches by author, m002 matches by content — author before content
+    expect(results.map(p => p.id)).toEqual(['m001', 'm002'])
   })
 })

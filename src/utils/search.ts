@@ -6,6 +6,7 @@ import type { Poem } from '@/types'
  */
 export function fuzzyMatch(target: string, query: string): boolean {
   if (!query) return true
+  if (!target) return false
   const t = target.toLowerCase()
   const q = query.toLowerCase()
   let ti = 0
@@ -24,7 +25,7 @@ export function fuzzyMatch(target: string, query: string): boolean {
  * Each poem appears at most once, at its highest priority position.
  */
 export function searchPoems(poems: Poem[], query: string): Poem[] {
-  if (!query) return poems
+  if (!query) return [...poems]
 
   const titleMatches: Poem[] = []
   const authorMatches: Poem[] = []
