@@ -78,7 +78,7 @@ HEADERS = {
     "Accept-Language": "zh-CN,zh;q=0.9",
 }
 
-_LINE_END_PUNCT = set("，。？！、；：\u201c\u201d\u2018\u2019）\"")
+_LINE_END_PUNCT = set("，。？！、；：\u201d\u2018\u2019）\"")
 
 # guwendao.net category pages that are accessible without login
 _CATEGORY_PAGES = [
