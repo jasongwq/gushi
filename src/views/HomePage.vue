@@ -21,7 +21,7 @@
     <div class="grid grid-cols-4 gap-3">
       <router-link to="/poems" class="shortcut-btn p-3 bg-white rounded-lg shadow text-center hover:shadow-md transition">
         <div class="text-sm">古诗集合</div>
-        <div class="text-lg font-bold text-indigo-500">{{ poemStore.poems.length }}</div>
+        <div class="text-lg font-bold text-indigo-500">{{ poemStore.enabledPoems.length }}</div>
       </router-link>
       <router-link to="/wrong" class="shortcut-btn p-3 bg-white rounded-lg shadow text-center hover:shadow-md transition">
         <div class="text-sm">错题本</div>
