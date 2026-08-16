@@ -58,6 +58,25 @@ export const useLearningStore = defineStore('learning', () => {
     persist()
   }
 
+  function recordDetail(poemId: string, detailType: 'line' | 'author' | 'dynasty', wrongInfo?: string) {
+    void wrongInfo
+    const today = new Date().toISOString().split('T')[0]
+    const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === detailType)
+    if (existing) {
+      existing.wrongCount++
+      existing.lastWrongDate = today
+    } else {
+      data.value.wrongBook.push({
+        poemId,
+        quizType: detailType,
+        wrongCount: 1,
+        lastWrongDate: today,
+        unproficient: false,
+      })
+    }
+    persist()
+  }
+
   function recordRecite(poemId: string, correct: boolean) {
     const record = getOrCreateRecord(poemId)
     const today = new Date().toISOString().split('T')[0]
@@ -143,7 +162,7 @@ export const useLearningStore = defineStore('learning', () => {
 
   return {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
-    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordRecite, toggleUnproficient, removeWrongEntry,
+    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
   }
 })

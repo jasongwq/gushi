@@ -186,6 +186,45 @@ describe('updateSettings', () => {
   })
 })
 
+describe('recordDetail', () => {
+  it('adds line detail to wrongBook', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].quizType).toBe('line')
+    expect(store.data.wrongBook[0].wrongCount).toBe(1)
+  })
+
+  it('adds author detail to wrongBook', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'author')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].quizType).toBe('author')
+  })
+
+  it('increments wrongCount on repeated detail', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    store.recordDetail('p001', 'line')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].wrongCount).toBe(2)
+  })
+
+  it('does not affect reviewCount or correctness', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    // No learning record should be created
+    const record = store.getRecord('p001')
+    expect(record).toBeUndefined()
+  })
+
+  it('does not generate quizResult', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    expect(store.data.quizResults).toHaveLength(0)
+  })
+})
+
 describe('importUserData', () => {
   it('imports valid data', () => {
     const store = useLearningStore()
