@@ -261,8 +261,12 @@ const detailProgress = computed(() => {
 <template>
   <div class="poem-card-page w-full max-w-md mx-auto h-dvh flex flex-col bg-gray-50 relative overflow-hidden">
     <div class="flex flex-col flex-1 min-h-0">
-      <!-- 顶部筛选栏 -->
-      <div class="p-3 bg-white border-b border-gray-100">
+      <!-- 顶部：背诵模式只保留返回条，浏览/盲盒模式显示完整筛选栏 -->
+      <div v-if="viewMode === 'recite'" class="px-3 py-2 bg-white border-b border-gray-100 flex items-center">
+        <button data-testid="recite-back" class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
+        <span class="text-sm text-gray-500 ml-auto">已查 {{ checkedCount }} / {{ totalCount }} 首</span>
+      </div>
+      <div v-else class="p-3 bg-white border-b border-gray-100">
         <div class="flex items-center gap-2 mb-2">
           <button class="text-gray-400 text-sm" @click="router.push({ name: 'home' })">← 返回</button>
           <span class="text-sm text-gray-500 ml-auto">已查 {{ checkedCount }} / {{ totalCount }} 首</span>
@@ -336,27 +340,25 @@ const detailProgress = computed(() => {
 
       <!-- 底部工具栏 -->
       <div class="bg-white border-t border-gray-100">
-        <!-- 背诵模式：进度条 + 返回按钮 -->
+        <!-- 背诵模式：精简进度条 -->
         <div v-if="viewMode === 'recite'" class="px-4 pt-2 pb-1">
           <div class="flex items-center justify-between mb-1">
-            <button class="text-gray-400 text-sm" @click="goBackToBrowse">← 返回</button>
             <span data-testid="detail-progress" class="text-xs text-gray-400">{{ detailProgress.text }}</span>
+            <div class="flex items-center">
+              <button
+                v-if="fromMystery"
+                class="ml-3 text-xs text-purple-400 cursor-pointer"
+                @click="collapseSlide(); viewMode = 'mystery'"
+              >返回盲盒</button>
+              <button
+                v-if="fromMystery"
+                class="ml-2 text-xs text-indigo-400 cursor-pointer"
+                @click="switchToGlobal"
+              >全部古诗</button>
+            </div>
           </div>
           <div class="h-1 bg-gray-100 rounded-full overflow-hidden">
             <div class="h-full bg-indigo-500 rounded-full transition-all duration-300" :style="{ width: detailProgress.percent + '%' }"></div>
-          </div>
-          <div class="flex justify-center mt-1">
-            <span class="text-xs text-gray-300">左右滑动切换</span>
-            <button
-              v-if="fromMystery"
-              class="ml-3 text-xs text-purple-400 cursor-pointer"
-              @click="collapseSlide(); viewMode = 'mystery'"
-            >返回盲盒</button>
-            <button
-              v-if="fromMystery"
-              class="ml-2 text-xs text-indigo-400 cursor-pointer"
-              @click="switchToGlobal"
-            >全部古诗</button>
           </div>
         </div>
 
@@ -372,11 +374,11 @@ const detailProgress = computed(() => {
           <p class="text-center text-xs text-gray-300 mt-1">点击卡片进入详情</p>
         </div>
 
-        <!-- 模式切换按钮 -->
-        <div class="p-3 flex gap-3">
+        <!-- 模式切换按钮（背诵模式隐藏，保证全屏） -->
+        <div v-if="viewMode !== 'recite'" class="p-3 flex gap-3">
           <button
             :disabled="allPoems.length === 0"
-            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' || viewMode === 'recite' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
+            :class="['flex-1 py-3 rounded-xl text-base font-medium cursor-pointer transition', viewMode === 'swiper' ? 'bg-indigo-500 text-white' : allPoems.length > 0 ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-gray-200 text-gray-400 cursor-not-allowed']"
             @click="viewMode = 'swiper'; fromMystery = false"
           >
             📇 滑动

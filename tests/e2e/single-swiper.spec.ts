@@ -65,8 +65,8 @@ test('点击返回按钮缩回到浏览模式', async ({ page }) => {
   await enterPoemCardPage(page)
   await enterReciteFromSwiper(page)
 
-  // 点击返回按钮（使用更精确的选择器，避免匹配顶部导航的"← 返回"）
-  await page.locator('[data-testid="detail-progress"]').locator('..').locator('button:has-text("返回")').dispatchEvent('click')
+  // 点击返回按钮（背诵模式顶部精简返回条）
+  await page.locator('[data-testid="recite-back"]').dispatchEvent('click')
 
   // 应该回到浏览模式
   await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })

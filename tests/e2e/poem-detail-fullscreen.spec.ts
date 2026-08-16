@@ -129,6 +129,46 @@ test('点击卡片后 Swiper 重建为 slide 效果（无 coverflow 类）', asy
   expect(classes.includes('is-fullscreen')).toBe(true)
 })
 
+test('点击卡片后 RecitationCard 高度占满可用空间', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await enterPoemCardPage(page)
+
+  // 点击进入背诵
+  await enterReciteFromSwiper(page)
+  await page.waitForTimeout(500)
+
+  const info = await page.evaluate(() => {
+    const viewportH = document.documentElement.clientHeight
+    const topbar = document.querySelector('.poem-card-page > div > div:first-child') as HTMLElement | null
+    const bottomBar = document.querySelector('.poem-card-page .bg-white.border-t') as HTMLElement | null
+    const recCard = document.querySelector('.swiper-slide-active .recitation-card') as HTMLElement | null
+    if (!recCard) return null
+    const recRect = recCard.getBoundingClientRect()
+    const topbarBottom = topbar?.getBoundingClientRect().bottom ?? 0
+    const bottomBarTop = bottomBar?.getBoundingClientRect().top ?? viewportH
+    return {
+      viewportH,
+      recTop: Math.round(recRect.top),
+      recBottom: Math.round(recRect.bottom),
+      recHeight: Math.round(recRect.height),
+      topbarBottom: Math.round(topbarBottom),
+      bottomBarTop: Math.round(bottomBarTop),
+      availableHeight: Math.round(bottomBarTop - topbarBottom),
+      // RecitationCard 高度应接近卡片区域高度（至少 90%）
+      heightRatio: recRect.height / Math.max(1, bottomBarTop - topbarBottom),
+    }
+  })
+  expect(info).toBeTruthy()
+  const i = info!
+
+  // 背诵模式隐藏筛选栏后，卡片区域应占大部分屏幕
+  expect(i.topbarBottom).toBeLessThan(i.viewportH * 0.1)
+  // RecitationCard 高度应达到卡片区域高度的 95% 以上
+  expect(i.heightRatio).toBeGreaterThan(0.95)
+  // RecitationCard 底部不超出卡片区域
+  expect(i.recBottom).toBeLessThanOrEqual(i.bottomBarTop + 1)
+})
+
 test('点击卡片后 Swiper 触摸被禁用', async ({ page }) => {
   await enterPoemCardPage(page)
 
@@ -158,8 +198,8 @@ test('点击返回按钮缩回到浏览模式（宽度恢复 65%、coverflow 恢
 
   const containerWidth = await getSwiperContainerWidth(page)
 
-  // 点击返回按钮（使用更精确的选择器，避免匹配顶部导航的"← 返回"）
-  await page.locator('[data-testid="detail-progress"]').locator('..').locator('button:has-text("返回")').dispatchEvent('click')
+  // 点击返回按钮（背诵模式顶部精简返回条）
+  await page.locator('[data-testid="recite-back"]').dispatchEvent('click')
   await page.waitForTimeout(500)
 
   // 应该回到浏览模式 - PoemCard 可见
@@ -190,8 +230,8 @@ test('展开-缩回-再展开循环正常', async ({ page }) => {
   let expanded = await getActiveSlideInfo(page)
   expect(expanded.width / containerWidth).toBeGreaterThan(0.9)
 
-  // 缩回（使用更精确的选择器）
-  await page.locator('[data-testid="detail-progress"]').locator('..').locator('button:has-text("返回")').dispatchEvent('click')
+  // 缩回（背诵模式顶部精简返回条）
+  await page.locator('[data-testid="recite-back"]').dispatchEvent('click')
   await page.waitForTimeout(500)
 
   // 等待 PoemCard 可见
