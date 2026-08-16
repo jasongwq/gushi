@@ -139,6 +139,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-600">{{ poem.author }}</span>
         <button
+          data-testid="btn-author-forgot"
           :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', authorCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
           @click="toggleAuthorCorrect"
         >不会</button>
@@ -146,6 +147,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       <div class="flex items-center gap-2">
         <span class="text-sm text-gray-600">{{ poem.dynasty }}</span>
         <button
+          data-testid="btn-dynasty-forgot"
           :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', dynastyCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
           @click="toggleDynastyCorrect"
         >不会</button>
