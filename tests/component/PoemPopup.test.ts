@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PoemPopup from '@/components/PoemPopup.vue'
 import type { Poem } from '@/types'
@@ -15,13 +15,20 @@ const mockPoem: Poem = {
   yiwen: '译文内容',
 }
 
+let activeWrapper: VueWrapper | null = null
+
 beforeEach(() => {
   localStorage.clear()
   setActivePinia(createPinia())
 })
 
+afterEach(() => {
+  activeWrapper?.unmount()
+  activeWrapper = null
+})
+
 function mountPopup(props: { poem?: Poem; visible?: boolean } = {}) {
-  return mount(PoemPopup, {
+  activeWrapper = mount(PoemPopup, {
     props: { poem: mockPoem, visible: false, ...props },
     global: {
       plugins: [createPinia()],
@@ -30,6 +37,7 @@ function mountPopup(props: { poem?: Poem; visible?: boolean } = {}) {
       },
     },
   })
+  return activeWrapper
 }
 
 describe('PoemPopup', () => {
@@ -72,5 +80,63 @@ describe('PoemPopup', () => {
     await wrapper.find('.yiwen-btn').trigger('click')
     expect(wrapper.find('.popup-yiwen').exists()).toBe(true)
     expect(wrapper.text()).toContain('译文内容')
+  })
+
+  it('persists yiwen setting through learning store', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    await wrapper.find('.yiwen-btn').trigger('click')
+    // 通过 store 持久化：showYiwen 为 true
+    const { useLearningStore } = await import('@/stores/learning')
+    const store = useLearningStore()
+    expect(store.settings.showYiwen).toBe(true)
+  })
+
+  it('removes document keydown listener on unmount', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    const spy = vi.spyOn(document, 'removeEventListener')
+    wrapper.unmount()
+    expect(spy).toHaveBeenCalledWith('keydown', expect.any(Function))
+    spy.mockRestore()
+  })
+
+  it('trapFocus wraps Tab from last element back to first', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    const contentEl = wrapper.find('.popup-content').element as HTMLElement
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
+    const keyEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    contentEl.dispatchEvent(keyEvent)
+    // activeElement 不在 content 内（happy-dom 限制）→ 走 wrap 分支调用 focus
+    expect(focusSpy).toHaveBeenCalled()
+    focusSpy.mockRestore()
+  })
+
+  it('trapFocus with shift+Tab wraps', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    const contentEl = wrapper.find('.popup-content').element as HTMLElement
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
+    const keyEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    Object.defineProperty(keyEvent, 'shiftKey', { value: true })
+    contentEl.dispatchEvent(keyEvent)
+    expect(focusSpy).toHaveBeenCalled()
+    focusSpy.mockRestore()
+  })
+
+  it('trapFocus does not call focus when no focusable elements', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    // 删除唯一的可聚焦按钮
+    wrapper.find('.yiwen-btn').element.remove()
+    await wrapper.vm.$nextTick()
+    const contentEl = wrapper.find('.popup-content').element as HTMLElement
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
+    const keyEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })
+    contentEl.dispatchEvent(keyEvent)
+    // 无可聚焦元素时不应调用 focus（preventDefault 由 .prevent 修饰符无条件触发，不在此断言）
+    expect(focusSpy).not.toHaveBeenCalled()
+    focusSpy.mockRestore()
   })
 })

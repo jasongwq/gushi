@@ -5,6 +5,14 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import QuizPlayPage from '@/views/QuizPlayPage.vue'
 import type { QuizSession } from '@/types'
 
+// 避免 happy-dom 中真实 fetch('/poems.json') 产生未处理网络错误
+vi.mock('@/stores/poem', () => ({
+  usePoemStore: () => ({
+    fetchPoems: vi.fn(() => Promise.resolve()),
+    getPoemById: vi.fn(() => undefined),
+  }),
+}))
+
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [

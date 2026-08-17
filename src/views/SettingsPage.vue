@@ -14,7 +14,8 @@ function exportData() {
   a.href = url
   a.download = `古诗抽查_${new Date().toISOString().split('T')[0]}.json`
   a.click()
-  URL.revokeObjectURL(url)
+  // 延迟 revoke，确保浏览器已开始下载，避免下载被中断
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function importData() {

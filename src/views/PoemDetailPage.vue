@@ -114,7 +114,8 @@ function renderChart() {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await poemStore.fetchPoems()
   if (poem.value) renderChart()
 })
 

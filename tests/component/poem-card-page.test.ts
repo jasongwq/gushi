@@ -6,22 +6,29 @@ import PoemCardPage from '@/views/PoemCardPage.vue'
 const mockPoems = [
   { id: 'p1', title: '静夜思', author: '李白', dynasty: '唐', grade: '一年级', text: ['床前明月光', '疑是地上霜', '举头望明月', '低头思故乡'], textType: '五言' as const, yiwen: '译' },
   { id: 'p2', title: '春晓', author: '孟浩然', dynasty: '唐', grade: '一年级', text: ['春眠不觉晓', '处处闻啼鸟', '夜来风雨声', '花落知多少'], textType: '五言' as const, yiwen: '译' },
+  { id: 'p3', title: '咏鹅', author: '骆宾王', dynasty: '唐', grade: '二年级', text: ['鹅鹅鹅', '曲项向天歌', '白毛浮绿水', '红掌拨清波'], textType: '五言' as const, yiwen: '译' },
 ]
 
 vi.mock('@/stores/poem', () => ({
   usePoemStore: () => ({
     fetchPoems: vi.fn(),
     enabledPoems: mockPoems,
-    grades: ['一年级'],
+    grades: ['一年级', '二年级'],
+    getPoemById: (id: string) => mockPoems.find(p => p.id === id),
   }),
 }))
+
+const recordAnswerMock = vi.fn()
+const recordDetailMock = vi.fn()
+const recordReciteWithCharMarksMock = vi.fn()
 
 vi.mock('@/stores/learning', () => ({
   useLearningStore: () => ({
     settings: { showYiwen: false },
     updateSettings: vi.fn(),
-    recordAnswer: vi.fn(),
-    recordDetail: vi.fn(),
+    recordAnswer: recordAnswerMock,
+    recordDetail: recordDetailMock,
+    recordReciteWithCharMarks: recordReciteWithCharMarksMock,
     getRecord: vi.fn(() => undefined),
     records: [],
     wrongBook: [],
@@ -146,6 +153,111 @@ describe('PoemCardPage detail interactions', () => {
     await wrapper.findAll('button').find(b => b.text() === '📇 滑动')!.trigger('click')
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.poem-card').exists()).toBe(true)
+  })
+})
+
+describe('PoemCardPage source filters and navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('grade source shows grade selector and filters poems', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    // 点击"按年级"
+    const gradeBtn = wrapper.findAll('button').find(b => b.text() === '按年级')
+    expect(gradeBtn).toBeTruthy()
+    await gradeBtn!.trigger('click')
+    await wrapper.vm.$nextTick()
+    // 显示年级按钮
+    const gradeSelector = wrapper.findAll('button').find(b => b.text() === '一年级')
+    expect(gradeSelector).toBeTruthy()
+    await gradeSelector!.trigger('click')
+    await wrapper.vm.$nextTick()
+    // 只显示一年级的诗
+    expect(wrapper.text()).toContain('静夜思')
+    expect(wrapper.text()).not.toContain('咏鹅')
+  })
+
+  it('saveResult records char marks through recordReciteWithCharMarks', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    // 直接调用内部 saveResult（recitation 详情提交路径）
+    await vm.onDetailSubmit({
+      poemId: 'p1',
+      overallStatus: 'not-mastered',
+      lines: [{ lineIndex: 0, status: 'stuck' }],
+      authorCorrect: false,
+      dynastyCorrect: null,
+      charMarks: { '0-0': 'wrong' },
+    })
+    expect(recordAnswerMock).toHaveBeenCalledWith('p1', 'recite', false)
+    expect(recordDetailMock).toHaveBeenCalledWith('p1', 'line', '第1句:stuck')
+    expect(recordDetailMock).toHaveBeenCalledWith('p1', 'author')
+    expect(recordReciteWithCharMarksMock).toHaveBeenCalledWith('p1', false, expect.any(Array), { '0-0': 'wrong' })
+  })
+
+  it('mystery select enters recite mode scoped to revealed poems', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    // 模拟盲盒：2 个已揭示的诗
+    vm.mysteryBoxRef = {
+      boxes: [
+        { state: 'revealed', poem: mockPoems[0] },
+        { state: 'revealed', poem: mockPoems[1] },
+        { state: 'closed', poem: mockPoems[2] },
+      ],
+    }
+    vm.onMysterySelectAndEnter(mockPoems[1])
+    await wrapper.vm.$nextTick()
+    expect(vm.fromMystery).toBe(true)
+    // 背诵模式下显示 RecitationCard
+    expect(wrapper.find('.recitation-card').exists()).toBe(true)
+  })
+
+  it('goBackToBrowse from recite returns to mystery view when fromMystery', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    vm.fromMystery = true
+    vm.expandedPoemId = 'p1'
+    vm.viewMode = 'recite'
+    vm.goBackToBrowse()
+    expect(vm.viewMode).toBe('mystery')
+    expect(vm.expandedPoemId).toBeNull()
+  })
+
+  it('submit on last poem collapses back to browse mode', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    // 导航到最后一首（index 2）
+    vm.currentIndex = 2
+    vm.onDetailSubmit({
+      poemId: 'p3',
+      overallStatus: 'mastered',
+      lines: [],
+      authorCorrect: null,
+      dynastyCorrect: null,
+      charMarks: {},
+    })
+    // 不是盲盒来源 → collapseSlide
+    expect(vm.expandedPoemId).toBeNull()
+    expect(vm.viewMode).toBe('swiper')
+  })
+
+  it('goBackToBrowse from recite collapses to swiper when not fromMystery', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    vm.fromMystery = false
+    vm.expandedPoemId = 'p1'
+    vm.viewMode = 'recite'
+    vm.goBackToBrowse()
+    expect(vm.viewMode).toBe('swiper')
+    expect(vm.expandedPoemId).toBeNull()
   })
 })
 

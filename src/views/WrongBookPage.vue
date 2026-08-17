@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useLearningStore } from '@/stores/learning'
 import { usePoemStore } from '@/stores/poem'
 import PoemPopup from '@/components/PoemPopup.vue'
@@ -7,6 +7,8 @@ import type { Poem } from '@/types'
 
 const learningStore = useLearningStore()
 const poemStore = usePoemStore()
+
+onMounted(() => poemStore.fetchPoems())
 
 const popupVisible = ref(false)
 const popupPoemId = ref('')

@@ -123,16 +123,21 @@ export const useLearningStore = defineStore('learning', () => {
     persist()
   }
 
-  // 提交背诵时附带字级标记：保存快照并聚合统计
+  // 提交背诵时附带字级标记：仅保存快照并聚合统计，不重复调度
+  // 注意：背诵提交已由 quiz store 的 submitRecitationResult 调用 recordAnswer 完成遗忘曲线调度，
+  // 这里不能再次调用 recordRecite（会重复计算 nextReviewDate / reviewCount）。
   function recordReciteWithCharMarks(poemId: string, correct: boolean, poemText: string[], charMarksSnapshot: CharMarkMap) {
-    recordRecite(poemId, correct)
-
-    // 保存快照到 reciteRecords（覆盖刚 push 的默认空对象）
-    const reciteRecords = data.value.reciteRecords
-    const lastIdx = reciteRecords.length - 1
-    if (lastIdx >= 0) {
-      reciteRecords[lastIdx] = { ...reciteRecords[lastIdx], charMarks: charMarksSnapshot }
+    const today = new Date().toISOString().split('T')[0]
+    const record = getOrCreateRecord(poemId)
+    // 仅追加背诵正确性历史，不改调度
+    const idx = data.value.records.findIndex(r => r.poemId === poemId)
+    data.value.records[idx] = {
+      ...record,
+      reciteCorrectness: [...record.reciteCorrectness, correct ? 1 : 0],
     }
+
+    // 保存快照到 reciteRecords
+    data.value.reciteRecords.push({ poemId, date: today, correct, charMarks: charMarksSnapshot })
 
     // 聚合统计
     if (Object.keys(charMarksSnapshot).length > 0) {

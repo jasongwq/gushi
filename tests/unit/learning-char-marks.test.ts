@@ -68,6 +68,24 @@ describe('char marks in learning store', () => {
     expect(store.data.reciteRecords[0].charMarks).toEqual({})
   })
 
+  it('recordReciteWithCharMarks does not double-schedule after recordAnswer', () => {
+    const store = useLearningStore()
+    // 背诵流程中 submitRecitationResult 已调用 recordAnswer 完成遗忘曲线调度
+    store.recordAnswer('p001', 'recite', true)
+    const reviewCountAfterAnswer = store.getRecord('p001')!.reviewCount
+    const nextReviewDateAfterAnswer = store.getRecord('p001')!.nextReviewDate
+
+    // 再附带字级标记提交，不应重复调度（reviewCount / nextReviewDate 不变）
+    store.recordReciteWithCharMarks('p001', true, ['床前明月光'], { '0-0': 'fuzzy' })
+    const record = store.getRecord('p001')
+    expect(record!.reviewCount).toBe(reviewCountAfterAnswer)
+    expect(record!.nextReviewDate).toBe(nextReviewDateAfterAnswer)
+    // 背诵历史与字级统计仍应记录
+    expect(record!.reciteCorrectness).toEqual([1])
+    expect(store.data.reciteRecords).toHaveLength(1)
+    expect(record!.charMarkStats).toHaveLength(1)
+  })
+
   it('getCharMarkStats skips stale stats when poem text changed', () => {
     const store = useLearningStore()
     store.recordReciteWithCharMarks('p001', false, ['床前明月光'], { '0-0': 'fuzzy' })

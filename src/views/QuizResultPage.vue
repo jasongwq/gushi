@@ -21,6 +21,18 @@ const answers = computed(() => {
   if (!quizStore.session) return []
   return quizStore.session.answers.map((a, i) => {
     const question = quizStore.session!.questions[a.questionIndex]
+    // 防御：session 恢复后 questionIndex 可能越界（旧 session 数据）
+    if (!question) {
+      return {
+        index: i + 1,
+        poemId: '',
+        poemTitle: '（题目数据缺失）',
+        prompt: '',
+        selected: '',
+        correct: '',
+        isCorrect: false,
+      }
+    }
     const poem = poemStore.getPoemById(question.poemId)
     return {
       index: i + 1,

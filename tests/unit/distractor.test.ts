@@ -64,6 +64,30 @@ describe('generateFillBlankOptions', () => {
       expect(opt).toHaveLength(1)
     }
   })
+
+  it('falls back to all poems when same grade has too few distinct chars', () => {
+    // 用极小的诗库触发 fallback：同诗 + 同年级可去重汉字不足 5 个
+    const smallPoems: Poem[] = [
+      { id: 's1', title: '独诗', author: '甲', dynasty: '唐', grade: '一年级', text: ['春眠不觉晓'], textType: '五言', yiwen: '' },
+      // 另一个年级仅 1 首诗，提供补充干扰字
+      { id: 's2', title: '他年级', author: '乙', dynasty: '唐', grade: '二年级', text: ['鹅鹅鹅，曲项向天歌'], textType: '五言', yiwen: '' },
+    ]
+    const result = generateFillBlankOptions(smallPoems[0], smallPoems, '春', 0)
+    expect(result).toHaveLength(6)
+    expect(new Set(result).size).toBe(6)
+    expect(result).toContain('春')
+  })
+
+  it('returns fewer than 6 options when poem pool is too small', () => {
+    // 所有诗加起来唯一汉字 < 6：不强制填满，选项数等于可用字符数
+    const tinyPoems: Poem[] = [
+      { id: 't1', title: '微诗', author: '丙', dynasty: '唐', grade: '一年级', text: ['春眠'], textType: '五言', yiwen: '' },
+    ]
+    const result = generateFillBlankOptions(tinyPoems[0], tinyPoems, '春', 0)
+    expect(result).toContain('春')
+    expect(result.length).toBeLessThanOrEqual(2)
+    expect(new Set(result).size).toBe(result.length)
+  })
 })
 
 describe('generateNextLineOptions', () => {
@@ -152,5 +176,24 @@ describe('generateNextLineOptions', () => {
         expect(options).not.toContain(stripPunctuation(givenLine))
       }
     }
+  })
+
+  it('falls back to other grade poems when same grade lacks matching lines', () => {
+    // 同年级只有一首诗，无法提供同长度行 → 从其他年级补充
+    const lonePoem: Poem = { id: 'L1', title: '孤诗', author: '丁', dynasty: '唐', grade: '六年级', text: ['床前明月光，'], textType: '五言', yiwen: '' }
+    const pool: Poem[] = [lonePoem, ...poems] // poems 里大量「一年级」五言行可补充
+    const result = generateNextLineOptions(lonePoem, pool, '床前明月光，', '六年级', '床前明月光，')
+    expect(result).toHaveLength(6)
+    expect(result).toContain('床前明月光')
+    expect(new Set(result).size).toBe(6)
+  })
+
+  it('returns only available lines when pool is tiny', () => {
+    const tiny: Poem[] = [
+      { id: 'q1', title: '单行诗', author: '戊', dynasty: '唐', grade: '一年级', text: ['白日依山尽'], textType: '五言', yiwen: '' },
+    ]
+    const result = generateNextLineOptions(tiny[0], tiny, '白日依山尽', '一年级', '白日依山尽')
+    expect(result).toContain('白日依山尽')
+    expect(result).toHaveLength(1)
   })
 })

@@ -16,7 +16,8 @@ onMounted(() => poemStore.fetchPoems())
 
 const isParentMode = computed(() => route.query.mode === 'parent')
 
-const source = ref<SourceType>(learningStore.settings.source || 'smart')
+// 支持 HomePage「今日待复习」横幅通过 ?source=review 直达复习模式
+const source = ref<SourceType>(route.query.source as SourceType || learningStore.settings.source || 'smart')
 const count = ref(learningStore.settings.quizCount || 10)
 const selectedGrades = ref<string[]>(learningStore.settings.selectedGrades || [])
 const errorMsg = ref('')
@@ -90,8 +91,8 @@ function startQuiz() {
   errorMsg.value = ''
   const grades = source.value === 'grade' ? selectedGrades.value : undefined
 
-  // 家长模式下古诗抽背跳转到新的抽卡页面
-  if (isParentMode.value) {
+  // 家长模式下若勾选了古诗抽背，跳转到抽卡页面
+  if (isParentMode.value && quizTypes.value.includes('recite')) {
     router.push({ name: 'poem-card' })
     return
   }
