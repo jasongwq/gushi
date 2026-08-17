@@ -8,6 +8,7 @@ describe('calculateRetention', () => {
     const record: LearningRecord = {
       poemId: 'p001', lastReviewDate: today, reviewCount: 1,
       nextReviewDate: today, correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
     }
     expect(calculateRetention(record, today)).toBeCloseTo(1)
@@ -18,6 +19,7 @@ describe('calculateRetention', () => {
     const record: LearningRecord = {
       poemId: 'p001', lastReviewDate: today, reviewCount: 0,
       nextReviewDate: today, correctness: [], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
     }
     expect(calculateRetention(record, today)).toBe(0)
@@ -28,6 +30,7 @@ describe('calculateRetention', () => {
     const record: LearningRecord = {
       poemId: 'p001', lastReviewDate: '2026-08-13', reviewCount: 2,
       nextReviewDate: '2026-08-15', correctness: [1, 1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
     }
     const retention = calculateRetention(record, today)
@@ -44,8 +47,8 @@ describe('calculateOverallRetention', () => {
   it('returns average retention across records', () => {
     const today = '2026-08-15'
     const records: LearningRecord[] = [
-      { poemId: 'p001', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
-      { poemId: 'p002', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+      { poemId: 'p001', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], charMarkStats: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+      { poemId: 'p002', lastReviewDate: today, reviewCount: 1, nextReviewDate: '2026-08-17', correctness: [1], reciteCorrectness: [], charMarkStats: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
     ]
     expect(calculateOverallRetention(records, today)).toBeCloseTo(1)
   })
@@ -54,7 +57,7 @@ describe('calculateOverallRetention', () => {
 describe('calculateDailyRetention', () => {
   it('returns array of retention values for date range', () => {
     const records: LearningRecord[] = [
-      { poemId: 'p001', lastReviewDate: '2026-08-10', reviewCount: 1, nextReviewDate: '2026-08-12', correctness: [1], reciteCorrectness: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
+      { poemId: 'p001', lastReviewDate: '2026-08-10', reviewCount: 1, nextReviewDate: '2026-08-12', correctness: [1], reciteCorrectness: [], charMarkStats: [], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 },
     ]
     const result = calculateDailyRetention(records, '2026-08-10', '2026-08-12')
     expect(result).toHaveLength(3)

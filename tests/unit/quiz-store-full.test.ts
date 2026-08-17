@@ -77,6 +77,7 @@ describe('startQuiz', () => {
     learningStore.data.records.push({
       poemId: 'p001', lastReviewDate: '2020-01-01', reviewCount: 1,
       nextReviewDate: today, correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
     })
     const result = store.startQuiz('review', ['fillBlank'], 3)
@@ -100,6 +101,7 @@ describe('startQuiz', () => {
     learningStore.data.records.push({
       poemId: 'p001', lastReviewDate: '2026-01-01', reviewCount: 1,
       nextReviewDate: '2026-01-02', correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: true, unproficientCorrectStreak: 0,
     })
     const result = store.startQuiz('unproficient', ['fillBlank'], 3)
@@ -186,6 +188,7 @@ describe('submitRecitationResult', () => {
       lines: [],
       authorCorrect: null,
       dynastyCorrect: null,
+      charMarks: {},
     })
     expect(store.session!.recitationResults).toHaveLength(1)
     expect(store.session!.currentIndex).toBe(1)
@@ -205,6 +208,7 @@ describe('submitRecitationResult', () => {
       ],
       authorCorrect: false,
       dynastyCorrect: false,
+      charMarks: {},
     })
     expect(store.session!.recitationResults).toHaveLength(1)
     // Check that wrong book entries were created
@@ -227,6 +231,7 @@ describe('submitRecitationResult separation', () => {
       ],
       authorCorrect: false,
       dynastyCorrect: false,
+      charMarks: {},
     })
     // Only 1 quizResult (from the single recordAnswer call)
     const quizResults = learningStore.data.quizResults.filter(r => r.poemId === poemId)
@@ -249,6 +254,7 @@ describe('submitRecitationResult separation', () => {
       lines: [{ lineIndex: 0, status: 'stuck' }],
       authorCorrect: false,
       dynastyCorrect: null,
+      charMarks: {},
     })
     // Should have line + author wrongBook entries
     const wbEntries = learningStore.wrongBook.filter(w => w.poemId === poemId)
@@ -268,6 +274,7 @@ describe('goToPrevRecitation', () => {
       lines: [],
       authorCorrect: null,
       dynastyCorrect: null,
+      charMarks: {},
     })
     expect(store.session!.currentIndex).toBe(1)
     store.goToPrevRecitation()

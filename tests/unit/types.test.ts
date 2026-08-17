@@ -59,6 +59,7 @@ describe('Type definitions', () => {
       nextReviewDate: '2026-01-08',
       correctness: [1, 1, 0, 1, 1],
       reciteCorrectness: [1, 0, 1],
+      charMarkStats: [],
       masteryLevel: '熟',
       unproficient: false,
       unproficientCorrectStreak: 0,

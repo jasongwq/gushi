@@ -3,12 +3,14 @@ import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
+import { useLearningStore } from '@/stores/learning'
 import RecitationCard from '@/components/RecitationCard.vue'
 import type { RecitationResult } from '@/types'
 
 const router = useRouter()
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
+const learningStore = useLearningStore()
 
 onMounted(() => poemStore.fetchPoems())
 
@@ -27,6 +29,13 @@ const canGoPrev = computed(() => quizStore.currentIndex > 0)
 
 function onSubmit(result: RecitationResult) {
   quizStore.submitRecitationResult(result)
+  // 字级标记统计
+  if (result.charMarks && Object.keys(result.charMarks).length > 0) {
+    const poem = poemStore.getPoemById(result.poemId)
+    if (poem) {
+      learningStore.recordReciteWithCharMarks(result.poemId, result.overallStatus === 'mastered', poem.text, result.charMarks)
+    }
+  }
   if (quizStore.isFinished) {
     router.push({ name: 'recitation-result' })
   }

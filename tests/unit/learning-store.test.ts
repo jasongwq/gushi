@@ -99,6 +99,7 @@ describe('recordAnswer', () => {
       nextReviewDate: '2020-01-03',
       correctness: [1],
       reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学',
       unproficient: false,
       unproficientCorrectStreak: 0,
@@ -330,6 +331,7 @@ describe('computed properties', () => {
     store.data.records.push({
       poemId: 'p001', lastReviewDate: '2020-01-01', reviewCount: 1,
       nextReviewDate: today, correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
     })
     expect(store.reviewDueCount).toBeGreaterThanOrEqual(1)

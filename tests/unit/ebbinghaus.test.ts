@@ -17,6 +17,7 @@ function makeRecord(overrides: Partial<LearningRecord> = {}): LearningRecord {
     nextReviewDate: '2026-01-01',
     correctness: [],
     reciteCorrectness: [],
+    charMarkStats: [],
     masteryLevel: '新',
     unproficient: false,
     unproficientCorrectStreak: 0,

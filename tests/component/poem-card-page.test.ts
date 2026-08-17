@@ -25,6 +25,8 @@ vi.mock('@/stores/learning', () => ({
     getRecord: vi.fn(() => undefined),
     records: [],
     wrongBook: [],
+    charMarks: {},
+    initCharMarks: vi.fn(),
   }),
 }))
 

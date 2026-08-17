@@ -9,6 +9,7 @@ const baseRecord: LearningRecord = {
   nextReviewDate: '2026-08-16',
   correctness: [1],
   reciteCorrectness: [],
+  charMarkStats: [],
   masteryLevel: '学',
   unproficient: false,
   unproficientCorrectStreak: 0,
