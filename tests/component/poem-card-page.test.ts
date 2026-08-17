@@ -146,3 +146,96 @@ describe('PoemCardPage detail interactions', () => {
     expect(wrapper.find('.poem-card').exists()).toBe(true)
   })
 })
+
+describe('PoemCardPage touch gesture handling', () => {
+  // 在背诵模式下分派触摸事件到页面根容器（pageRootRef 上绑定了 capture 阶段监听）
+  function dispatchTouch(wrapper: ReturnType<typeof mountPage>, type: 'touchstart' | 'touchmove' | 'touchend', x: number, y: number) {
+    const root = wrapper.find('.poem-card-page').element as HTMLElement
+    const event = new Event(type, { bubbles: true, cancelable: true }) as any
+    if (type === 'touchend') {
+      event.touches = []
+      event.changedTouches = []
+    } else {
+      event.touches = [{ clientX: x, clientY: y }]
+      event.changedTouches = [{ clientX: x, clientY: y }]
+    }
+    // 用 elementFromPoint 无法在 happy-dom 模拟命中；直接分派到根容器，
+    // target 用参数指定——通过 dispatchEvent 的 target 是 root 本身，
+    // closest('.card-swiper') 会失败，因此需要手动构造 target。
+    // 改用 component 暴露的内部实现：直接触发 capture 监听，target 指向卡片内元素。
+    Object.defineProperty(event, 'target', {
+      value: createTarget(root, y),
+      configurable: true,
+    })
+    root.dispatchEvent(event)
+  }
+
+  // 构造一个带 closest 的伪目标元素（模拟命中点）
+  function createTarget(root: HTMLElement, y: number) {
+    // happy-dom 不支持 elementFromPoint，这里直接基于命中点 y 推断：
+    // 顶部标题区（不在滚动区内） vs 中部（在 data-scroll-area 滚动区内）
+    const cardArea = root.querySelector('.recitation-card')
+    const fake = document.createElement('div')
+    // 根据坐标构造 closest 行为
+    fake.closest = ((selector: string) => {
+      if (!cardArea) return null
+      const scrollArea = cardArea.querySelector('[data-scroll-area]')!
+      // 简化：y < 100 视为标题区（滚动区外），否则视为滚动区内
+      const inScroll = y >= 100
+      if (selector === '.card-swiper') return root.querySelector('.card-swiper')
+      if (selector === '[data-scroll-area]') return inScroll ? scrollArea : null
+      if (selector === '.recitation-card') return cardArea
+      return null
+    }) as any
+    return fake as any
+  }
+
+  async function enterRecite(wrapper: ReturnType<typeof mountPage>) {
+    await wrapper.find('.poem-card').trigger('click')
+    await wrapper.vm.$nextTick()
+    return wrapper
+  }
+
+  it('滚动区内上滑：不缩回（正文滚动接管）', async () => {
+    const wrapper = await enterRecite(mountPage())
+    const beforeCount = wrapper.find('.recitation-card').exists()
+
+    // touchstart 在滚动区内（y=300）→ 不记录起点
+    dispatchTouch(wrapper, 'touchstart', 195, 300)
+    // 上滑 100px
+    dispatchTouch(wrapper, 'touchmove', 195, 200)
+    dispatchTouch(wrapper, 'touchend', 195, 200)
+    await wrapper.vm.$nextTick()
+
+    // 仍处于背诵模式（未缩回）
+    expect(wrapper.find('.recitation-card').exists()).toBe(true)
+    expect(beforeCount).toBe(true)
+  })
+
+  it('滚动区外（标题区）上滑：缩回浏览模式', async () => {
+    const wrapper = await enterRecite(mountPage())
+
+    // touchstart 在标题区（y=50，滚动区外）→ 记录起点
+    dispatchTouch(wrapper, 'touchstart', 195, 50)
+    // 上滑 100px（超过阈值 50）
+    dispatchTouch(wrapper, 'touchmove', 195, -50)
+    dispatchTouch(wrapper, 'touchend', 195, -50)
+    await wrapper.vm.$nextTick()
+
+    // 缩回浏览模式
+    expect(wrapper.find('.recitation-card').exists()).toBe(false)
+    expect(wrapper.find('.poem-card').exists()).toBe(true)
+  })
+
+  it('滚动区内点击（位移小）不触发缩回', async () => {
+    const wrapper = await enterRecite(mountPage())
+
+    dispatchTouch(wrapper, 'touchstart', 195, 300)
+    // 小位移（dy = 10px，低于阈值）
+    dispatchTouch(wrapper, 'touchmove', 196, 290)
+    dispatchTouch(wrapper, 'touchend', 196, 290)
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.find('.recitation-card').exists()).toBe(true)
+  })
+})

@@ -108,7 +108,7 @@ test('水平滑动切诗不缩回，上滑缩回', async ({ browser }) => {
   const swiperBox = await page.locator('.card-swiper').first().boundingBox()
   expect(swiperBox).toBeTruthy()
   const cx = swiperBox!.x + swiperBox!.width / 2
-  // 用卡片 40% 高度处（避开中间按钮区域）
+  // 用卡片 40% 高度处（避开中间正文滚动区按钮区域）
   const cy = swiperBox!.y + swiperBox!.height * 0.4
 
   const progressBefore = await page.locator('[data-testid="detail-progress"]').textContent()
@@ -129,9 +129,11 @@ test('水平滑动切诗不缩回，上滑缩回', async ({ browser }) => {
   expect(progressAfter).not.toBe(progressBefore)
 
   // 上滑 → 应缩回浏览模式
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy }] })
+  // 起点用标题区（卡片顶部，滚动区之外）——滚动区内的上滑是正文滚动，不会缩回
+  const titleY = swiperBox!.y + 30
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: titleY }] })
   for (let i = 1; i <= 10; i++) {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: cy - 20 * i }] })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: titleY - 20 * i }] })
     await new Promise(r => setTimeout(r, 16))
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
