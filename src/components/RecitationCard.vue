@@ -115,7 +115,8 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     </div>
 
     <!-- 正文区：全诗原文 + 逐句标记 + 译文，独立滚动 -->
-    <div class="flex-1 min-h-0 overflow-y-auto mb-4">
+    <!-- data-scroll-area：语义标记，供 PoemCardPage 手势逻辑识别滚动区（避免依赖展示类名） -->
+    <div data-scroll-area class="flex-1 min-h-0 overflow-y-auto mb-4">
       <div class="mb-4">
         <div
           v-for="(line, index) in poem.text"
