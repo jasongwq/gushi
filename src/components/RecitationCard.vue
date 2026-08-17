@@ -87,7 +87,8 @@ const hasAnyIssue = computed(() => {
   const hasLineIssue = lineStatuses.value.some(l => l.status !== 'ok')
   const hasAuthorIssue = authorCorrect.value === false
   const hasDynastyIssue = dynastyCorrect.value === false
-  return hasLineIssue || hasAuthorIssue || hasDynastyIssue
+  const hasCharIssue = Object.keys(learningStore.charMarks).length > 0
+  return hasLineIssue || hasAuthorIssue || hasDynastyIssue || hasCharIssue
 })
 
 function submit() {

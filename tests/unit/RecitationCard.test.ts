@@ -142,6 +142,10 @@ describe('RecitationCard', () => {
   })
 
   describe('"下一首" button', () => {
+    beforeEach(() => {
+      Object.keys(charMarksMock).forEach(k => delete charMarksMock[k])
+    })
+
     it('is disabled when no issues are marked', () => {
       const wrapper = mountCard()
       const nextBtn = getNextButton(wrapper)
@@ -162,6 +166,20 @@ describe('RecitationCard', () => {
       await forgotBtns[0].trigger('click')
       const nextBtn = getNextButton(wrapper)
       expect(nextBtn.attributes('disabled')).toBeUndefined()
+    })
+
+    it('is enabled when a char is marked', async () => {
+      charMarksMock['0-2'] = 'wrong'
+      const wrapper = mountCard()
+      const nextBtn = getNextButton(wrapper)
+      expect(nextBtn.attributes('disabled')).toBeUndefined()
+    })
+
+    it('is disabled when a char mark is cleared', () => {
+      // 清除标记后（空 charMarks）重新渲染，下一首回到禁用状态
+      const wrapper = mountCard()
+      const nextBtn = getNextButton(wrapper)
+      expect(nextBtn.attributes('disabled')).toBeDefined()
     })
 
     it('is enabled when author is marked wrong', async () => {
