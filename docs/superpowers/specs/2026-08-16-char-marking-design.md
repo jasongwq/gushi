@@ -130,7 +130,7 @@ function parseLine(line: string) {
 
 用户提交背诵结果
   → RecitationCard emit('result', { ...existing, charMarks })
-    → learning store recordRecite()
+    → learning store recordReciteWithCharMarks()
       → 保存 ReciteRecord（含 charMarks 快照）到 reciteRecords
       → 更新 CharMarkStats（按字聚合计数）
       → 持久化到 localStorage
@@ -140,14 +140,16 @@ function parseLine(line: string) {
 
 - **learning store** 新增：
   - `charMarks: CharMarkMap` — 当前会话状态（响应式，组件绑定）
-  - `initCharMarks(poemId)` — 切换古诗时重置
-  - `toggleCharMark(lineIndex, charIdx)` — 三态循环
-  - `updateCharMarkStats(poemId, charMarks)` — 提交时聚合统计
-  - `getCharMarkStats(poemId)` — 获取某诗的字级统计
+  - `initCharMarks()` — 重置当前会话字级标记（切换古诗时、提交后调用）
+  - `toggleCharMark(lineIndex, charIdx)` — 三态循环（ok→fuzzy→wrong→ok）
+  - `recordReciteWithCharMarks(poemId, correct, poemText, charMarksSnapshot)` — 提交时保存快照到 ReciteRecord 并聚合 CharMarkStats；poemText 用于解析汉字取原字（char）
+  - `getCharMarkStats(poemId, poemText?)` — 获取某诗的字级统计；传 poemText 时校验存储的 char 与当前诗行一致，不一致则跳过（内容变化校验）
 
 - **RecitationCard** 改动：
   - 提交结果时附带 `charMarks` 字段
   - 从 store 读取/更新字级状态
+  - `watch(() => props.poem.id)` 中调用 `initCharMarks()` 重置会话标记
+  - `submitResult` 提交后调用 `initCharMarks()` 重置会话标记
 
 ## 边界情况与错误处理
 
