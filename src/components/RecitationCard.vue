@@ -103,8 +103,11 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       : [],
     authorCorrect: authorCorrect.value,
     dynastyCorrect: dynastyCorrect.value,
+    charMarks: { ...learningStore.charMarks },
   }
   emit('submit', result)
+  // 提交后重置当前会话的字级标记
+  learningStore.initCharMarks()
 }
 </script>
 

@@ -96,6 +96,14 @@ function saveResult(result: RecitationResult) {
   if (result.dynastyCorrect === false) {
     learningStore.recordAnswer(result.poemId, 'dynasty', false)
   }
+
+  // 字级标记统计
+  if (result.charMarks && Object.keys(result.charMarks).length > 0) {
+    const poem = poemStore.getPoemById(result.poemId)
+    if (poem) {
+      learningStore.recordReciteWithCharMarks(result.poemId, result.overallStatus === 'mastered', poem.text, result.charMarks)
+    }
+  }
 }
 
 // ========== 展开/缩回逻辑 ==========

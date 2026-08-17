@@ -88,6 +88,7 @@ export interface RecitationResult {
   lines: RecitationLineResult[]
   authorCorrect: boolean | null
   dynastyCorrect: boolean | null
+  charMarks: CharMarkMap  // 新增
 }
 
 export interface QuizSession {

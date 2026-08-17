@@ -396,6 +396,7 @@ describe('RecitationCard', () => {
         lines: [],
         authorCorrect: null,
         dynastyCorrect: null,
+        charMarks: {},
       })
     })
 
@@ -410,6 +411,17 @@ describe('RecitationCard', () => {
       expect(result.lines.every((l: any) => l.status === 'forgot')).toBe(true)
       expect(result.authorCorrect).toBe(false)
       expect(result.dynastyCorrect).toBe(false)
+    })
+
+    it('submit result includes current charMarks snapshot', async () => {
+      charMarksMock['0-2'] = 'wrong'
+      const wrapper = mountCard()
+      const masteredBtn = getMasteredButton(wrapper)
+      await masteredBtn.trigger('click')
+      const result = wrapper.emitted('submit')![0][0] as any
+      expect(result.charMarks).toEqual({ '0-2': 'wrong' })
+      // 提交后重置会话标记
+      expect(initCharMarksMock).toHaveBeenCalled()
     })
   })
 

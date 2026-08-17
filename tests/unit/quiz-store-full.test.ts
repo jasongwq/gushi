@@ -189,6 +189,7 @@ describe('submitRecitationResult', () => {
       lines: [],
       authorCorrect: null,
       dynastyCorrect: null,
+      charMarks: {},
     })
     expect(store.session!.recitationResults).toHaveLength(1)
     expect(store.session!.currentIndex).toBe(1)
@@ -208,6 +209,7 @@ describe('submitRecitationResult', () => {
       ],
       authorCorrect: false,
       dynastyCorrect: false,
+      charMarks: {},
     })
     expect(store.session!.recitationResults).toHaveLength(1)
     // Check that wrong book entries were created
@@ -226,6 +228,7 @@ describe('goToPrevRecitation', () => {
       lines: [],
       authorCorrect: null,
       dynastyCorrect: null,
+      charMarks: {},
     })
     expect(store.session!.currentIndex).toBe(1)
     store.goToPrevRecitation()
