@@ -137,6 +137,10 @@ function onAreaTouchStart(e: TouchEvent) {
   // 只处理卡片区域内的触摸（避开顶部返回条、底部进度条）
   const target = e.target as HTMLElement | null
   if (!target?.closest?.('.card-swiper')) return
+  // 忽略背诵卡片正文滚动区（.recitation-card 内的 .overflow-y-auto）内的触摸，
+  // 让原生滚动接管；否则上滑滚动手势会被「上滑缩回浏览」拦截（长诗正文无法滚动）。
+  // 注意不能直接用 closest('.overflow-y-auto')——页面级 flex 容器也带该类，会误伤标题区/按钮区的缩回手势
+  if (target.closest('.recitation-card .overflow-y-auto')) return
   const touch = e.touches[0]
   if (touch) swipeStart(swipeState, touch.clientX, touch.clientY)
 }

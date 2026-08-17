@@ -280,6 +280,7 @@ test('背诵模式水平滑动切诗、上滑缩回', async ({ browser }) => {
   const cdp = await page.context().newCDPSession(page)
   const box = await page.locator('.card-swiper').boundingBox()
   const cx = box!.x + box!.width / 2
+  // 水平滑动用卡片中部（切诗手势由 Swiper 处理，与正文滚动区无关）
   const cy = box!.y + box!.height / 2
 
   // 1. 水平左滑 → 切诗（进度变化），不缩回
@@ -299,9 +300,11 @@ test('背诵模式水平滑动切诗、上滑缩回', async ({ browser }) => {
   expect(progressAfter).not.toBe(progressBefore)
 
   // 2. 上滑 → 缩回浏览模式
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: cy }] })
+  // 起点用标题区（卡片顶部，滚动区之外）——滚动区内的上滑是正文滚动，不会缩回
+  const titleY = box!.y + 30
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: cx, y: titleY }] })
   for (let i = 1; i <= 10; i++) {
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: cy - 20 * i }] })
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: cx, y: titleY - 20 * i }] })
     await new Promise(r => setTimeout(r, 16))
   }
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
@@ -579,12 +582,10 @@ test('背诵模式长诗正文可滚动，4 按钮固定在底部', async ({ bro
   await context.close()
 })
 
-test.fixme('背诵模式长诗正文触屏上滑可滚动（待修复：上滑被页面手势拦截缩回）', async ({ browser }) => {
-  // 已知问题：正文滚动区位于 .card-swiper 内，页面根容器的 capture 阶段 touchmove 监听
-  // （PoemCardPage.onAreaTouchMove + swipeMove）会在原生滚动前把垂直上滑识别为「上滑缩回」，
-  // 导致在长诗正文里向上滑动时卡片直接缩回浏览模式，正文无法滚动。
-  // 修复方向：页面手势监听应忽略以 .overflow-y-auto 为起点的触摸（或滚动区 stopPropagation）。
-  // 该用例待修复后取消 fixme。
+test('背诵模式长诗正文触屏上滑可滚动（修复：页面手势忽略滚动区触摸）', async ({ browser }) => {
+  // 回归用例：正文滚动区位于 .card-swiper 内，页面根容器的 capture 阶段 touchmove 监听
+  // （PoemCardPage.onAreaTouchMove + swipeMove）会把垂直上滑识别为「上滑缩回」。
+  // 修复：onAreaTouchStart 忽略以 .overflow-y-auto 为起点的触摸，让原生滚动接管。
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
