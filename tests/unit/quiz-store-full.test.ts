@@ -156,7 +156,6 @@ describe('startRecitation', () => {
 
   it('uses enabledPoems (not all poems)', () => {
     const store = useQuizStore()
-    const poemStore = usePoemStore()
     // Disable some poems by setting enabledPoems in settings
     const learningStore = useLearningStore()
     learningStore.updateSettings({ enabledPoems: ['p001', 'p002'] })

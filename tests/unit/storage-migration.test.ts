@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadData, saveData, importData, clearData } from '@/utils/storage'
+import { loadData, importData } from '@/utils/storage'
 
 beforeEach(() => {
   localStorage.clear()
