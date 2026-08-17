@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import RecitationCard from '@/components/RecitationCard.vue'
 import type { Poem } from '@/types'
@@ -14,10 +14,19 @@ const mockPoem: Poem = {
   yiwen: '翻译内容',
 }
 
+const { toggleCharMarkMock, initCharMarksMock, charMarksMock } = vi.hoisted(() => ({
+  toggleCharMarkMock: vi.fn(),
+  initCharMarksMock: vi.fn(),
+  charMarksMock: {} as Record<string, string>,
+}))
+
 vi.mock('@/stores/learning', () => ({
   useLearningStore: () => ({
     settings: { showYiwen: false },
     updateSettings: vi.fn(),
+    charMarks: charMarksMock,
+    toggleCharMark: toggleCharMarkMock,
+    initCharMarks: initCharMarksMock,
   }),
 }))
 
@@ -416,6 +425,56 @@ describe('RecitationCard', () => {
       const wrapper = mountCard({ canGoPrev: false })
       const prevBtn = wrapper.findAll('button').find(b => b.text() === '上一首')!
       expect(prevBtn.attributes('disabled')).toBeDefined()
+    })
+  })
+
+  describe('char-level marking', () => {
+    beforeEach(() => {
+      toggleCharMarkMock.mockClear()
+      initCharMarksMock.mockClear()
+      Object.keys(charMarksMock).forEach(k => delete charMarksMock[k])
+    })
+
+    it('renders each char as a clickable span', () => {
+      const wrapper = mountCard()
+      // mockPoem 共 4 行，每行 '床前明月光' 式 5 个汉字，无标点 → 4×5=20
+      const charSpans = wrapper.findAll('.char-mark')
+      expect(charSpans.length).toBe(20)
+      expect(charSpans[0].text()).toBe('床')
+    })
+
+    it('does not render punctuation as clickable chars', () => {
+      const poemWithPunct: Poem = {
+        ...mockPoem,
+        text: ['床前明月光，', '疑是地上霜。'],
+      }
+      const wrapper = mountCard({ poem: poemWithPunct })
+      const charSpans = wrapper.findAll('.char-mark')
+      expect(charSpans.length).toBe(10)  // 5+5 汉字
+      expect(wrapper.findAll('.punct').length).toBe(2)
+    })
+
+    it('clicking a char calls toggleCharMark with line and char index', async () => {
+      const wrapper = mountCard()
+      const charSpans = wrapper.findAll('.char-mark')
+      await charSpans[2].trigger('click')
+      expect(toggleCharMarkMock).toHaveBeenCalledWith(0, 2)
+    })
+
+    it('switching poem calls initCharMarks to reset session marks', async () => {
+      const wrapper = mountCard()
+      const initCallsBefore = initCharMarksMock.mock.calls.length
+      await wrapper.setProps({ poem: { ...mockPoem, id: 'test-2', title: '咏鹅' } })
+      expect(initCharMarksMock.mock.calls.length).toBeGreaterThan(initCallsBefore)
+    })
+
+    it('char status classes render from store charMarks', () => {
+      charMarksMock['0-0'] = 'fuzzy'
+      charMarksMock['0-1'] = 'wrong'
+      const wrapper = mountCard()
+      const charSpans = wrapper.findAll('.char-mark')
+      expect(charSpans[0].classes().join(' ')).toContain('char-fuzzy')
+      expect(charSpans[1].classes().join(' ')).toContain('char-wrong')
     })
   })
 })

@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import type { Poem, RecitationResult } from '@/types'
 import { useLearningStore } from '@/stores/learning'
+import { parseLine } from '@/utils/charMark'
 
 const props = defineProps<{
   poem: Poem
@@ -28,12 +29,26 @@ const lineStatuses = ref<{ lineIndex: number; status: 'ok' | 'stuck' | 'forgot' 
 const authorCorrect = ref<boolean | null>(null)
 const dynastyCorrect = ref<boolean | null>(null)
 
+// 当前诗的字级标记状态（直接读 store）
+function charMarkClass(lineIndex: number, charIdx: number): string {
+  const status = learningStore.charMarks[`${lineIndex}-${charIdx}`]
+  if (status === 'fuzzy') return 'char-fuzzy'
+  if (status === 'wrong') return 'char-wrong'
+  return ''
+}
+
+function toggleCharMark(lineIndex: number, charIdx: number) {
+  learningStore.toggleCharMark(lineIndex, charIdx)
+}
+
 // 当 poem 变化时重置状态
 watch(() => props.poem.id, () => {
   lineStatuses.value = props.poem.text.map((_, i) => ({ lineIndex: i, status: 'ok' as const }))
   authorCorrect.value = null
   dynastyCorrect.value = null
   showYiwen.value = learningStore.settings.showYiwen ?? false
+  // 切换古诗时重置当前会话的字级标记
+  learningStore.initCharMarks()
 })
 
 // 整首熟练：所有行都ok，作者/朝代都没标错
@@ -107,7 +122,17 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
         :key="index"
         class="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0"
       >
-        <span :class="['flex-1 text-lg min-w-0 break-all', lineStatuses[index].status === 'forgot' ? 'text-red-400' : lineStatuses[index].status === 'stuck' ? 'text-yellow-600' : '']">{{ line }}</span>
+        <span :class="['flex-1 text-lg min-w-0 break-all', lineStatuses[index].status === 'forgot' ? 'text-red-400' : lineStatuses[index].status === 'stuck' ? 'text-yellow-600' : '']">
+          <template v-for="(segment, i) in parseLine(line)" :key="i">
+            <span
+              v-if="segment.type === 'char'"
+              class="char-mark"
+              :class="charMarkClass(index, segment.charIdx ?? 0)"
+              @click="toggleCharMark(index, segment.charIdx ?? 0)"
+            >{{ segment.char }}</span>
+            <span v-else class="punct">{{ segment.char }}</span>
+          </template>
+        </span>
         <div class="flex gap-1 shrink-0">
           <button
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'stuck' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 bg-white text-gray-400']"
@@ -185,3 +210,22 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     </div>
   </div>
 </template>
+
+<style scoped>
+.char-fuzzy {
+  background: #fef3c7;
+  color: #d97706;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.char-wrong {
+  background: #fecaca;
+  color: #dc2626;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.punct {
+  pointer-events: none;
+  user-select: none;
+}
+</style>

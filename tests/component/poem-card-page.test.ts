@@ -23,6 +23,8 @@ vi.mock('@/stores/learning', () => ({
     recordAnswer: vi.fn(),
     records: {},
     wrongBook: [],
+    charMarks: {},
+    initCharMarks: vi.fn(),
   }),
 }))
 
