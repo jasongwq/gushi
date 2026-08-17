@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel } from '@/types'
+import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel, CharMarkMap, CharMarkStats } from '@/types'
 import { loadData, saveData } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
+import { parseLine } from '@/utils/charMark'
 
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
@@ -13,6 +14,21 @@ export const useLearningStore = defineStore('learning', () => {
   const settings = computed(() => data.value.settings)
 
   function persist() { saveData(data.value) }
+
+  // 当前会话的字级标记（不持久化，切换诗时重置）
+  const charMarks = ref<CharMarkMap>({})
+
+  function initCharMarks() {
+    charMarks.value = {}
+  }
+
+  function toggleCharMark(lineIndex: number, charIndex: number) {
+    const key = `${lineIndex}-${charIndex}`
+    const current = charMarks.value[key]
+    if (current === 'fuzzy') charMarks.value[key] = 'wrong'
+    else if (current === 'wrong') delete charMarks.value[key]
+    else charMarks.value[key] = 'fuzzy'
+  }
 
   function getRecord(poemId: string): LearningRecord | undefined {
     return data.value.records.find(r => r.poemId === poemId)
@@ -25,7 +41,7 @@ export const useLearningStore = defineStore('learning', () => {
       record = {
         poemId, lastReviewDate: today, reviewCount: 0,
         nextReviewDate: today, correctness: [], reciteCorrectness: [], masteryLevel: '新',
-        unproficient: false, unproficientCorrectStreak: 0,
+        unproficient: false, unproficientCorrectStreak: 0, charMarkStats: [],
       }
       data.value.records.push(record)
     }
@@ -78,9 +94,61 @@ export const useLearningStore = defineStore('learning', () => {
     data.value.records[idx] = finalRecord
 
     // 记录背诵记录
-    data.value.reciteRecords.push({ poemId, date: today, correct })
+    data.value.reciteRecords.push({ poemId, date: today, correct, charMarks: {} })
 
     persist()
+  }
+
+  // 提交背诵时附带字级标记：保存快照并聚合统计
+  function recordReciteWithCharMarks(poemId: string, correct: boolean, poemText: string[], charMarksSnapshot: CharMarkMap) {
+    recordRecite(poemId, correct)
+
+    // 保存快照到 reciteRecords（覆盖刚 push 的默认空对象）
+    const reciteRecords = data.value.reciteRecords
+    const lastIdx = reciteRecords.length - 1
+    if (lastIdx >= 0) {
+      reciteRecords[lastIdx] = { ...reciteRecords[lastIdx], charMarks: charMarksSnapshot }
+    }
+
+    // 聚合统计
+    if (Object.keys(charMarksSnapshot).length > 0) {
+      const record = getRecord(poemId)
+      if (record) {
+        const stats = [...record.charMarkStats]
+        // 用 parseLine 将诗行拆成段，通过 charIdx 找到对应汉字（跳过标点）
+        const lineSegments = poemText.map(line => parseLine(line))
+        for (const [key, status] of Object.entries(charMarksSnapshot)) {
+          const [lineIndex, charIndex] = key.split('-').map(Number)
+          const seg = lineSegments[lineIndex]?.find(s => s.type === 'char' && s.charIdx === charIndex)
+          const char = seg?.char ?? ''
+          const existing = stats.find(s => s.poemId === poemId && s.lineIndex === lineIndex && s.charIndex === charIndex)
+          if (existing) {
+            if (status === 'fuzzy') existing.fuzzyCount++
+            else existing.wrongCount++
+          } else {
+            stats.push({
+              poemId, lineIndex, charIndex, char,
+              fuzzyCount: status === 'fuzzy' ? 1 : 0,
+              wrongCount: status === 'wrong' ? 1 : 0,
+            })
+          }
+        }
+        record.charMarkStats = stats
+      }
+    }
+    persist()
+  }
+
+  function getCharMarkStats(poemId: string, poemText?: string[]): CharMarkStats[] {
+    const stats = getRecord(poemId)?.charMarkStats ?? []
+    // 若 poemText 提供，校验存储的 char 与当前诗行解析结果一致；不一致说明内容变化，跳过
+    if (!poemText || stats.length === 0) return stats
+    const lineSegments = poemText.map(line => parseLine(line))
+    return stats.filter(s => {
+      if (s.poemId !== poemId) return false
+      const seg = lineSegments[s.lineIndex]?.find(seg => seg.type === 'char' && seg.charIdx === s.charIndex)
+      return seg?.char === s.char
+    })
   }
 
   function toggleUnproficient(poemId: string, value?: boolean) {
@@ -144,5 +212,6 @@ export const useLearningStore = defineStore('learning', () => {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
     getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
+    charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
   }
 })

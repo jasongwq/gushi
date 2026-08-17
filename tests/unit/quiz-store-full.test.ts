@@ -77,6 +77,7 @@ describe('startQuiz', () => {
     learningStore.data.records.push({
       poemId: 'p001', lastReviewDate: '2020-01-01', reviewCount: 1,
       nextReviewDate: today, correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0,
     })
     const result = store.startQuiz('review', ['fillBlank'], 3)
@@ -100,6 +101,7 @@ describe('startQuiz', () => {
     learningStore.data.records.push({
       poemId: 'p001', lastReviewDate: '2026-01-01', reviewCount: 1,
       nextReviewDate: '2026-01-02', correctness: [1], reciteCorrectness: [],
+      charMarkStats: [],
       masteryLevel: '学', unproficient: true, unproficientCorrectStreak: 0,
     })
     const result = store.startQuiz('unproficient', ['fillBlank'], 3)
