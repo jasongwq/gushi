@@ -80,6 +80,15 @@ describe('Type definitions', () => {
     expect(result.wrongAnswer).toBe('床前明月光')
   })
 
+  it('WrongEntry accepts detail quizTypes', () => {
+    const entry: WrongEntry = { poemId: 'p001', quizType: 'line', wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false }
+    expect(entry.quizType).toBe('line')
+    const entry2: WrongEntry = { poemId: 'p001', quizType: 'author', wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false }
+    expect(entry2.quizType).toBe('author')
+    const entry3: WrongEntry = { poemId: 'p001', quizType: 'dynasty', wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false }
+    expect(entry3.quizType).toBe('dynasty')
+  })
+
   it('should construct a valid WrongEntry object', () => {
     const entry: WrongEntry = {
       poemId: '1',

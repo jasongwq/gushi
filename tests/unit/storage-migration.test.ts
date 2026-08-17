@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { loadData, saveData, importData, clearData } from '@/utils/storage'
+import { loadData, importData } from '@/utils/storage'
 
 beforeEach(() => {
   localStorage.clear()
@@ -39,8 +39,48 @@ describe('importData', () => {
   })
 })
 
-describe('loadData migration', () => {
-  it('resets data when old poemId starts with b', () => {
+describe('importData default value filling', () => {
+  beforeEach(() => { localStorage.clear() })
+
+  it('fills missing record fields with defaults', () => {
+    const data = {
+      records: [{ poemId: 'p001' }],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    expect(importData(JSON.stringify(data))).toBe(true)
+    const loaded = loadData()
+    expect(loaded.records[0].poemId).toBe('p001')
+    expect(loaded.records[0].reviewCount).toBe(0)
+    expect(loaded.records[0].correctness).toEqual([])
+    expect(loaded.records[0].masteryLevel).toBe('新')
+  })
+
+  it('filters out records without poemId', () => {
+    const data = {
+      records: [{ poemId: '' }, { poemId: 'p001' }, {}],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    expect(importData(JSON.stringify(data))).toBe(true)
+    const loaded = loadData()
+    expect(loaded.records).toHaveLength(1)
+    expect(loaded.records[0].poemId).toBe('p001')
+  })
+
+  it('fills missing wrongBook fields with defaults', () => {
+    const data = {
+      records: [],
+      wrongBook: [{ poemId: 'p001', quizType: 'fillBlank' }],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    expect(importData(JSON.stringify(data))).toBe(true)
+    const loaded = loadData()
+    expect(loaded.wrongBook[0].wrongCount).toBe(0)
+    expect(loaded.wrongBook[0].unproficient).toBe(false)
+  })
+})
+
+describe('loadData with old poemId', () => {
+  it('preserves data with old poemId (migration removed)', () => {
     const oldData = {
       records: [{ poemId: 'b001', lastReviewDate: '2026-01-01', reviewCount: 1, nextReviewDate: '2026-01-02', correctness: [1], masteryLevel: '学', unproficient: false, unproficientCorrectStreak: 0 }],
       quizResults: [],
@@ -49,31 +89,9 @@ describe('loadData migration', () => {
     }
     localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
     const data = loadData()
-    expect(data.records).toHaveLength(0)
-  })
-
-  it('resets data when quizResults have old poemId', () => {
-    const oldData = {
-      records: [],
-      quizResults: [{ poemId: 'b001', quizType: 'fillBlank', date: '2026-01-01', correct: true }],
-      wrongBook: [],
-      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
-    }
-    localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
-    const data = loadData()
-    expect(data.quizResults).toHaveLength(0)
-  })
-
-  it('resets data when wrongBook has old poemId', () => {
-    const oldData = {
-      records: [],
-      quizResults: [],
-      wrongBook: [{ poemId: 'b001', quizType: 'fillBlank', wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false }],
-      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
-    }
-    localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
-    const data = loadData()
-    expect(data.wrongBook).toHaveLength(0)
+    // Migration code removed — data is preserved
+    expect(data.records).toHaveLength(1)
+    expect(data.records[0].poemId).toBe('b001')
   })
 
   it('preserves data with valid poemIds', () => {

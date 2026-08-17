@@ -9,7 +9,7 @@ import MysteryBox from '@/components/MysteryBox.vue'
 import RecitationCard from '@/components/RecitationCard.vue'
 import { SwiperSlide } from 'swiper/vue'
 import type { Poem, RecitationResult, SourceType } from '@/types'
-import { getReviewPoems, getWrongPoems, getUnproficientPoems, shuffleArray } from '@/utils/quiz'
+import { getReviewPoems, getWrongPoems, getUnproficientPoems, compareSmartPriority } from '@/utils/quiz'
 import { createSwipeState, swipeStart, swipeMove, swipeEnd } from '@/utils/swipe'
 
 const router = useRouter()
@@ -56,13 +56,15 @@ const today = new Date().toISOString().split('T')[0]
 
 const allPoems = computed(() => {
   const enabled = poemStore.enabledPoems
-  if (source.value === 'all') return enabled
-  if (source.value === 'smart') return shuffleArray(enabled)
+  if (source.value === 'all') return [...enabled].sort((a, b) => a.id.localeCompare(b.id))
+  if (source.value === 'smart') {
+    return [...enabled].sort((a, b) => compareSmartPriority(a, b, learningStore.records, learningStore.wrongBook, today))
+  }
   if (source.value === 'grade') return enabled.filter(p => selectedGrades.value.includes(p.grade))
   if (source.value === 'review') return getReviewPoems(enabled, learningStore.records, today)
   if (source.value === 'wrong') return getWrongPoems(enabled, learningStore.wrongBook)
   if (source.value === 'unproficient') return getUnproficientPoems(enabled, learningStore.records)
-  return enabled
+  return [...enabled].sort((a, b) => a.id.localeCompare(b.id))
 })
 
 // 当前诗列表：从盲盒来时只显示已开盒的诗，否则显示全部
@@ -80,21 +82,22 @@ const checkedPoemIds = ref(new Set<string>())
 function saveResult(result: RecitationResult) {
   checkedPoemIds.value.add(result.poemId)
 
-  if (result.overallStatus === 'mastered') {
-    learningStore.recordAnswer(result.poemId, 'recite', true)
-  } else {
-    learningStore.recordAnswer(result.poemId, 'recite', false)
+  // 整体只调用一次 recordAnswer
+  learningStore.recordAnswer(result.poemId, 'recite', result.overallStatus === 'mastered')
+
+  // 细节用 recordDetail，不影响复习调度
+  if (result.overallStatus !== 'mastered') {
     for (const line of result.lines) {
       if (line.status === 'stuck' || line.status === 'forgot') {
-        learningStore.recordAnswer(result.poemId, 'recite', false, `第${line.lineIndex + 1}句:${line.status}`)
+        learningStore.recordDetail(result.poemId, 'line', `第${line.lineIndex + 1}句:${line.status}`)
       }
     }
   }
   if (result.authorCorrect === false) {
-    learningStore.recordAnswer(result.poemId, 'author', false)
+    learningStore.recordDetail(result.poemId, 'author')
   }
   if (result.dynastyCorrect === false) {
-    learningStore.recordAnswer(result.poemId, 'dynasty', false)
+    learningStore.recordDetail(result.poemId, 'dynasty')
   }
 }
 

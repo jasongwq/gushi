@@ -29,6 +29,9 @@ const quizTypeLabels: Record<string, string> = {
   fillBlank: '补字选择',
   nextLine: '上下句接龙',
   recite: '背诵',
+  line: '卡顿句',
+  author: '作者',
+  dynasty: '朝代',
 }
 
 function getPoemTitle(poemId: string): string {
@@ -55,6 +58,7 @@ const enabledWrongBook = computed(() => {
           <span class="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
           <span class="text-xs text-red-500">错 {{ entry.wrongCount }} 次</span>
         </div>
+        <p v-if="entry.note" class="text-xs text-gray-400 mb-2">{{ entry.note }}</p>
         <div class="flex gap-2">
           <button
             :class="['px-3 py-1 text-xs border rounded transition', entry.unproficient ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-gray-200 bg-white text-gray-600']"

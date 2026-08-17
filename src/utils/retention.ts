@@ -59,7 +59,7 @@ export function calculatePoemRetentionTimeline(
   if (record.reviewCount === 0) return []
 
   const points: { date: string; retention: number; type: 'quiz' | 'recite'; correct: boolean }[] = []
-  const startDate = new Date(record.lastReviewDate + 'T00:00:00')
+  const startDate = new Date((record.firstLearnDate || record.lastReviewDate) + 'T00:00:00')
 
   let reviewCount = 0
   let lastDate = startDate

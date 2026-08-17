@@ -7,6 +7,7 @@ import {
   getWrongPoems,
   getRecentlyLearnedPoems,
   smartMix,
+  compareSmartPriority,
 } from '@/utils/quiz'
 import type { Poem, LearningRecord, WrongEntry } from '@/types'
 
@@ -152,6 +153,60 @@ describe('getRecentlyLearnedPoems', () => {
     const records = [makeRecord({ poemId: 'p1' })] // no lastLearnDate
     const result = getRecentlyLearnedPoems(poems, records, today)
     expect(result).toHaveLength(0)
+  })
+})
+
+describe('compareSmartPriority', () => {
+  const today = '2026-01-15'
+
+  function sortByPriority(poems: Poem[], records: LearningRecord[], wrongBook: WrongEntry[]): Poem[] {
+    return [...poems].sort((a, b) => compareSmartPriority(a, b, records, wrongBook, today))
+  }
+
+  it('sorts due-for-review poems first', () => {
+    const due = makePoem({ id: 'p1' })
+    const notDue = makePoem({ id: 'p2' })
+    const records = [
+      makeRecord({ poemId: 'p1', nextReviewDate: '2026-01-10' }), // due
+      makeRecord({ poemId: 'p2', nextReviewDate: '2026-12-31' }), // not due
+    ]
+    const result = sortByPriority([notDue, due], records, [])
+    expect(result[0].id).toBe('p1')
+  })
+
+  it('sorts wrong-book poems before new poems', () => {
+    const wrong = makePoem({ id: 'p1' })
+    const fresh = makePoem({ id: 'p2' }) // no record
+    const wrongBook = [makeWrongEntry({ poemId: 'p1' })]
+    const result = sortByPriority([fresh, wrong], [], wrongBook)
+    expect(result[0].id).toBe('p1')
+  })
+
+  it('sorts lower reviewCount before higher', () => {
+    const low = makePoem({ id: 'p1' })
+    const high = makePoem({ id: 'p2' })
+    const records = [
+      makeRecord({ poemId: 'p1', nextReviewDate: '2026-12-31', reviewCount: 1 }),
+      makeRecord({ poemId: 'p2', nextReviewDate: '2026-12-31', reviewCount: 5 }),
+    ]
+    const result = sortByPriority([high, low], records, [])
+    expect(result[0].id).toBe('p1')
+  })
+
+  it('ties broken by poemId letter order', () => {
+    const a = makePoem({ id: 'a01' })
+    const b = makePoem({ id: 'b01' })
+    const result = sortByPriority([b, a], [], [])
+    expect(result.map(p => p.id)).toEqual(['a01', 'b01'])
+  })
+
+  it('new poems without records do not count as due', () => {
+    const fresh = makePoem({ id: 'p2' }) // no record
+    const due = makePoem({ id: 'p1' })
+    const records = [makeRecord({ poemId: 'p1', nextReviewDate: '2026-01-10' })]
+    // due poem must come before fresh poem
+    const result = sortByPriority([fresh, due], records, [])
+    expect(result[0].id).toBe('p1')
   })
 })
 

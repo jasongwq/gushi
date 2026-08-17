@@ -134,6 +134,28 @@ describe('calculatePoemRetentionTimeline', () => {
     expect(points[2].correct).toBe(false)
   })
 
+  it('uses firstLearnDate when available', () => {
+    const record = makeRecord({
+      firstLearnDate: '2025-06-01',
+      lastReviewDate: '2026-01-15',
+      reviewCount: 2,
+      correctness: [1, 1],
+    })
+    const points = calculatePoemRetentionTimeline(record, '2026-01-20')
+    expect(points[0].date).toBe('2025-06-01')
+  })
+
+  it('falls back to lastReviewDate when firstLearnDate absent', () => {
+    const record = makeRecord({
+      lastReviewDate: '2026-01-01',
+      reviewCount: 2,
+      correctness: [1, 1],
+    })
+    // No firstLearnDate — should fallback to lastReviewDate
+    const points = calculatePoemRetentionTimeline(record, '2026-01-10')
+    expect(points[0].date).toBe('2026-01-01')
+  })
+
   it('dates advance by intervals', () => {
     const record = makeRecord({
       lastReviewDate: '2026-01-01',

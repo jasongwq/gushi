@@ -1,8 +1,16 @@
 <template>
   <Teleport to="body">
     <Transition name="popup">
-      <div v-if="visible" class="popup-overlay" @click.self="$emit('update:visible', false)">
-        <div class="popup-content">
+      <div
+        v-if="visible"
+        class="popup-overlay"
+        role="dialog"
+        aria-modal="true"
+        aria-label="古诗详情"
+        @keydown.tab.prevent="trapFocus"
+        @click.self="$emit('update:visible', false)"
+      >
+        <div class="popup-content" ref="contentRef" tabindex="-1">
           <div class="popup-header">
             <h3 class="popup-title">{{ poem.title }}</h3>
             <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
@@ -28,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
 import type { Poem } from '@/types'
 import { useLearningStore } from '@/stores/learning'
 
@@ -37,16 +45,56 @@ const props = defineProps<{
   visible: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'update:visible': [value: boolean]
 }>()
 
 const learningStore = useLearningStore()
 const showYiwen = ref(learningStore.settings.showYiwen ?? false)
+const contentRef = ref<HTMLElement | null>(null)
 
 watch(() => props.visible, (v) => {
-  if (v) showYiwen.value = learningStore.settings.showYiwen ?? false
-})
+  if (v) {
+    showYiwen.value = learningStore.settings.showYiwen ?? false
+    nextTick(() => contentRef.value?.focus())
+    document.addEventListener('keydown', onDocumentKeydown)
+  } else {
+    document.removeEventListener('keydown', onDocumentKeydown)
+  }
+}, { immediate: true })
+
+// 文档级 Escape 监听：弹窗打开时按 Escape 关闭（无论焦点在何处）
+function onDocumentKeydown(e: KeyboardEvent) {
+  if (e.key === 'Escape' && props.visible) {
+    emit('update:visible', false)
+  }
+}
+
+onBeforeUnmount(() => document.removeEventListener('keydown', onDocumentKeydown))
+
+// 焦点陷阱：Tab 循环限制在弹窗内
+function trapFocus(e: KeyboardEvent) {
+  const content = contentRef.value
+  if (!content) return
+  const focusables = content.querySelectorAll<HTMLElement>(
+    'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+  )
+  if (focusables.length === 0) return
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  const active = document.activeElement as HTMLElement | null
+  if (e.shiftKey) {
+    if (active === first || !content.contains(active)) {
+      e.preventDefault()
+      last.focus()
+    }
+  } else {
+    if (active === last || !content.contains(active)) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+}
 
 function toggleYiwen() {
   showYiwen.value = !showYiwen.value
@@ -72,6 +120,7 @@ function toggleYiwen() {
   max-width: 320px;
   width: 100%;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  outline: none;
 }
 .popup-header {
   text-align: center;

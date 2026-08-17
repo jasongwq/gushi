@@ -154,7 +154,6 @@ describe('startRecitation', () => {
 
   it('uses enabledPoems (not all poems)', () => {
     const store = useQuizStore()
-    const poemStore = usePoemStore()
     // Disable some poems by setting enabledPoems in settings
     const learningStore = useLearningStore()
     learningStore.updateSettings({ enabledPoems: ['p001', 'p002'] })
@@ -210,6 +209,51 @@ describe('submitRecitationResult', () => {
     expect(store.session!.recitationResults).toHaveLength(1)
     // Check that wrong book entries were created
     expect(learningStore.wrongBook.length).toBeGreaterThan(0)
+  })
+})
+
+describe('submitRecitationResult separation', () => {
+  it('only calls recordAnswer once per poem', () => {
+    const store = useQuizStore()
+    const learningStore = useLearningStore()
+    store.startRecitation('all', 3)
+    const poemId = store.currentQuestion!.poemId
+    store.submitRecitationResult({
+      poemId,
+      overallStatus: 'not-mastered',
+      lines: [
+        { lineIndex: 0, status: 'stuck' },
+        { lineIndex: 1, status: 'forgot' },
+      ],
+      authorCorrect: false,
+      dynastyCorrect: false,
+    })
+    // Only 1 quizResult (from the single recordAnswer call)
+    const quizResults = learningStore.data.quizResults.filter(r => r.poemId === poemId)
+    expect(quizResults).toHaveLength(1)
+    // Only 1 correctness entry
+    const record = learningStore.getRecord(poemId)
+    expect(record!.correctness).toHaveLength(1)
+    // reviewCount is not inflated (wrong answers don't increment it in the scheduler)
+    expect(record!.reviewCount).toBe(0)
+  })
+
+  it('detail entries go to wrongBook via recordDetail', () => {
+    const store = useQuizStore()
+    const learningStore = useLearningStore()
+    store.startRecitation('all', 3)
+    const poemId = store.currentQuestion!.poemId
+    store.submitRecitationResult({
+      poemId,
+      overallStatus: 'not-mastered',
+      lines: [{ lineIndex: 0, status: 'stuck' }],
+      authorCorrect: false,
+      dynastyCorrect: null,
+    })
+    // Should have line + author wrongBook entries
+    const wbEntries = learningStore.wrongBook.filter(w => w.poemId === poemId)
+    expect(wbEntries.some(w => w.quizType === 'line')).toBe(true)
+    expect(wbEntries.some(w => w.quizType === 'author')).toBe(true)
   })
 })
 

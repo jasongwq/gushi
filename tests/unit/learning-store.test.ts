@@ -75,6 +75,20 @@ describe('recordAnswer', () => {
     expect(record!.reviewCount).toBe(2)
   })
 
+  it('clears all wrongBook entries for poem when recite correct', () => {
+    const store = useLearningStore()
+    // Simulate: poem had line/author/dynasty wrong entries
+    store.data.wrongBook.push(
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+      { poemId: 'p001', quizType: 'author' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+      { poemId: 'p001', quizType: 'dynasty' as const, wrongCount: 1, lastWrongDate: '2026-01-01', unproficient: false },
+    )
+    expect(store.data.wrongBook).toHaveLength(3)
+    // Correct recite answer clears all entries for this poem
+    store.recordAnswer('p001', 'recite', true)
+    expect(store.data.wrongBook).toHaveLength(0)
+  })
+
   it('nextReviewDate is based on today, not stale lastReviewDate', () => {
     const store = useLearningStore()
     // Create a record with a stale lastReviewDate
@@ -95,6 +109,24 @@ describe('recordAnswer', () => {
     // nextReviewDate should be today + interval, not 2020-01-01 + interval
     expect(record!.lastReviewDate).toBe(today)
     expect(record!.nextReviewDate > '2020-01-01').toBe(true)
+  })
+})
+
+describe('getOrCreateRecord', () => {
+  it('sets firstLearnDate to today on creation', () => {
+    const store = useLearningStore()
+    const today = new Date().toISOString().split('T')[0]
+    store.recordAnswer('p001', 'fillBlank', true)
+    const record = store.getRecord('p001')
+    expect(record!.firstLearnDate).toBe(today)
+  })
+
+  it('preserves firstLearnDate on subsequent answers', () => {
+    const store = useLearningStore()
+    store.recordAnswer('p001', 'fillBlank', true)
+    const firstDate = store.getRecord('p001')!.firstLearnDate
+    store.recordAnswer('p001', 'nextLine', true)
+    expect(store.getRecord('p001')!.firstLearnDate).toBe(firstDate)
   })
 })
 
@@ -165,6 +197,64 @@ describe('updateSettings', () => {
     const store = useLearningStore()
     store.updateSettings({ quizCount: 10 })
     expect(store.settings.quizCount).toBe(10)
+  })
+})
+
+describe('recordDetail', () => {
+  it('adds line detail to wrongBook', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].quizType).toBe('line')
+    expect(store.data.wrongBook[0].wrongCount).toBe(1)
+  })
+
+  it('adds author detail to wrongBook', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'author')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].quizType).toBe('author')
+  })
+
+  it('increments wrongCount on repeated detail', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    store.recordDetail('p001', 'line')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].wrongCount).toBe(2)
+  })
+
+  it('does not affect reviewCount or correctness', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    // No learning record should be created
+    const record = store.getRecord('p001')
+    expect(record).toBeUndefined()
+  })
+
+  it('does not generate quizResult', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line')
+    expect(store.data.quizResults).toHaveLength(0)
+  })
+
+  it('stores wrongInfo as note', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook[0].note).toBe('第1句:stuck')
+  })
+
+  it('keys entries by note so different stuck lines count separately', () => {
+    const store = useLearningStore()
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    store.recordDetail('p001', 'line', '第2句:forgot')
+    expect(store.data.wrongBook).toHaveLength(2)
+    expect(store.data.wrongBook[0].wrongCount).toBe(1)
+    expect(store.data.wrongBook[1].wrongCount).toBe(1)
+    // 相同备注则累加
+    store.recordDetail('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(2)
+    expect(store.data.wrongBook[0].wrongCount).toBe(2)
   })
 })
 

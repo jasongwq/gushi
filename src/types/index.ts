@@ -1,4 +1,4 @@
-export type QuizType = 'fillBlank' | 'nextLine' | 'recite'
+export type QuizType = 'fillBlank' | 'nextLine' | 'recite' | 'line' | 'author' | 'dynasty'
 export type MasteryLevel = '新' | '学' | '熟' | '固'
 export type TextType = '五言' | '七言' | '其他'
 export type SourceType = 'smart' | 'grade' | 'all' | 'review' | 'wrong' | 'unproficient'
@@ -25,6 +25,7 @@ export interface LearningRecord {
   unproficient: boolean
   unproficientCorrectStreak: number
   lastLearnDate?: string
+  firstLearnDate?: string  // 首次学习日期，用于遗忘曲线时间线
 }
 
 export interface QuizResult {
@@ -47,6 +48,7 @@ export interface WrongEntry {
   wrongCount: number
   lastWrongDate: string
   unproficient: boolean
+  note?: string  // 细节备注（如卡顿句），line/author/dynasty 详情记录时使用
 }
 
 export interface UserSettings {

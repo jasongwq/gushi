@@ -118,6 +118,15 @@ test.describe('poem collection page', () => {
     await expect(page.locator('.popup-overlay')).not.toBeVisible()
   })
 
+  test('Escape key closes popup', async ({ page }) => {
+    await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
+    const titleSpan = page.locator('.space-y-2 > div').first().locator('span.font-bold')
+    await titleSpan.click()
+    await expect(page.locator('.popup-overlay')).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.popup-overlay')).not.toBeVisible()
+  })
+
   test('clicking same title again closes popup', async ({ page }) => {
     await page.locator('.space-y-2 > div').first().waitFor({ state: 'visible' })
     const titleSpan = page.locator('.space-y-2 > div').first().locator('span.font-bold')

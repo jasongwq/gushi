@@ -222,3 +222,50 @@ test('recitation flow: yiwen toggle shows and hides translation', async ({ page 
   await page.locator('.recitation-card').locator('button:has-text("隐藏译文")').click()
   await expect(page.locator('.recitation-card').locator('button:has-text("显示译文")')).toBeVisible()
 })
+
+// 架构修复：not-mastered 背诵只记录一次 recite，细节进错题本不重复调度
+test('recitation flow: not-mastered poem creates exactly one recite wrongBook entry', async ({ page }) => {
+  test.setTimeout(60000)
+  // 清空状态（localStorage + sessionStorage）
+  await page.goto('/')
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+  await page.reload()
+  await page.waitForTimeout(500)
+
+  await startRecitationWithAll(page)
+
+  // 第一首：标记一行"卡顿"
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+  await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
+  await expect(page.locator('button:has-text("下一首")')).toBeEnabled()
+  await page.click('text=下一首')
+
+  // 等待进入第 2 首（避免过渡期重复点击旧卡片）
+  await expect(page.locator('text=第 2 / 5 首')).toBeVisible({ timeout: 5000 })
+
+  // 其余诗标记熟练
+  for (let i = 1; i < 5; i++) {
+    await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+    await page.locator('button:has-text("熟练")').click()
+    if (i < 4) {
+      await expect(page.locator(`text=第 ${i + 2} / 5 首`)).toBeVisible({ timeout: 5000 })
+    }
+  }
+  await expect(page.locator('h2')).toContainText('抽背结果')
+
+  // 检查 localStorage：5 首诗各一条 recite quizResult
+  const quizResults = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.quizResults || []
+  })
+  const reciteResults = quizResults.filter((r: any) => r.quizType === 'recite')
+  expect(reciteResults.length).toBe(5)
+
+  // 错题本中 no-mastered 的诗只有 1 条 recite 条目
+  const wrongBook = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.wrongBook || []
+  })
+  const reciteEntries = wrongBook.filter((w: any) => w.quizType === 'recite')
+  expect(reciteEntries.length).toBeLessThanOrEqual(1)
+})

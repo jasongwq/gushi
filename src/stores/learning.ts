@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel } from '@/types'
-import { loadData, saveData } from '@/utils/storage'
+import { loadData, saveData, importData as importDataUtil } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 
@@ -26,6 +26,7 @@ export const useLearningStore = defineStore('learning', () => {
         poemId, lastReviewDate: today, reviewCount: 0,
         nextReviewDate: today, correctness: [], reciteCorrectness: [], masteryLevel: '新',
         unproficient: false, unproficientCorrectStreak: 0,
+        firstLearnDate: today,
       }
       data.value.records.push(record)
     }
@@ -51,8 +52,31 @@ export const useLearningStore = defineStore('learning', () => {
       const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === quizType)
       if (existing) { existing.wrongCount++; existing.lastWrongDate = result.date }
       else { data.value.wrongBook.push({ poemId, quizType: quizType as WrongEntry['quizType'], wrongCount: 1, lastWrongDate: result.date, unproficient: false }) }
+    } else if (quizType === 'recite') {
+      // 背诵正确时清除该诗所有 wrongBook 条目（包括 line/author/dynasty）
+      data.value.wrongBook = data.value.wrongBook.filter(w => w.poemId !== poemId)
     } else {
       data.value.wrongBook = data.value.wrongBook.filter(w => !(w.poemId === poemId && w.quizType === quizType))
+    }
+    persist()
+  }
+
+  function recordDetail(poemId: string, detailType: 'line' | 'author' | 'dynasty', wrongInfo?: string) {
+    const today = new Date().toISOString().split('T')[0]
+    // 同类型同备注视为同一条目（不同卡顿句各自计数）
+    const existing = data.value.wrongBook.find(w => w.poemId === poemId && w.quizType === detailType && w.note === wrongInfo)
+    if (existing) {
+      existing.wrongCount++
+      existing.lastWrongDate = today
+    } else {
+      data.value.wrongBook.push({
+        poemId,
+        quizType: detailType,
+        wrongCount: 1,
+        lastWrongDate: today,
+        unproficient: false,
+        ...(wrongInfo ? { note: wrongInfo } : {}),
+      })
     }
     persist()
   }
@@ -110,13 +134,9 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   function importUserData(json: string): boolean {
-    try {
-      const imported = JSON.parse(json) as UserData
-      if (!imported.settings || !Array.isArray(imported.records)) return false
-      data.value = imported
-      persist()
-      return true
-    } catch { return false }
+    const success = importDataUtil(json)
+    if (success) data.value = loadData()
+    return success
   }
 
   function exportUserData(): string {
@@ -142,7 +162,7 @@ export const useLearningStore = defineStore('learning', () => {
 
   return {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
-    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordRecite, toggleUnproficient, removeWrongEntry,
+    getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
   }
 })
