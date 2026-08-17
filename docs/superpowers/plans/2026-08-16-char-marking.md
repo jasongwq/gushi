@@ -234,6 +234,18 @@ describe('char marks in learning store', () => {
     expect(record!.charMarkStats).toEqual([])
     expect(store.data.reciteRecords[0].charMarks).toEqual({})
   })
+
+  it('getCharMarkStats skips stale stats when poem text changed', () => {
+    const store = useLearningStore()
+    store.recordReciteWithCharMarks('p001', false, ['床前明月光'], { '0-0': 'fuzzy' })
+    // 原 stats: lineIndex=0, charIndex=0, char='床'
+    // 诗文本变化后（'床' 不再是第一个汉字），校验应过滤该条
+    const filtered = store.getCharMarkStats('p001', ['疑是地上霜'])
+    expect(filtered).toEqual([])
+    // 不传 poemText 时不做校验，返回原始统计
+    const raw = store.getCharMarkStats('p001')
+    expect(raw).toHaveLength(1)
+  })
 })
 ```
 
@@ -309,12 +321,21 @@ function recordReciteWithCharMarks(poemId: string, correct: boolean, poemText: s
   persist()
 }
 
-function getCharMarkStats(poemId: string): CharMarkStats[] {
-  return getRecord(poemId)?.charMarkStats ?? []
+function getCharMarkStats(poemId: string, poemText?: string[]): CharMarkStats[] {
+  const stats = getRecord(poemId)?.charMarkStats ?? []
+  // spec「古诗内容变化」：若 poemText 提供，校验存储的 char 与当前诗行解析结果一致
+  // 不一致说明 poems.json 已更新导致行内容变化，该条统计失效，跳过
+  if (!poemText || stats.length === 0) return stats
+  const lineSegments = poemText.map(line => parseLine(line))
+  return stats.filter(s => {
+    if (s.poemId !== poemId) return false
+    const seg = lineSegments[s.lineIndex]?.find(seg => seg.type === 'char' && seg.charIdx === s.charIndex)
+    return seg?.char === s.char
+  })
 }
 ```
 
-导出这些方法。注意：`recordReciteWithCharMarks` 复用 `recordRecite`，但 `recordRecite` 内部会调用 `persist()`，随后再修改 reciteRecords 和 stats 后再次 `persist()`。为简单起见，`recordReciteWithCharMarks` 自己完成后调用 `persist()` 一次即可（recordRecite 内部那次是冗余但无害）。
+导出这些方法。注意：`getCharMarkStats` 增加可选 `poemText` 参数用于校验（spec 边界要求）。`recordReciteWithCharMarks` 复用 `recordRecite`，但 `recordRecite` 内部会调用 `persist()`，随后再修改 reciteRecords 和 stats 后再次 `persist()`。为简单起见，`recordReciteWithCharMarks` 自己完成后调用 `persist()` 一次即可（recordRecite 内部那次是冗余但无害）。
 
 在 store 的 return 对象中补充导出：
 
@@ -534,6 +555,22 @@ describe('char-level marking', () => {
     await charSpans[2].trigger('click')
     expect(toggleCharMarkMock).toHaveBeenCalledWith(0, 2)
   })
+
+  it('switching poem calls initCharMarks to reset session marks', async () => {
+    const wrapper = mountCard()
+    const initCallsBefore = initCharMarksMock.mock.calls.length
+    await wrapper.setProps({ poem: { ...mockPoem, id: 'test-2', title: '咏鹅' } })
+    expect(initCharMarksMock.mock.calls.length).toBeGreaterThan(initCallsBefore)
+  })
+
+  it('char status classes render from store charMarks', () => {
+    charMarksMock['0-0'] = 'fuzzy'
+    charMarksMock['0-1'] = 'wrong'
+    const wrapper = mountCard()
+    const charSpans = wrapper.findAll('.char-mark')
+    expect(charSpans[0].classes().join(' ')).toContain('char-fuzzy')
+    expect(charSpans[1].classes().join(' ')).toContain('char-wrong')
+  })
 })
 ```
 
@@ -568,6 +605,23 @@ function toggleCharMark(lineIndex: number, charIdx: number) {
   learningStore.toggleCharMark(lineIndex, charIdx)
 }
 ```
+
+**关键：切换古诗时重置字级标记（spec「切换古诗」边界要求）。**
+
+修改现有 `watch(() => props.poem.id, ...)`，在重置行级状态的同时调用 `initCharMarks()`：
+
+```typescript
+watch(() => props.poem.id, () => {
+  lineStatuses.value = props.poem.text.map((_, i) => ({ lineIndex: i, status: 'ok' as const }))
+  authorCorrect.value = null
+  dynastyCorrect.value = null
+  showYiwen.value = learningStore.settings.showYiwen ?? false
+  // 切换古诗时重置当前会话的字级标记
+  learningStore.initCharMarks()
+})
+```
+
+注意：`markMastered`/`markForgot`/`submitResult` 内部也需在提交后重置字级标记（`submitResult` 中调用 `initCharMarks()`，见 Task 6 Step 1）。切换诗（watch）与提交（submitResult）两条路径都要重置，避免残留。
 
 template 中，将行文本 span 替换：
 
