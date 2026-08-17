@@ -19,9 +19,16 @@ export function loadData(): UserData {
     const parsed = JSON.parse(raw) as Partial<UserData>
     const defaults = getDefaultData()
     const data = {
-      records: (parsed.records ?? defaults.records).map(r => ({ ...r, reciteCorrectness: r.reciteCorrectness ?? [] })),
+      records: (parsed.records ?? defaults.records).map(r => ({
+        ...r,
+        reciteCorrectness: r.reciteCorrectness ?? [],
+        charMarkStats: r.charMarkStats ?? [],
+      })),
       quizResults: parsed.quizResults ?? defaults.quizResults,
-      reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
+      reciteRecords: (parsed.reciteRecords ?? defaults.reciteRecords).map(r => ({
+        ...r,
+        charMarks: r.charMarks ?? {},
+      })),
       wrongBook: parsed.wrongBook ?? defaults.wrongBook,
       settings: { ...defaults.settings, ...parsed.settings },
     }

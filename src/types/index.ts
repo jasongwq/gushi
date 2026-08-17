@@ -21,6 +21,7 @@ export interface LearningRecord {
   nextReviewDate: string
   correctness: number[]
   reciteCorrectness: number[]   // 新增：背诵正确性历史
+  charMarkStats: CharMarkStats[]  // 新增：按字聚合的统计
   masteryLevel: MasteryLevel
   unproficient: boolean
   unproficientCorrectStreak: number
@@ -39,6 +40,7 @@ export interface ReciteRecord {
   poemId: string
   date: string           // YYYY-MM-DD
   correct: boolean       // 自评"会"=true，"不会"=false
+  charMarks: CharMarkMap  // 新增：本次背诵最终状态的快照
 }
 
 export interface WrongEntry {
@@ -97,4 +99,20 @@ export interface QuizSession {
   startTime: string
   mode: 'quiz' | 'recitation'
   recitationResults: RecitationResult[]
+}
+
+// 字级标记状态（ok = 无记录，不显式存储）
+export type CharMarkStatus = 'fuzzy' | 'wrong'
+
+// 会话内字级标记 map，key 为 `${lineIndex}-${charIndex}`
+export type CharMarkMap = Record<string, CharMarkStatus>
+
+// 单字聚合统计（跨所有历史背诵快照累计）
+export interface CharMarkStats {
+  poemId: string
+  lineIndex: number
+  charIndex: number
+  char: string           // 原字，用于校验数据一致性
+  fuzzyCount: number     // 被标为模糊的次数
+  wrongCount: number     // 被标为错误的次数
 }
