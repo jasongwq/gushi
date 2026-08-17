@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { execSync } from 'node:child_process'
 
 const gitHash = execSync('git rev-parse --short HEAD').toString().trim()
-const buildTime = new Date().toISOString().slice(0, 10)
+const buildTime = Date.now()
 
 export default defineConfig({
   define: {
