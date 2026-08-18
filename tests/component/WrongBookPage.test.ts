@@ -117,6 +117,15 @@ describe('WrongBookPage', () => {
     expect(wrapper.find('[data-testid="entry-cancel"]').exists()).toBe(true)
   })
 
+  it('shows 已标不熟练 on the mark button when entry is unproficient', async () => {
+    const store = useLearningStore()
+    seed(store, [{ poemId: 'p1', quizType: 'line', wrongCount: 1, unproficient: true }])
+    const wrapper = mountPage()
+    await wrapper.find('[data-testid="wrong-entry-label"]').trigger('click')
+    const btn = wrapper.find('[data-testid="entry-mark-unproficient"]')
+    expect(btn.text()).toBe('已标不熟练')
+  })
+
   it('removes one entry but keeps the card when other entries remain', async () => {
     const store = useLearningStore()
     seed(store, [

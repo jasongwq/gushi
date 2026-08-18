@@ -159,14 +159,14 @@ function removeEntry(entry: WrongEntry) {
     >
       <div class="bg-white rounded-lg p-4 w-56 shadow-lg">
         <div class="text-sm text-gray-500 text-center mb-3">
-          {{ getPoemTitle(actionEntry.poemId) }} · {{ quizTypeLabels[actionEntry.quizType] ?? actionEntry.quizType }}
+          {{ getPoemTitle(actionEntry.poemId) || actionEntry.poemId }} · {{ quizTypeLabels[actionEntry.quizType] ?? actionEntry.quizType }}
         </div>
         <div class="flex flex-col gap-2">
           <button
             data-testid="entry-mark-unproficient"
-            class="px-3 py-2 text-xs border border-orange-400 bg-orange-50 text-orange-600 rounded"
+            :class="['px-3 py-2 text-xs border rounded', actionEntry.unproficient ? 'border-orange-400 bg-orange-50 text-orange-600' : 'border-gray-200 bg-white text-gray-600']"
             @click="markUnproficient(actionEntry)"
-          >标不熟练</button>
+          >{{ actionEntry.unproficient ? '已标不熟练' : '标不熟练' }}</button>
           <button
             data-testid="entry-remove"
             class="px-3 py-2 text-xs border border-red-200 bg-red-50 text-red-500 rounded"
