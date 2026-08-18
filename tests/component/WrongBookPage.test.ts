@@ -92,6 +92,16 @@ describe('WrongBookPage', () => {
     expect(labels.map(l => l.text())).toEqual(['第 1 句·卡顿', '第 2 句·不会'])
   })
 
+  it('renders note without colon as sentence only, no undefined suffix', () => {
+    const store = useLearningStore()
+    seed(store, [{ poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第1句' }])
+    const wrapper = mountPage()
+    const labels = wrapper.findAll('[data-testid="wrong-entry-label"]')
+    expect(labels).toHaveLength(1)
+    expect(labels[0].text()).toBe('第 1 句')
+    expect(labels[0].text()).not.toContain('undefined')
+  })
+
   it('hides char summary badge when no char mark stats', () => {
     const store = useLearningStore()
     seed(store, [{ poemId: 'p1', quizType: 'line', wrongCount: 1 }])

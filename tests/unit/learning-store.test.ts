@@ -203,16 +203,18 @@ describe('removeWrongEntry', () => {
     expect(store.data.wrongBook[0].note).toBe('第2句:forgot')
   })
 
-  it('removes all entries of poem+quizType when note is not provided', () => {
+  it('removes only note-less entries of poem+quizType when note is not provided', () => {
     const store = useLearningStore()
     store.data.wrongBook.push(
       { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第1句:stuck' },
       { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第2句:forgot' },
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false },
       { poemId: 'p001', quizType: 'author' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false },
     )
     store.removeWrongEntry('p001', 'line')
-    expect(store.data.wrongBook).toHaveLength(1)
-    expect(store.data.wrongBook[0].quizType).toBe('author')
+    // note 省略只删除无 note 的同 poem+quizType 条目，不误删带 note 的兄弟条目
+    expect(store.data.wrongBook).toHaveLength(3)
+    expect(store.data.wrongBook.filter(w => w.quizType === 'line' && w.note).map(w => w.note)).toEqual(['第1句:stuck', '第2句:forgot'])
   })
 
   it('does not remove entries with different poem or quizType', () => {

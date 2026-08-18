@@ -198,7 +198,7 @@ export const useLearningStore = defineStore('learning', () => {
 
   function removeWrongEntry(poemId: string, quizType: string, note?: string) {
     data.value.wrongBook = data.value.wrongBook.filter(w =>
-      !(w.poemId === poemId && w.quizType === quizType && (note === undefined || w.note === note))
+      !(w.poemId === poemId && w.quizType === quizType && (w.note ?? '') === (note ?? ''))
     )
     persist()
   }

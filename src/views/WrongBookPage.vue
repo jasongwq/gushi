@@ -11,7 +11,6 @@ interface GroupedWrongEntry {
   poemId: string
   poem?: Poem
   entries: WrongEntry[]
-  quizTypeLabels: string[]
   totalWrongCount: number
   charSummary: CharMarkSummary | null
 }
@@ -83,15 +82,12 @@ const groupedEntries = computed<GroupedWrongEntry[]>(() => {
         poemId: entry.poemId,
         poem,
         entries: [],
-        quizTypeLabels: [],
         totalWrongCount: 0,
         charSummary: stats.length > 0 ? summarizeCharMarks(stats) : null,
       }
       map.set(entry.poemId, group)
     }
     group.entries.push(entry)
-    const label = quizTypeLabels[entry.quizType] ?? entry.quizType
-    if (!group.quizTypeLabels.includes(label)) group.quizTypeLabels.push(label)
     group.totalWrongCount += entry.wrongCount
   }
   return Array.from(map.values())
@@ -101,9 +97,12 @@ const groupedEntries = computed<GroupedWrongEntry[]>(() => {
 function formatLabel(entry: WrongEntry): string {
   if (entry.note) {
     const [sentence, status] = entry.note.split(':')
-    const statusLabel = status === 'stuck' ? '卡顿' : status === 'forgot' ? '不会' : status
-    const sentenceLabel = sentence.replace(/(\d+)/, ' $1 ') // 「第1句」→「第 1 句」
-    return `${sentenceLabel}·${statusLabel}`
+    if (status) {
+      const statusLabel = status === 'stuck' ? '卡顿' : status === 'forgot' ? '不会' : status
+      const sentenceLabel = sentence.replace(/(\d+)/, ' $1 ') // 「第1句」→「第 1 句」
+      return `${sentenceLabel}·${statusLabel}`
+    }
+    return sentence.replace(/(\d+)/, ' $1 ')
   }
   return quizTypeLabels[entry.quizType] ?? entry.quizType
 }
