@@ -106,7 +106,7 @@ function markUnproficient(entry: WrongEntry) {
 }
 
 function removeEntry(entry: WrongEntry) {
-  learningStore.removeWrongEntry(entry.poemId, entry.quizType)
+  learningStore.removeWrongEntry(entry.poemId, entry.quizType, entry.note)
   closeMenu()
 }
 </script>

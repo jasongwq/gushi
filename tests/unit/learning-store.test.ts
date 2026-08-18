@@ -191,6 +191,40 @@ describe('removeWrongEntry', () => {
     store.removeWrongEntry('p001', 'fillBlank')
     expect(store.data.wrongBook).toHaveLength(0)
   })
+
+  it('removes only the matching note when note is provided', () => {
+    const store = useLearningStore()
+    store.data.wrongBook.push(
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第1句:stuck' },
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第2句:forgot' },
+    )
+    store.removeWrongEntry('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].note).toBe('第2句:forgot')
+  })
+
+  it('removes all entries of poem+quizType when note is not provided', () => {
+    const store = useLearningStore()
+    store.data.wrongBook.push(
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第1句:stuck' },
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第2句:forgot' },
+      { poemId: 'p001', quizType: 'author' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false },
+    )
+    store.removeWrongEntry('p001', 'line')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].quizType).toBe('author')
+  })
+
+  it('does not remove entries with different poem or quizType', () => {
+    const store = useLearningStore()
+    store.data.wrongBook.push(
+      { poemId: 'p001', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第1句:stuck' },
+      { poemId: 'p002', quizType: 'line' as const, wrongCount: 1, lastWrongDate: '2026-08-18', unproficient: false, note: '第1句:stuck' },
+    )
+    store.removeWrongEntry('p001', 'line', '第1句:stuck')
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].poemId).toBe('p002')
+  })
 })
 
 describe('updateSettings', () => {

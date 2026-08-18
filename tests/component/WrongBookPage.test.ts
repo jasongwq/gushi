@@ -155,4 +155,24 @@ describe('WrongBookPage', () => {
     const wrapper = mountPage()
     expect(wrapper.text()).toContain('床前明月光；疑是地上霜')
   })
+
+  it('removes only the clicked entry when same quizType but different note', async () => {
+    const store = useLearningStore()
+    seed(store, [
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第1句:stuck' },
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第2句:forgot' },
+    ])
+    const wrapper = mountPage()
+    // 点击第一个标签（第1句:stuck）并移除
+    const labels = wrapper.findAll('[data-testid="wrong-entry-label"]')
+    await labels[0].trigger('click')
+    await wrapper.find('[data-testid="entry-remove"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    // 只剩一个标签，且是第2句:forgot 的条目
+    expect(store.data.wrongBook).toHaveLength(1)
+    expect(store.data.wrongBook[0].note).toBe('第2句:forgot')
+    expect(wrapper.findAll('[data-testid="wrong-entry-label"]')).toHaveLength(1)
+    expect(wrapper.text()).toContain('第2句:forgot')
+    expect(wrapper.text()).not.toContain('第1句:stuck')
+  })
 })
