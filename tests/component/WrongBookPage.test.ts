@@ -167,6 +167,23 @@ describe('WrongBookPage', () => {
     expect(wrapper.text()).toContain('静夜思')
   })
 
+  it('passes line statuses extracted from wrong book notes to the popup', async () => {
+    const store = useLearningStore()
+    seed(store, [
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第1句:stuck' },
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第2句:forgot' },
+    ])
+    const wrapper = mountPage()
+    await wrapper.find('[data-testid="poem-title"]').trigger('click')
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    expect(lines).toHaveLength(2)
+    expect(lines[0].classes()).toContain('popup-line-stuck')
+    expect(lines[0].classes()).not.toContain('popup-line-forgot')
+    expect(lines[1].classes()).toContain('popup-line-forgot')
+    expect(lines[1].classes()).not.toContain('popup-line-stuck')
+  })
+
   it('removes only the clicked entry when same quizType but different note', async () => {
     const store = useLearningStore()
     seed(store, [

@@ -35,6 +35,19 @@ const popupCharMarkStats = computed<CharMarkStats[] | undefined>(() => {
   return learningStore.getCharMarkStats(popupPoem.value.id, popupPoem.value.text)
 })
 
+const popupLineStatuses = computed<Record<number, 'stuck' | 'forgot'> | undefined>(() => {
+  if (!popupPoem.value) return undefined
+  const statuses: Record<number, 'stuck' | 'forgot'> = {}
+  for (const entry of learningStore.wrongBook) {
+    if (entry.poemId !== popupPoem.value.id || !entry.note) continue
+    const match = entry.note.match(/^第(\d+)句:(stuck|forgot)$/)
+    if (match) {
+      statuses[Number(match[1]) - 1] = match[2] as 'stuck' | 'forgot'
+    }
+  }
+  return Object.keys(statuses).length > 0 ? statuses : undefined
+})
+
 function togglePopup(poemId: string) {
   if (popupPoemId.value === poemId && popupVisible.value) {
     popupVisible.value = false
@@ -188,7 +201,13 @@ function removeEntry(entry: WrongEntry) {
       </div>
     </div>
 
-    <PoemPopup v-if="popupPoem" :poem="popupPoem" :char-mark-stats="popupCharMarkStats" v-model:visible="popupVisible" />
+    <PoemPopup
+      v-if="popupPoem"
+      :poem="popupPoem"
+      :char-mark-stats="popupCharMarkStats"
+      :line-statuses="popupLineStatuses"
+      v-model:visible="popupVisible"
+    />
 
     <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm">返回首页</router-link>
   </div>

@@ -17,7 +17,11 @@
           </div>
           <div class="popup-body">
             <template v-if="hasCharMarks">
-              <p v-for="(line, i) in poem.text" :key="i" class="popup-line">
+              <p
+                v-for="(line, i) in poem.text"
+                :key="i"
+                :class="['popup-line', lineStatuses?.[i] === 'forgot' ? 'popup-line-forgot' : lineStatuses?.[i] === 'stuck' ? 'popup-line-stuck' : '']"
+              >
                 <template v-for="(segment, j) in parseLine(line)" :key="j">
                   <template v-if="segment.type === 'char'">
                     <span
@@ -36,7 +40,12 @@
                 </template>
               </p>
             </template>
-            <p v-for="(line, i) in poem.text" :key="i" class="popup-line" v-else>{{ line }}</p>
+            <p
+              v-for="(line, i) in poem.text"
+              :key="i"
+              :class="['popup-line', lineStatuses?.[i] === 'forgot' ? 'popup-line-forgot' : lineStatuses?.[i] === 'stuck' ? 'popup-line-stuck' : '']"
+              v-else
+            >{{ line }}</p>
           </div>
           <div class="popup-yiwen-toggle">
             <button
@@ -66,6 +75,7 @@ const props = defineProps<{
   poem: Poem
   visible: boolean
   charMarkStats?: CharMarkStats[]
+  lineStatuses?: Record<number, 'stuck' | 'forgot'>  // 新增：lineIndex → 行状态
 }>()
 
 const charLookup = computed(() => buildCharMarkLookup(props.charMarkStats ?? []))
@@ -174,6 +184,12 @@ function toggleYiwen() {
   font-size: 1rem;
   line-height: 2;
   color: var(--color-text);
+}
+.popup-line-forgot {
+  color: #f87171;  /* text-red-400 */
+}
+.popup-line-stuck {
+  color: #d97706;  /* text-yellow-600 */
 }
 .popup-char-fuzzy {
   background: #fef3c7;

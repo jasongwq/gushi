@@ -27,7 +27,7 @@ afterEach(() => {
   activeWrapper = null
 })
 
-function mountPopup(props: { poem?: Poem; visible?: boolean; charMarkStats?: CharMarkStats[] } = {}) {
+function mountPopup(props: { poem?: Poem; visible?: boolean; charMarkStats?: CharMarkStats[]; lineStatuses?: Record<number, 'stuck' | 'forgot'> } = {}) {
   activeWrapper = mount(PoemPopup, {
     props: { poem: mockPoem, visible: false, ...props },
     global: {
@@ -189,5 +189,53 @@ describe('PoemPopup char mark highlighting', () => {
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.popup-char-wrong').text()).toContain('光')
     expect(wrapper.text()).toContain('，')
+  })
+})
+
+describe('PoemPopup line-level status highlighting', () => {
+  it('marks line as forgot with popup-line-forgot class', async () => {
+    const wrapper = mountPopup({ visible: true, lineStatuses: { 0: 'forgot' } })
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    expect(lines[0].classes()).toContain('popup-line-forgot')
+    expect(lines[0].classes()).not.toContain('popup-line-stuck')
+  })
+
+  it('marks line as stuck with popup-line-stuck class', async () => {
+    const wrapper = mountPopup({ visible: true, lineStatuses: { 0: 'stuck' } })
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    expect(lines[0].classes()).toContain('popup-line-stuck')
+    expect(lines[0].classes()).not.toContain('popup-line-forgot')
+  })
+
+  it('adds no line-level class when lineStatuses is not provided', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    expect(lines[0].classes()).not.toContain('popup-line-stuck')
+    expect(lines[0].classes()).not.toContain('popup-line-forgot')
+  })
+
+  it('applies line-level coloring in plain-text branch when no charMarkStats', async () => {
+    const wrapper = mountPopup({ visible: true, lineStatuses: { 0: 'forgot', 2: 'stuck' } })
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    // 纯文本分支渲染完整诗句文本
+    expect(lines[0].text()).toBe('床前明月光')
+    expect(lines[0].classes()).toContain('popup-line-forgot')
+    expect(lines[1].classes()).not.toContain('popup-line-forgot')
+    expect(lines[2].classes()).toContain('popup-line-stuck')
+  })
+
+  it('keeps line-level coloring alongside char marks', async () => {
+    const charMarkStats: CharMarkStats[] = [
+      { poemId: 'p1', lineIndex: 0, charIndex: 2, char: '明', fuzzyCount: 0, wrongCount: 3 },
+    ]
+    const wrapper = mountPopup({ visible: true, charMarkStats, lineStatuses: { 0: 'forgot' } })
+    await wrapper.vm.$nextTick()
+    const lines = wrapper.findAll('.popup-line')
+    expect(lines[0].classes()).toContain('popup-line-forgot')
+    expect(wrapper.find('.popup-char-wrong').exists()).toBe(true)
   })
 })
