@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PoemPopup from '@/components/PoemPopup.vue'
-import type { Poem } from '@/types'
+import type { Poem, CharMarkStats } from '@/types'
 
 const mockPoem: Poem = {
   id: 'p1',
@@ -27,7 +27,7 @@ afterEach(() => {
   activeWrapper = null
 })
 
-function mountPopup(props: { poem?: Poem; visible?: boolean } = {}) {
+function mountPopup(props: { poem?: Poem; visible?: boolean; charMarkStats?: CharMarkStats[] } = {}) {
   activeWrapper = mount(PoemPopup, {
     props: { poem: mockPoem, visible: false, ...props },
     global: {
@@ -138,5 +138,56 @@ describe('PoemPopup', () => {
     // 无可聚焦元素时不应调用 focus（preventDefault 由 .prevent 修饰符无条件触发，不在此断言）
     expect(focusSpy).not.toHaveBeenCalled()
     focusSpy.mockRestore()
+  })
+})
+
+describe('PoemPopup char mark highlighting', () => {
+  const charMarkStats: CharMarkStats[] = [
+    { poemId: 'p1', lineIndex: 0, charIndex: 2, char: '明', fuzzyCount: 0, wrongCount: 3 },
+    { poemId: 'p1', lineIndex: 0, charIndex: 3, char: '月', fuzzyCount: 2, wrongCount: 0 },
+  ]
+
+  it('renders highlighted chars when charMarkStats provided', async () => {
+    const wrapper = mountPopup({ visible: true, charMarkStats })
+    await wrapper.vm.$nextTick()
+    const fuzzySpans = wrapper.findAll('.popup-char-fuzzy')
+    const wrongSpans = wrapper.findAll('.popup-char-wrong')
+    expect(fuzzySpans.length).toBe(1)
+    expect(fuzzySpans[0].text()).toContain('月')
+    expect(wrongSpans.length).toBe(1)
+    expect(wrongSpans[0].text()).toContain('明')
+  })
+
+  it('shows wrong count as superscript on highlighted chars', async () => {
+    const wrapper = mountPopup({ visible: true, charMarkStats })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.popup-char-wrong').text()).toContain('3')
+    expect(wrapper.find('.popup-char-fuzzy').text()).toContain('2')
+  })
+
+  it('renders plain text when no charMarkStats', async () => {
+    const wrapper = mountPopup({ visible: true })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('.popup-char-fuzzy').length).toBe(0)
+    expect(wrapper.findAll('.popup-char-wrong').length).toBe(0)
+    expect(wrapper.text()).toContain('床前明月光')
+  })
+
+  it('renders plain text when charMarkStats is empty array', async () => {
+    const wrapper = mountPopup({ visible: true, charMarkStats: [] })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.findAll('.popup-char-fuzzy').length).toBe(0)
+    expect(wrapper.findAll('.popup-char-wrong').length).toBe(0)
+  })
+
+  it('renders punctuation normally with highlighting', async () => {
+    const poemWithPunct: Poem = { ...mockPoem, text: ['床前明月光，'] }
+    const stats: CharMarkStats[] = [
+      { poemId: 'p1', lineIndex: 0, charIndex: 4, char: '光', fuzzyCount: 0, wrongCount: 1 },
+    ]
+    const wrapper = mountPopup({ visible: true, poem: poemWithPunct, charMarkStats: stats })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.popup-char-wrong').text()).toContain('光')
+    expect(wrapper.text()).toContain('，')
   })
 })

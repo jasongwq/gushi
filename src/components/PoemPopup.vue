@@ -16,7 +16,25 @@
             <span class="popup-meta">{{ poem.dynasty }}·{{ poem.author }}</span>
           </div>
           <div class="popup-body">
-            <p v-for="(line, i) in poem.text" :key="i" class="popup-line">{{ line }}</p>
+            <template v-if="hasCharMarks">
+              <p v-for="(line, i) in poem.text" :key="i" class="popup-line">
+                <template v-for="(segment, j) in parseLine(line)" :key="j">
+                  <template v-if="segment.type === 'char'">
+                    <span
+                      v-if="charLookup[`${i}-${segment.charIdx}`]?.wrongCount > 0"
+                      class="popup-char-wrong"
+                    >{{ segment.char }}<sup class="popup-char-count">{{ charLookup[`${i}-${segment.charIdx}`].wrongCount }}</sup></span>
+                    <span
+                      v-else-if="charLookup[`${i}-${segment.charIdx}`]?.fuzzyCount > 0"
+                      class="popup-char-fuzzy"
+                    >{{ segment.char }}<sup class="popup-char-count">{{ charLookup[`${i}-${segment.charIdx}`].fuzzyCount }}</sup></span>
+                    <span v-else>{{ segment.char }}</span>
+                  </template>
+                  <span v-else>{{ segment.char }}</span>
+                </template>
+              </p>
+            </template>
+            <p v-for="(line, i) in poem.text" :key="i" class="popup-line" v-else>{{ line }}</p>
           </div>
           <div class="popup-yiwen-toggle">
             <button
@@ -36,14 +54,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onBeforeUnmount } from 'vue'
-import type { Poem } from '@/types'
+import { ref, watch, nextTick, onBeforeUnmount, computed } from 'vue'
+import type { Poem, CharMarkStats } from '@/types'
 import { useLearningStore } from '@/stores/learning'
+import { parseLine, buildCharMarkLookup } from '@/utils/charMark'
 
 const props = defineProps<{
   poem: Poem
   visible: boolean
+  charMarkStats?: CharMarkStats[]
 }>()
+
+const charLookup = computed(() => buildCharMarkLookup(props.charMarkStats ?? []))
+const hasCharMarks = computed(() => (props.charMarkStats?.length ?? 0) > 0)
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
@@ -144,6 +167,22 @@ function toggleYiwen() {
   font-size: 1rem;
   line-height: 2;
   color: var(--color-text);
+}
+.popup-char-fuzzy {
+  background: #fef3c7;
+  color: #d97706;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.popup-char-wrong {
+  background: #fecaca;
+  color: #dc2626;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.popup-char-count {
+  font-size: 0.625rem;
+  margin-left: 1px;
 }
 .popup-yiwen-toggle {
   text-align: center;
