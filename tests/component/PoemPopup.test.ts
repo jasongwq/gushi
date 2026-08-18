@@ -161,8 +161,8 @@ describe('PoemPopup char mark highlighting', () => {
   it('shows wrong count as superscript on highlighted chars', async () => {
     const wrapper = mountPopup({ visible: true, charMarkStats })
     await wrapper.vm.$nextTick()
-    expect(wrapper.find('.popup-char-wrong').text()).toContain('3')
-    expect(wrapper.find('.popup-char-fuzzy').text()).toContain('2')
+    expect(wrapper.find('.popup-char-wrong').text()).toContain('×3')
+    expect(wrapper.find('.popup-char-fuzzy').text()).toContain('×2')
   })
 
   it('renders plain text when no charMarkStats', async () => {

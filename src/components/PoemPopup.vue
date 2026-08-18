@@ -21,13 +21,15 @@
                 <template v-for="(segment, j) in parseLine(line)" :key="j">
                   <template v-if="segment.type === 'char'">
                     <span
-                      v-if="charLookup[`${i}-${segment.charIdx}`]?.wrongCount > 0"
+                      v-if="(getMark(i, segment.charIdx)?.wrongCount ?? 0) > 0"
                       class="popup-char-wrong"
-                    >{{ segment.char }}<sup class="popup-char-count">{{ charLookup[`${i}-${segment.charIdx}`].wrongCount }}</sup></span>
+                      :aria-label="`${segment.char} 错误${getMark(i, segment.charIdx)!.wrongCount}次`"
+                    >{{ segment.char }}<sup class="popup-char-count">×{{ getMark(i, segment.charIdx)!.wrongCount }}</sup></span>
                     <span
-                      v-else-if="charLookup[`${i}-${segment.charIdx}`]?.fuzzyCount > 0"
+                      v-else-if="(getMark(i, segment.charIdx)?.fuzzyCount ?? 0) > 0"
                       class="popup-char-fuzzy"
-                    >{{ segment.char }}<sup class="popup-char-count">{{ charLookup[`${i}-${segment.charIdx}`].fuzzyCount }}</sup></span>
+                      :aria-label="`${segment.char} 模糊${getMark(i, segment.charIdx)!.fuzzyCount}次`"
+                    >{{ segment.char }}<sup class="popup-char-count">×{{ getMark(i, segment.charIdx)!.fuzzyCount }}</sup></span>
                     <span v-else>{{ segment.char }}</span>
                   </template>
                   <span v-else>{{ segment.char }}</span>
@@ -58,6 +60,7 @@ import { ref, watch, nextTick, onBeforeUnmount, computed } from 'vue'
 import type { Poem, CharMarkStats } from '@/types'
 import { useLearningStore } from '@/stores/learning'
 import { parseLine, buildCharMarkLookup } from '@/utils/charMark'
+import type { CharMarkStatEntry } from '@/utils/charMark'
 
 const props = defineProps<{
   poem: Poem
@@ -67,6 +70,10 @@ const props = defineProps<{
 
 const charLookup = computed(() => buildCharMarkLookup(props.charMarkStats ?? []))
 const hasCharMarks = computed(() => (props.charMarkStats?.length ?? 0) > 0)
+
+function getMark(lineIndex: number, charIdx: number | undefined): CharMarkStatEntry | undefined {
+  return charLookup.value[`${lineIndex}-${charIdx}`]
+}
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
