@@ -53,10 +53,6 @@ const quizTypeLabels: Record<string, string> = {
   dynasty: '朝代',
 }
 
-function getPoemTitle(poemId: string): string {
-  return poemStore.getPoemById(poemId)?.title ?? ''
-}
-
 const enabledWrongBook = computed(() => {
   return learningStore.wrongBook.filter(entry => poemStore.isEnabled(entry.poemId))
 })
@@ -88,8 +84,20 @@ const groupedEntries = computed<GroupedWrongEntry[]>(() => {
   return Array.from(map.values())
 })
 
-function mergedNotes(group: GroupedWrongEntry): string {
-  return group.entries.filter(e => e.note).map(e => e.note).join('；')
+// 把 note「第1句:stuck」格式化为「第 1 句·卡顿」；无 note 返回类型名
+function formatLabel(entry: WrongEntry): string {
+  if (entry.note) {
+    const [sentence, status] = entry.note.split(':')
+    const statusLabel = status === 'stuck' ? '卡顿' : status === 'forgot' ? '不会' : status
+    const sentenceLabel = sentence.replace(/(\d+)/, ' $1 ') // 「第1句」→「第 1 句」
+    return `${sentenceLabel}·${statusLabel}`
+  }
+  return quizTypeLabels[entry.quizType] ?? entry.quizType
+}
+
+function formatEntryDescription(entry: WrongEntry): string {
+  const title = poemStore.getPoemById(entry.poemId)?.title ?? entry.poemId
+  return `${title} · ${formatLabel(entry)}`
 }
 
 function openMenu(entry: WrongEntry) {
@@ -145,9 +153,8 @@ function removeEntry(entry: WrongEntry) {
             data-testid="wrong-entry-label"
             class="cursor-pointer text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded"
             @click="openMenu(entry)"
-          >{{ quizTypeLabels[entry.quizType] ?? entry.quizType }}</span>
+          >{{ formatLabel(entry) }}</span>
         </div>
-        <p v-if="mergedNotes(group)" class="text-xs text-gray-400 mb-2">{{ mergedNotes(group) }}</p>
       </div>
     </div>
 
@@ -159,7 +166,7 @@ function removeEntry(entry: WrongEntry) {
     >
       <div class="bg-white rounded-lg p-4 w-56 shadow-lg">
         <div class="text-sm text-gray-500 text-center mb-3">
-          {{ getPoemTitle(actionEntry.poemId) || actionEntry.poemId }} · {{ quizTypeLabels[actionEntry.quizType] ?? actionEntry.quizType }}
+          {{ formatEntryDescription(actionEntry) }}
         </div>
         <div class="flex flex-col gap-2">
           <button

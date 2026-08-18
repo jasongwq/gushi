@@ -68,7 +68,7 @@ test('wrong book: 点击错题类型标签，操作菜单可见', async ({ page 
 
   await expect(page.locator('[data-testid="char-summary"]')).toContainText('错1字', { timeout: 5000 })
 
-  // 点击标签（背诵/卡顿句标签都行，取第一个）
+  // 点击标签（背诵/第 N 句·状态标签都行，取第一个）
   await page.locator('[data-testid="wrong-entry-label"]').first().click()
 
   await expect(page.locator('[data-testid="entry-action-menu"]')).toBeVisible({ timeout: 5000 })

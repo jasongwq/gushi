@@ -80,6 +80,18 @@ describe('WrongBookPage', () => {
     expect(labels.map(l => l.text())).toEqual(['补字选择', '背诵'])
   })
 
+  it('formats line notes as 第 N 句·状态 in labels', () => {
+    const store = useLearningStore()
+    seed(store, [
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第1句:stuck' },
+      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '第2句:forgot' },
+    ])
+    const wrapper = mountPage()
+    const labels = wrapper.findAll('[data-testid="wrong-entry-label"]')
+    expect(labels).toHaveLength(2)
+    expect(labels.map(l => l.text())).toEqual(['第 1 句·卡顿', '第 2 句·不会'])
+  })
+
   it('hides char summary badge when no char mark stats', () => {
     const store = useLearningStore()
     seed(store, [{ poemId: 'p1', quizType: 'line', wrongCount: 1 }])
@@ -155,16 +167,6 @@ describe('WrongBookPage', () => {
     expect(wrapper.text()).toContain('静夜思')
   })
 
-  it('merges notes of entries with note field using ；', () => {
-    const store = useLearningStore()
-    seed(store, [
-      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '床前明月光' },
-      { poemId: 'p1', quizType: 'line', wrongCount: 1, note: '疑是地上霜' },
-    ])
-    const wrapper = mountPage()
-    expect(wrapper.text()).toContain('床前明月光；疑是地上霜')
-  })
-
   it('removes only the clicked entry when same quizType but different note', async () => {
     const store = useLearningStore()
     seed(store, [
@@ -181,7 +183,7 @@ describe('WrongBookPage', () => {
     expect(store.data.wrongBook).toHaveLength(1)
     expect(store.data.wrongBook[0].note).toBe('第2句:forgot')
     expect(wrapper.findAll('[data-testid="wrong-entry-label"]')).toHaveLength(1)
-    expect(wrapper.text()).toContain('第2句:forgot')
-    expect(wrapper.text()).not.toContain('第1句:stuck')
+    expect(wrapper.text()).toContain('第 2 句·不会')
+    expect(wrapper.text()).not.toContain('第 1 句·卡顿')
   })
 })
