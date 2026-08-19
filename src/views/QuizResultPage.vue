@@ -31,17 +31,22 @@ const answers = computed(() => {
         selected: '',
         correct: '',
         isCorrect: false,
+        isRecite: false,
       }
     }
     const poem = poemStore.getPoemById(question.poemId)
+    const isRecite = question.quizType === 'recite'
     return {
       index: i + 1,
       poemId: question.poemId,
       poemTitle: poem?.title ?? '',
       prompt: question.prompt,
-      selected: question.options[a.selectedIndex],
-      correct: question.options[question.correctIndex],
+      selected: isRecite
+        ? (a.correct ? '熟练' : '不熟练')
+        : question.options[a.selectedIndex],
+      correct: isRecite ? '熟练' : question.options[question.correctIndex],
       isCorrect: a.correct,
+      isRecite,
     }
   })
 })
@@ -92,7 +97,7 @@ function togglePopup(poemId: string) {
           </span>
         </div>
         <p class="text-sm text-gray-600 mt-1">{{ item.prompt }}</p>
-        <div class="mt-1 text-xs">
+        <div v-if="!item.isRecite" class="mt-1 text-xs">
           <p :class="item.isCorrect ? 'text-green-600' : 'text-red-500'">你的答案：{{ item.selected }}</p>
           <p v-if="!item.isCorrect" class="text-green-600">正确答案：{{ item.correct }}</p>
         </div>
