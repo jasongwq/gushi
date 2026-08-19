@@ -234,6 +234,13 @@ export const useQuizStore = defineStore('quiz', () => {
     if (!session.value) return
     session.value.recitationResults.push(result)
 
+    // 混排统一：背诵题也推一条 answers 条目，使进度圆点/计分/结果页统一工作
+    session.value.answers.push({
+      questionIndex: session.value.currentIndex,
+      selectedIndex: 0, // recite 无选项，占位
+      correct: result.overallStatus === 'mastered',
+    })
+
     const learningStore = useLearningStore()
 
     // 整体只调用一次 recordAnswer

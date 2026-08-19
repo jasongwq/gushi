@@ -214,6 +214,36 @@ describe('submitRecitationResult', () => {
     // Check that wrong book entries were created
     expect(learningStore.wrongBook.length).toBeGreaterThan(0)
   })
+
+  it('pushes an answers entry for unified dots/score', () => {
+    const store = useQuizStore()
+    store.startRecitation('all', 3)
+    const poemId = store.currentQuestion!.poemId
+    store.submitRecitationResult({
+      poemId,
+      overallStatus: 'mastered',
+      lines: [],
+      authorCorrect: null,
+      dynastyCorrect: null,
+      charMarks: {},
+    })
+    expect(store.session!.answers).toHaveLength(1)
+    expect(store.session!.answers[0].questionIndex).toBe(0)
+    expect(store.session!.answers[0].correct).toBe(true)
+    // 下一个背诵结果 correct=false
+    const poemId2 = store.currentQuestion!.poemId
+    store.submitRecitationResult({
+      poemId: poemId2,
+      overallStatus: 'not-mastered',
+      lines: [{ lineIndex: 0, status: 'forgot' }],
+      authorCorrect: false,
+      dynastyCorrect: false,
+      charMarks: {},
+    })
+    expect(store.session!.answers).toHaveLength(2)
+    expect(store.session!.answers[1].correct).toBe(false)
+    expect(store.session!.answers[1].questionIndex).toBe(1)
+  })
 })
 
 describe('submitRecitationResult separation', () => {
