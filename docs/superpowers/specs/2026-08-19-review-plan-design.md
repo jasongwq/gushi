@@ -23,6 +23,92 @@
   - 新增学习：归入今天（未学过的诗，建议开始学）
   - 错题本：按 `lastWrongDate + 1 天` 排期归入对应日期；若该日期已过（逾期未复习）则落回今天；同诗多条目取最近 `lastWrongDate`
 
+## 待办事项（另行处理，不在当前实施范围）
+
+- **快速配置已学**：计划页支持快速标记某首诗为"已学"，从学习队列移除，不再排入"新增学习"。用户已确认需要，交互方式待定，另行设计实现。
+
+## 学习计划排程（2026-08-19 追加，已确认）
+
+### 背景
+
+"新增学习"把所有未学的诗（200 首中大部分）都堆在"今天"，导致计划表爆表。需要**学习计划排程**：未学的诗按节奏排入未来日期，区分"待学"（已排入且未学）、"已学"（排入但已有学习记录）、"未学"（未排入）。
+
+### 需求（已确认）
+
+- **节奏档位**：每天 1-5 首 / 每 2/3/5 天 1 首，共 8 档
+- **排程顺序**：未学的诗按年级从低到高、同年级按诗库顺序
+- **排程起点**：从今天开始连续排
+- **持久化**：localStorage（UserData 新增 `schedule` 字段，诗→日期映射 `{ poemId: 'YYYY-MM-DD' }`）
+- **重排**：「重排」按钮清空排程，未学的重新从今天开始排
+- **切换档位**：只改存储配置，需手动点「重排」才生效
+- **首次进入**：无排程时自动按默认节奏（每天 3 首）生成
+- **已学标记**：排程中的诗若有学习记录 → 保留在排程中但标记"已学"
+- **30 天外排程**：排到 30 天后的诗归入底部"未学"区块，但标注"已排期"，与真正未排的分组显示
+
+### 数据层 — `src/utils/schedule.ts`（纯函数）
+
+```typescript
+export type PaceOption =
+  | { type: 'perDay'; count: number }      // 每天 count 首，count ∈ 1..5
+  | { type: 'perDays'; days: number }       // 每 days 天 1 首，days ∈ 2/3/5
+
+export const PACE_OPTIONS: { value: string; label: string }[] = [
+  { value: '1', label: '每天 1 首' },
+  { value: '2', label: '每天 2 首' },
+  { value: '3', label: '每天 3 首' },
+  { value: '4', label: '每天 4 首' },
+  { value: '5', label: '每天 5 首' },
+  { value: 'every2', label: '每 2 天 1 首' },
+  { value: 'every3', label: '每 3 天 1 首' },
+  { value: 'every5', label: '每 5 天 1 首' },
+]
+
+// 未学的诗按节奏排到日期映射
+export function buildSchedule(
+  unlearnedPoems: Poem[],   // 已按年级低→高排序
+  pace: PaceOption,
+  today: string,
+): Record<string, string>   // { poemId: 'YYYY-MM-DD' }
+```
+
+排程规则：
+- `perDay count`：今天排前 count 首，明天排接下来 count 首，依此类推
+- `perDays days`：今天学第 1 首，第 days 天学第 2 首，第 2*days 天学第 3 首……
+
+### store 扩展 — `learning.ts`
+
+- `UserData` 新增 `schedule: Record<string, string>`（默认 `{}`）
+- 方法：
+  - `getSchedule(): Record<string, string>`
+  - `setSchedule(schedule: Record<string, string>)` → 保存并 persist
+  - `clearSchedule()` → 清空并 persist
+  - `rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string)` → 用 buildSchedule 重算并保存
+- `storage.ts` loadData 兼容旧数据（`schedule: parsed.schedule ?? {}`）
+
+### 页面 — `ReviewPlanPage.vue`
+
+- 顶部节奏选择器（8 档）+ 「重排」按钮
+- 首次进入无排程 → 自动按默认节奏（每天 3 首）生成
+- 切换档位 → 只存配置，需手动「重排」生效
+- 计划表按天分组：
+  - **待学**（排程中且未学）：正常显示，原因标签"新增学习"
+  - **已学**（排程中已有学习记录）：保留显示，标记"已学"
+- 底部**"未学"区块**，折叠展示，分两组：
+  - **未排期**：未排进排程的诗（无 schedule 映射）
+  - **已排期（30 天后）**：排程日期超出 30 天计划显示范围的诗
+- 原因判定逻辑中 `new`（新增学习）改为：**仅排程到当天的未学诗**归入当天（不再把所有未学诗堆今天）
+
+### 测试
+
+- 单测 `tests/unit/schedule.test.ts`：
+  - perDay 排程：每天 N 首、连续排、日期正确
+  - perDays 排程：每 N 天 1 首、间隔正确
+  - 空未学诗 → 空排程
+  - 可注入 today
+- 单测 schedule 迁移：loadData 兼容无 schedule 旧数据
+- 组件测试 ReviewPlanPage 更新：节奏选择器、重排按钮、待学/已学/未学分组
+- e2e：计划页节奏切换+重排流程、已学标记展示
+
 ## 架构
 
 复用现有模式：**纯函数工具（可单测）+ 页面组件**，与 `retention.ts` / `ProgressPage.vue` 的既有结构一致。
