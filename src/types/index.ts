@@ -3,6 +3,11 @@ export type MasteryLevel = '新' | '学' | '熟' | '固'
 export type TextType = '五言' | '七言' | '其他'
 export type SourceType = 'smart' | 'grade' | 'all' | 'review' | 'wrong' | 'unproficient'
 
+export interface PinyinPair {
+  char: string
+  pinyin: string  // 空字符串表示标点等非汉字
+}
+
 export interface Poem {
   id: string
   title: string
@@ -12,6 +17,7 @@ export interface Poem {
   text: string[]
   textType: TextType
   yiwen: string  // 译文/释义
+  pinyin?: PinyinPair[]  // 逐字注音（与 text 逐字对应）
 }
 
 export interface LearningRecord {
