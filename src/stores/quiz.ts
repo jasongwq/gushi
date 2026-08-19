@@ -145,7 +145,7 @@ export const useQuizStore = defineStore('quiz', () => {
         }
       }
       default:
-        // recite is v2, fallback to nextLine
+        // 未知类型兜底为 nextLine
         return generateQuestion(poem, 'nextLine', allPoems)
     }
   }

@@ -22,7 +22,7 @@ const count = ref(learningStore.settings.quizCount || 10)
 const selectedGrades = ref<string[]>(learningStore.settings.selectedGrades || [])
 const errorMsg = ref('')
 
-// 家长抽查：古诗抽背 + 上下句接龙；自主练习：补字选择 + 上下句接龙
+// 家长抽查：古诗抽背 + 上下句接龙；自主练习：补字选择 + 上下句接龙 + 古诗背诵
 const parentQuizTypes = ref<QuizType[]>(['recite'])
 const selfQuizTypes = ref<QuizType[]>(learningStore.settings.quizTypes.length > 0 ? learningStore.settings.quizTypes : ['fillBlank', 'nextLine'])
 
