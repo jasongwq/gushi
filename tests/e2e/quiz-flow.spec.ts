@@ -75,10 +75,8 @@ test('quiz setup config persists when returning from home', async ({ page }) => 
   // Verify config persisted
   await expect(page.locator('select')).toHaveValue('all')
   await expect(page.locator('text=20').first()).toBeVisible()
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
-  await expect(nextLineCheckbox).toBeChecked()
-  const fillBlankCheckbox = page.locator('input[type="checkbox"]').first()
-  await expect(fillBlankCheckbox).not.toBeChecked()
+  await expect(page.locator('label:has-text("上下句接龙") input')).toBeChecked()
+  await expect(page.locator('label:has-text("补字选择") input')).not.toBeChecked()
 })
 
 // Bug fix 2: Fill-blank quiz shows blanks (____) in poem text
@@ -89,7 +87,7 @@ test('fill-blank quiz shows blanks in poem text', async ({ page }) => {
   await page.waitForSelector('select', { timeout: 10000 })
 
   // Select only fillBlank quiz type - uncheck 上下句接龙
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }
@@ -113,7 +111,7 @@ test('fill-blank quiz shows exactly one blank', async ({ page }) => {
   await page.waitForSelector('select', { timeout: 10000 })
 
   // Select only fillBlank quiz type
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }
@@ -151,7 +149,7 @@ test('wrong book can mark entry as unproficient', async ({ page }) => {
   await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }
@@ -175,13 +173,14 @@ test('wrong book can mark entry as unproficient', async ({ page }) => {
 })
 
 // Bug fix 5: SelectTitle quiz type is not available in self mode
-test('self quiz mode shows fillBlank and nextLine options', async ({ page }) => {
+test('self quiz mode shows fillBlank, nextLine and recite options', async ({ page }) => {
   await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 })
   const checkboxes = page.locator('input[type="checkbox"]')
-  await expect(checkboxes).toHaveCount(2)
+  await expect(checkboxes).toHaveCount(3)
   await expect(page.locator('text=补字选择')).toBeVisible()
   await expect(page.locator('text=上下句接龙')).toBeVisible()
+  await expect(page.locator('text=古诗背诵')).toBeVisible()
   await expect(page.locator('text=选标题/作者/朝代')).not.toBeVisible()
 })
 
@@ -234,7 +233,7 @@ test('answering all questions auto-navigates to result page', async ({ page }) =
   await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }
@@ -260,7 +259,7 @@ test('result page shows prompt and user answer for each question', async ({ page
   await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }

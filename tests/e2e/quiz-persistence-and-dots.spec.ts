@@ -13,7 +13,7 @@ async function startQuiz(page: import('@playwright/test').Page) {
   await page.goto('/#/quiz/setup?mode=self')
   await page.waitForSelector('select', { timeout: 10000 })
   await page.selectOption('select', 'all')
-  const nextLineCheckbox = page.locator('input[type="checkbox"]').last()
+  const nextLineCheckbox = page.locator('label:has-text("上下句接龙") input')
   if (await nextLineCheckbox.isChecked()) {
     await nextLineCheckbox.click()
   }
