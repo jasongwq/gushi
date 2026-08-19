@@ -230,7 +230,7 @@ function goToDetail(poemId: string) {
       <button
         class="flex-1 p-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm cursor-pointer hover:bg-indigo-50 transition"
         @click="openBatchConfig"
-      >标记已读篇目</button>
+      >标记已背篇目</button>
     </div>
     <p class="text-xs text-gray-400 text-center mb-3">切换参数后点「重排」生效</p>
 
@@ -308,14 +308,14 @@ function goToDetail(poemId: string) {
 
     <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm mt-6">返回首页</router-link>
 
-    <!-- 标记已读篇目 覆盖层 -->
+    <!-- 标记已背篇目 覆盖层 -->
     <div v-if="showBatchConfig" class="fixed inset-0 z-50 bg-white overflow-y-auto">
       <div class="max-w-md mx-auto p-4">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold">标记已读篇目</h3>
+          <h3 class="text-lg font-bold">标记已背篇目</h3>
           <button class="text-sm text-gray-500 cursor-pointer" @click="showBatchConfig = false">关闭</button>
         </div>
-        <p class="text-xs text-gray-400 mb-3">勾选已经读过的诗（从学习队列移除，不再排入新增学习）</p>
+        <p class="text-xs text-gray-400 mb-3">勾选已经背过的诗（从学习队列移除，不再排入新增学习）</p>
 
         <div v-for="[grade, list] in unlearnedByGrade" :key="grade" class="mb-4">
           <label class="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1 cursor-pointer">

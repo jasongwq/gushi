@@ -169,10 +169,10 @@ describe('ReviewPlanPage', () => {
     const store = useLearningStore()
     const wrapper = mountPage()
     await flushPromises()
-    // 打开标记已读篇目
-    await wrapper.findAll('button').find(b => b.text().includes('标记已读篇目'))!.trigger('click')
+    // 打开标记已背篇目
+    await wrapper.findAll('button').find(b => b.text().includes('标记已背篇目'))!.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('勾选已经读过的诗')
+    expect(wrapper.text()).toContain('勾选已经背过的诗')
     // 勾选第一首并确认
     const checkbox = wrapper.find('input[type="checkbox"]')
     await checkbox.trigger('change')
@@ -187,12 +187,12 @@ describe('ReviewPlanPage', () => {
     const store = useLearningStore()
     const wrapper = mountPage()
     await flushPromises()
-    await wrapper.findAll('button').find(b => b.text().includes('标记已读篇目'))!.trigger('click')
+    await wrapper.findAll('button').find(b => b.text().includes('标记已背篇目'))!.trigger('click')
     await flushPromises()
     await wrapper.findAll('button').find(b => b.text() === '取消')!.trigger('click')
     await flushPromises()
     // 覆盖层特有内容（提示文案）不可见；按钮本身仍存在
-    expect(wrapper.text()).not.toContain('勾选已经读过的诗')
+    expect(wrapper.text()).not.toContain('勾选已经背过的诗')
     expect(store.records.length).toBe(0)
   })
 
@@ -200,8 +200,8 @@ describe('ReviewPlanPage', () => {
     const store = useLearningStore()
     const wrapper = mountPage()
     await flushPromises()
-    // 打开标记已读篇目
-    await wrapper.findAll('button').find(b => b.text().includes('标记已读篇目'))!.trigger('click')
+    // 打开标记已背篇目
+    await wrapper.findAll('button').find(b => b.text().includes('标记已背篇目'))!.trigger('click')
     await flushPromises()
     // 一年级有 p001、p002；点一年级年级复选框全选
     const gradeLabels = wrapper.findAll('label').filter(l => l.text().includes('一年级（'))
@@ -220,7 +220,7 @@ describe('ReviewPlanPage', () => {
   it('grade checkbox unselects all poems when already all selected', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    await wrapper.findAll('button').find(b => b.text().includes('标记已读篇目'))!.trigger('click')
+    await wrapper.findAll('button').find(b => b.text().includes('标记已背篇目'))!.trigger('click')
     await flushPromises()
     // 先全选一年级，再点一次取消
     const gradeCheckbox = wrapper.findAll('label').filter(l => l.text().includes('一年级（'))[0].find('input[type="checkbox"]')
