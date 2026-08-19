@@ -14,6 +14,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
   })
@@ -24,6 +25,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: ['一年级'], quizCount: 10, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     saveData(data)
@@ -37,6 +39,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     saveData(data)
@@ -50,6 +53,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: ['二年级'], quizCount: 8, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     const json = JSON.stringify(data)
@@ -68,6 +72,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
     clearData()
@@ -76,6 +81,7 @@ describe('storage', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     })
   })
@@ -105,5 +111,31 @@ describe('storage', () => {
     const data = loadData()
     expect(data.records[0].charMarkStats).toEqual([])
     expect(data.reciteRecords[0].charMarks).toEqual({})
+  })
+
+  it('defaults schedule to empty object when absent', () => {
+    const oldData = {
+      records: [],
+      quizResults: [],
+      reciteRecords: [],
+      wrongBook: [],
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    localStorage.setItem('poem-quiz-data', JSON.stringify(oldData))
+    const data = loadData()
+    expect(data.schedule).toEqual({})
+  })
+
+  it('preserves existing schedule on load', () => {
+    const data = {
+      records: [],
+      quizResults: [],
+      reciteRecords: [],
+      wrongBook: [],
+      schedule: { p001: '2026-08-20' },
+      settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank'], selectedGrades: [] },
+    }
+    localStorage.setItem('poem-quiz-data', JSON.stringify(data))
+    expect(loadData().schedule).toEqual({ p001: '2026-08-20' })
   })
 })

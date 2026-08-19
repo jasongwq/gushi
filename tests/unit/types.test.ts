@@ -121,6 +121,7 @@ describe('Type definitions', () => {
       quizResults: [],
       reciteRecords: [],
       wrongBook: [],
+      schedule: {},
       settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
     }
     expect(data.records).toEqual([])

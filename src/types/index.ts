@@ -67,6 +67,7 @@ export interface UserData {
   quizResults: QuizResult[]
   reciteRecords: ReciteRecord[]  // 新增
   wrongBook: WrongEntry[]
+  schedule: Record<string, string>  // 学习排程：诗→计划学习日期（YYYY-MM-DD）
   settings: UserSettings
 }
 

@@ -224,7 +224,7 @@ export const useLearningStore = defineStore('learning', () => {
   }
 
   function clearAllData() {
-    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
+    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], schedule: {}, settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
   }
 
