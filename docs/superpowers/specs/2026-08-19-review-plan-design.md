@@ -38,10 +38,27 @@
 - **确认**：勾选后点「确认标记」提交，给勾选的诗创建**最小学习记录**（reviewCount=0、masteryLevel='新'、lastReviewDate/nextReviewDate=今天），不触发复习调度
 - **排程联动**：标记已学的诗同时从排程 schedule 中移除，计划表不再显示（不算待学/未学）
 
+### 复习摊开（2026-08-19 追加，已确认）
+
+**问题**：批量标记已学后所有标记诗的 `nextReviewDate: today` 立即到期，今日待复习飙升，且一次性 50 首同时复习不符合记忆曲线。
+
+**方案**：
+- **markLearned 占位**：创建记录时 `nextReviewDate` 设为 `'2099-01-01'`（占位，标记已学但待排复习），不再设为今天。标记的诗**不进待复习队列**，直到重排分配实际日期
+- **重排双参数**：重排界面两个参数——
+  - 每天学习新诗数（现有节奏 8 档：每天 1-5 首 / 每 2/3/5 天 1 首）
+  - **每天最多复习数 N**（新增，如 1/3/5/10 首）
+- **复习摊开算法（全局配额）**：重排时遍历已标记已学且 `nextReviewDate === '2099-01-01'` 的诗，按每天复习名额 N 摊开：
+  1. 从今天起逐天检查
+  2. 每天先放艾宾浩斯到期的诗（`nextReviewDate <= today` 且非 2099 占位），这些占用当天名额
+  3. 当天剩余名额（N - 艾宾浩斯到期数）给标记已学的诗，满则顺延下一天
+  4. 分配到的诗设 `nextReviewDate` 为对应日期
+- **艾宾浩斯优先级高于标记已学**（先算到期，剩余名额给标记已学）
+
 ### 实现要点
 
-- `learning.ts` 新增方法 `markLearned(poemIds: string[])`：批量创建最小记录 + 从 schedule 移除
-- `ReviewPlanPage.vue` 新增批量配置界面（覆盖式列表 + 年级分组 + 勾选 + 确认/取消）
+- `learning.ts` 新增方法 `markLearned(poemIds: string[])`：批量创建最小记录（nextReviewDate='2099-01-01'）+ 从 schedule 移除
+- `learning.ts` 新增/扩展 `rebuildSchedule`：接收两个参数（pace + 每天复习数 N），未学诗按 pace 排 schedule，标记已学诗按 N 摊开 nextReviewDate
+- `ReviewPlanPage.vue` 新增批量配置界面（覆盖式列表 + 年级分组 + 勾选 + 确认/取消）+ 重排区复习数选择
 
 ## 学习计划排程（2026-08-19 追加，已确认）
 
