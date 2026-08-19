@@ -51,3 +51,20 @@ test('poem detail page: recite review button starts recitation', async ({ page }
   await expect(page.locator('text=第 1 / 1 首')).toBeVisible({ timeout: 5000 })
   await expect(page.locator('.recitation-card')).toBeVisible({ timeout: 5000 })
 })
+
+test('poem detail page: complete single-poem recitation to result page', async ({ page }) => {
+  await page.goto('/#/poem/p001')
+  await page.waitForLoadState('load')
+  await expect(page.locator('button:has-text("背诵复习")')).toBeVisible({ timeout: 10000 })
+
+  await page.locator('button:has-text("背诵复习")').click()
+
+  // 背诵：标记熟练
+  await expect(page.locator('button:has-text("熟练")')).toBeVisible({ timeout: 5000 })
+  await page.locator('button:has-text("熟练")').click()
+
+  // 单首完成 → 结果页
+  await expect(page.locator('h2')).toContainText('抽背结果', { timeout: 5000 })
+  await expect(page.locator('text=再来一轮')).toBeVisible()
+  await expect(page.locator('text=返回首页')).toBeVisible()
+})
