@@ -15,6 +15,8 @@
 - **保存时机**：每次点击标注时即时保存（用户选择，而非离开页面时保存）
 - **保存范围**：所有背诵场景统一（单诗、抽背流程、家长抽查卡片）
 - **作者/朝代按钮**：卡片按钮文字改为「作者不会」「朝代不会」（用户选择只改卡片按钮文字，不改错题本/结果页文案）
+- **未提交标记的存储**：localStorage 持久化（用户选择，而非 sessionStorage）——标注时记录 poemId → 待调度标记；关闭页面/浏览器后重开仍可修复，与学习数据同寿命
+- **整体调度的补全**：进入错题本页面时自动补 recordAnswer 调度（用户选择，而非离开页面时补）
 
 ## 核心改动
 
@@ -36,7 +38,26 @@
 - `recordDetail` 不触发遗忘曲线调度、不生成 quizResult（已有单测保证），只往错题本写细节条目。
 - 撤销用 `removeWrongEntry(poemId, quizType, note)` 精确移除单条，不会误删兄弟条目（已有单测保证）。
 - 「熟练」提交时 `recordAnswer(poemId, 'recite', true)` 会清空该诗全部错题条目（已有行为），天然覆盖「标记后又点熟练」的清理。
-- 点标注仅写细节，**不触发 recordAnswer 调度**；整体背诵调度（遗忘曲线）仍由提交路径 `submitRecitationResult` / `PoemCardPage.saveResult` 调用 `recordAnswer` 一次，遵守「背诵提交只调度一次」的既有约定。
+- 点标注仅写细节，**不触发 recordAnswer 调度**；整体背诵调度（遗忘曲线）由以下两条路径补全，遵守「背诵提交只调度一次」的既有约定：
+  1. 正常提交：`submitRecitationResult` / `PoemCardPage.saveResult` 调用 `recordAnswer` 一次
+  2. 未提交（关闭页面/直接返回）：进入错题本时自动补一次
+
+### 1b. 待调度标记（localStorage）
+
+标注变化时同步维护 `pendingReciteSchedules: string[]`（poemId 列表，存于 localStorage）：
+
+| 时机 | 操作 |
+|------|------|
+| 首次标记某诗任何异常（卡顿/不会/作者/朝代从无到有） | 将该 poemId 加入待调度列表 |
+| 撤销该诗所有异常（回全 ok + 无作者/朝代错误） | 从待调度列表移除该 poemId |
+| 正常提交（`submitRecitationResult` / `saveResult` 调 `recordAnswer` 成功） | 从待调度列表移除该 poemId |
+| 点「熟练」提交 mastered | recordAnswer(true) 清错题 + 从待调度列表移除 |
+
+**进入错题本页面时**（`WrongBookPage` onMounted）：
+- 遍历待调度列表，对每个 poemId 调 `recordAnswer(poemId, 'recite', hasWrong ? false : true)`——`hasWrong` 由该诗在错题本中是否存在异常条目判定（含 line/author/dynasty/recite 条目）
+- 调度完成后从待调度列表移除
+
+**为什么进错题本时补而非离开页面时补**：用户选择的模型——detail 即时入错题本，整体调度延迟到「进入错题本」这个自然的复习动作前补上，避免 `beforeunload` 的可靠性问题（移动端/浏览器可随时杀进程，beforeunload 不可靠）。
 
 ### 2. 移除提交路径中的重复细节写入
 
@@ -49,6 +70,16 @@
 `RecitationCard.vue` 标题区两个按钮：
 - 「不会」→「作者不会」
 - 「不会」→「朝代不会」
+
+### 4. 待调度标记的维护位置
+
+`learningStore` 是唯一写入学习数据的地方，待调度标记归它管理最合适：
+
+- 新增 `pendingReciteSchedules: ref<string[]>`（从 localStorage 初始化，`loadPendingReciteSchedules` / `savePendingReciteSchedules`）
+- 新增 `markPendingReciteSchedule(poemId)` / `unmarkPendingReciteSchedule(poemId)` 内部辅助
+- `recordDetail` / `removeWrongEntry` 不直接管待调度标记；由 `RecitationCard` 在标注变化时统一调用 `learningStore.syncPendingReciteSchedule(poemId, hasAnyIssue)`（有异常则标记，全清则移除）
+- `recordAnswer` 成功（背诵路径）后自动从待调度列表移除该 poemId（在 `recordAnswer` 内对 `quizType === 'recite'` 分支处理，或由调用方 `submitRecitationResult` / `saveResult` 显式移除——实施时选一种，避免重复）
+- `WrongBookPage` onMounted：遍历待调度列表补 `recordAnswer`
 
 ## 范围限制
 
@@ -67,25 +98,37 @@
   - 撤销卡顿 → `removeWrongEntry(poemId, 'line', '第1句:stuck')`
   - 撤销作者/朝代 → `removeWrongEntry(poemId, 'author'/'dynasty')`
   - 按钮文字断言：「作者不会」「朝代不会」
+  - 待调度标记：首次标记 → `syncPendingReciteSchedule(poemId, true)`；全清 → `(poemId, false)`
   - 现有提交逻辑（熟练/完全不会/下一首 emit submit）保持不变
+- `tests/unit/learning-store.test.ts`：
+  - `syncPendingReciteSchedule` 有异常标记 / 全清移除
+  - `recordAnswer`（recite 路径）后自动移除待调度标记
+  - 待调度列表 localStorage 持久化（初始化读、变化写）
 - `tests/unit/quiz-store-full.test.ts`：更新 detail 相关测试——submit 只调度 recordAnswer 一次，不再写 detail
 - `tests/component/poem-card-page.test.ts`：更新 saveResult 断言——recordDetail 不再被调用（由组件即时保存），recordAnswer/recordReciteWithCharMarks 保留
+- `tests/component/WrongBookPage.test.ts`：onMounted 时对待调度列表补 recordAnswer
 
 ### e2e
 
 新增单诗场景测试（`tests/e2e/review-plan.spec.ts` 或 `recitation-flow.spec.ts`）：
 - 古诗详情 →「背诵复习」→ 标记一行「卡顿」→ 直接返回（不点下一首）
 - 验证 localStorage 中错题本已含该诗 `line: 第1句:stuck` 条目
+- 验证 localStorage 中待调度标记含该 poemId
+- 进入错题本页 → 验证 recordAnswer 已补（records 中有该诗记录）
 - 多首抽背流程（`recitation-flow.spec.ts` 现有用例）不回归
 
 ## 涉及文件
 
 | 文件 | 改动 |
 |------|------|
-| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字 |
+| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字；待调度标记同步 |
+| `src/stores/learning.ts` | `pendingReciteSchedules` + localStorage 持久化 + `syncPendingReciteSchedule`；recordAnswer recite 路径移除待调度 |
+| `src/views/WrongBookPage.vue` | onMounted 补未提交的 recordAnswer 调度 |
 | `src/stores/quiz.ts` | `submitRecitationResult` 移除重复 recordDetail |
 | `src/views/PoemCardPage.vue` | `saveResult` 移除重复 recordDetail |
-| `tests/unit/RecitationCard.test.ts` | 即时保存单测 + 按钮文字断言 |
+| `tests/unit/RecitationCard.test.ts` | 即时保存单测 + 按钮文字断言 + 待调度标记 |
+| `tests/unit/learning-store.test.ts` | 待调度标记持久化/移除 |
 | `tests/unit/quiz-store-full.test.ts` | 更新 detail 断言 |
 | `tests/component/poem-card-page.test.ts` | 更新 saveResult 断言 |
+| `tests/component/WrongBookPage.test.ts` | 错题本补调度测试 |
 | `tests/e2e/*` | 单诗即时保存 e2e |
