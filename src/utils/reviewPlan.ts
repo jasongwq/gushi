@@ -27,6 +27,7 @@ export function buildReviewPlan(
   poems: Poem[],
   days: number = 30,
   today?: string,
+  schedule?: Record<string, string>,
 ): ReviewPlanDay[] {
   const baseDate = today ?? new Date().toISOString().slice(0, 10)
   const recordMap = new Map(records.map(r => [r.poemId, r]))
@@ -75,9 +76,16 @@ export function buildReviewPlan(
         }
       }
 
-      // new：无学习记录，仅今天
-      if (date === baseDate && !learnedIds.has(poem.id)) {
-        reasons.push('new')
+      // new：排程到当天的未学诗；排程日期已过（逾期未学）落回今天
+      if (!learnedIds.has(poem.id)) {
+        const scheduledDate = schedule?.[poem.id]
+        if (scheduledDate) {
+          if (scheduledDate === date) {
+            reasons.push('new')
+          } else if (scheduledDate < baseDate && date === baseDate) {
+            reasons.push('new')
+          }
+        }
       }
 
       if (reasons.length > 0) {

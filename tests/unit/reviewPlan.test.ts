@@ -59,11 +59,46 @@ describe('buildReviewPlan', () => {
     expect(today.items.find(i => i.poemId === 'p001')?.reasons).toContain('unproficient')
   })
 
-  it('puts unlearned poems on today as new', () => {
-    // p004 has no record
+  it('does not mark unlearned poems as new when no schedule is provided', () => {
+    // 无排程时未学诗不归入任何日期（由计划页自动生成排程）
     const plan = buildReviewPlan([], [], poems, 30, TODAY)
     const today = plan[0]
-    expect(today.items.find(i => i.poemId === 'p004')?.reasons).toContain('new')
+    expect(today.items.some(i => i.poemId === 'p004')).toBe(false)
+  })
+
+  it('marks new poems only on their scheduled day, not all on today', () => {
+    // p001、p002 排程到今天，p003、p004 排程到 2026-08-20
+    const schedule = { p001: TODAY, p002: TODAY, p003: '2026-08-20', p004: '2026-08-20' }
+    const plan = buildReviewPlan([], [], poems, 30, TODAY, schedule)
+    const today = plan[0]
+    const todayIds = today.items.map(i => i.poemId)
+    expect(todayIds).toContain('p001')
+    expect(todayIds).toContain('p002')
+    expect(todayIds).not.toContain('p003')
+    expect(todayIds).not.toContain('p004')
+    const day20 = plan.find(d => d.date === '2026-08-20')!
+    expect(day20.items.map(i => i.poemId)).toEqual(expect.arrayContaining(['p003', 'p004']))
+  })
+
+  it('does not add new reason for poems already learned', () => {
+    // p001 已学（有记录），p002 未学且排程今天
+    const records = [makeRecord('p001', '2026-08-25')]
+    const schedule = { p001: TODAY, p002: TODAY }
+    const plan = buildReviewPlan(records, [], poems, 30, TODAY, schedule)
+    const today = plan[0]
+    // p001 已有记录 → 今天不出现（也不标 new）
+    const p001Item = today.items.find(i => i.poemId === 'p001')
+    expect(p001Item?.reasons ?? []).not.toContain('new')
+    // p002 未学且排程今天 → new
+    expect(today.items.find(i => i.poemId === 'p002')?.reasons).toContain('new')
+  })
+
+  it('moves overdue scheduled poems to today', () => {
+    // p003 排程到 2026-08-10（已过），未学 → 落回今天
+    const schedule = { p003: '2026-08-10' }
+    const plan = buildReviewPlan([], [], poems, 30, TODAY, schedule)
+    const today = plan[0]
+    expect(today.items.find(i => i.poemId === 'p003')?.reasons).toContain('new')
   })
 
   it('schedules wrong-book poems for the day after lastWrongDate', () => {
