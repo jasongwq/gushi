@@ -19,6 +19,7 @@ const routes = [
   { path: '/poems', name: 'poem-collection', component: () => import('@/views/PoemCollectionPage.vue') },
   { path: '/settings/poems', name: 'poem-config', component: () => import('@/views/PoemConfigPage.vue') },
   { path: '/poem-card', name: 'poem-card', component: () => import('@/views/PoemCardPage.vue') },
+  { path: '/review-plan', name: 'review-plan', component: () => import('@/views/ReviewPlanPage.vue') },
   { path: '/poem/:id', name: 'poem-detail', component: () => import('@/views/PoemDetailPage.vue') },
 ]
 

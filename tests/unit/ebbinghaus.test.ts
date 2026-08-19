@@ -56,6 +56,12 @@ describe('addDays', () => {
     expect(addDays('2026-01-30', 5)).toBe('2026-02-04')
     expect(addDays('2026-12-28', 5)).toBe('2027-01-02')
   })
+
+  it('returns the same date for 0 days (timezone-safe)', () => {
+    // 回归：T00:00:00 构造在 UTC+8 下会回退到前一天，T12:00:00 修复此问题
+    expect(addDays('2026-08-19', 0)).toBe('2026-08-19')
+    expect(addDays('2026-01-01', 0)).toBe('2026-01-01')
+  })
 })
 
 describe('calculateNextReview (correct)', () => {

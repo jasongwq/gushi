@@ -8,6 +8,7 @@ function getDefaultData(): UserData {
     quizResults: [],
     reciteRecords: [],
     wrongBook: [],
+    schedule: {},
     settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
   }
 }
@@ -30,6 +31,7 @@ export function loadData(): UserData {
         charMarks: r.charMarks ?? {},
       })),
       wrongBook: parsed.wrongBook ?? defaults.wrongBook,
+      schedule: parsed.schedule ?? defaults.schedule,
       settings: { ...defaults.settings, ...parsed.settings },
     }
     return data
@@ -81,6 +83,7 @@ export function importData(json: string): boolean {
       quizResults: parsed.quizResults ?? defaults.quizResults,
       reciteRecords: parsed.reciteRecords ?? defaults.reciteRecords,
       wrongBook: (parsed.wrongBook ?? []).map((w: any) => ({ ...defaultWrongEntry, ...w })),
+      schedule: parsed.schedule ?? defaults.schedule,
       settings: { ...defaults.settings, ...parsed.settings },
     }
     saveData(data)

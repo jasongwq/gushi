@@ -3,6 +3,7 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
+import { useQuizStore } from '@/stores/quiz'
 import { calculatePoemRetentionTimeline } from '@/utils/retention'
 import { Chart, registerables } from 'chart.js'
 
@@ -12,6 +13,7 @@ const route = useRoute()
 const router = useRouter()
 const poemStore = usePoemStore()
 const learningStore = useLearningStore()
+const quizStore = useQuizStore()
 
 const poemId = computed(() => route.params.id as string)
 const poem = computed(() => poemStore.getPoemById(poemId.value))
@@ -24,6 +26,13 @@ const showYiwen = ref(learningStore.settings.showYiwen ?? false)
 function toggleYiwen() {
   showYiwen.value = !showYiwen.value
   learningStore.updateSettings({ showYiwen: showYiwen.value })
+}
+
+function startReciteReview() {
+  const success = quizStore.startRecitation('review', 1, undefined, poemId.value)
+  if (success) {
+    router.push({ name: 'recitation-play' })
+  }
 }
 
 const quizCorrectRate = computed(() => {
@@ -186,6 +195,11 @@ watch(poemId, () => {
         <h3 class="text-sm text-gray-500 mb-2">译文</h3>
         <p class="text-sm leading-relaxed text-center text-gray-500">{{ poem.yiwen }}</p>
       </div>
+
+      <button
+        class="w-full p-4 bg-indigo-500 text-white rounded-lg text-lg font-medium cursor-pointer hover:bg-indigo-600 transition mb-3"
+        @click="startReciteReview"
+      >背诵复习</button>
     </template>
 
     <div v-else class="text-center text-gray-500 py-8">古诗不存在</div>

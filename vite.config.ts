@@ -44,5 +44,14 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     exclude: ['tests/e2e/**', 'node_modules/**', '.codebuddy/**', '.worktrees/**'],
+    coverage: {
+      // 只统计被测试触碰的文件（v8 默认行为）；全库统计会把大量存量无测试页面计入 0% 拉低全局值
+      thresholds: {
+        statements: 90,
+        branches: 80,
+        functions: 85,
+        lines: 90,
+      },
+    },
   },
 })

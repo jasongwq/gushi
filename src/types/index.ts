@@ -27,6 +27,7 @@ export interface LearningRecord {
   unproficientCorrectStreak: number
   lastLearnDate?: string
   firstLearnDate?: string  // 首次学习日期，用于遗忘曲线时间线
+  isMarkedLearned?: boolean  // 通过"标记已背篇目"批量创建的最小记录标记
 }
 
 export interface QuizResult {
@@ -67,6 +68,7 @@ export interface UserData {
   quizResults: QuizResult[]
   reciteRecords: ReciteRecord[]  // 新增
   wrongBook: WrongEntry[]
+  schedule: Record<string, string>  // 学习排程：诗→计划学习日期（YYYY-MM-DD）
   settings: UserSettings
 }
 

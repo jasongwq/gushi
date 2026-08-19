@@ -1,0 +1,100 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { useLearningStore } from '@/stores/learning'
+
+beforeEach(() => {
+  localStorage.clear()
+  setActivePinia(createPinia())
+})
+
+describe('markLearned', () => {
+  it('creates minimal records with placeholder nextReviewDate', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002'])
+    const r1 = store.getRecord('p001')
+    const r2 = store.getRecord('p002')
+    expect(r1).toBeDefined()
+    expect(r1!.reviewCount).toBe(0)
+    expect(r1!.masteryLevel).toBe('新')
+    expect(r1!.nextReviewDate).toBe('2099-01-01')
+    expect(r2).toBeDefined()
+    expect(r2!.nextReviewDate).toBe('2099-01-01')
+  })
+
+  it('placeholder date does not make poems due today', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001'])
+    expect(store.reviewDueCount).toBe(0)
+  })
+
+  it('rebuildSchedule spreads marked-learned poems with review quota', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002', 'p003'])
+    // 每天复习名额 1，今天无艾宾浩斯到期 → p001 今天，p002 明天，p003 后天
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-20')
+    expect(store.getRecord('p003')!.nextReviewDate).toBe('2026-08-21')
+  })
+
+  it('rebuildSchedule re-spreads future-dated marked-learned poems on new quota', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002'])
+    // 先按每天 1 首摊开
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-20')
+    // 重排改为每天 2 首 → 未来未到期的重新摊开：p002（原08-20）重摊到 08-19，p001 不动（已到期）
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 2)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-19')
+  })
+
+  it('rebuildSchedule keeps already-due marked-learned poems untouched', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001'])
+    // 手动把 p001 设为已到期（昨天）
+    store.getRecord('p001')!.nextReviewDate = '2026-08-18'
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    // 已到期的不重新摊，保持原日期
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-18')
+  })
+
+  it('rebuildSchedule does not re-spread poems with wrong first answer', () => {
+    const store = useLearningStore()
+    // 用户做了一首诗，首次答错：reviewCount=0，nextReviewDate 为明天（艾宾浩斯回退调度）
+    store.recordAnswer('p001', 'fillBlank', false)
+    const record = store.getRecord('p001')!
+    expect(record.reviewCount).toBe(0)
+    const original = record.nextReviewDate
+    expect(original > '2026-08-19').toBe(true)
+    // 重排不应覆盖这首的调度（它没有 isMarkedLearned 标记）
+    store.rebuildSchedule([], { type: 'perDay', count: 1 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe(original)
+  })
+
+  it('keeps existing records unchanged', () => {
+    const store = useLearningStore()
+    store.recordAnswer('p001', 'fillBlank', true)
+    const before = store.getRecord('p001')!.reviewCount
+    store.markLearned(['p001'])
+    expect(store.getRecord('p001')!.reviewCount).toBe(before)
+  })
+
+  it('removes marked poems from schedule', () => {
+    const store = useLearningStore()
+    store.setSchedule({ p001: '2026-08-19', p002: '2026-08-19' })
+    store.markLearned(['p001'])
+    expect(store.getSchedule()).toEqual({ p002: '2026-08-19' })
+  })
+
+  it('persists records to localStorage', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001'])
+    // 重新加载应保留
+    const raw = localStorage.getItem('poem-quiz-data')
+    expect(raw).not.toBeNull()
+    const parsed = JSON.parse(raw!)
+    expect(parsed.records.some((r: any) => r.poemId === 'p001')).toBe(true)
+  })
+})

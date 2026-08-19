@@ -47,6 +47,7 @@ function seed(store: ReturnType<typeof useLearningStore>, entries: Partial<Wrong
       poemId: 'p1', quizType: 'line' as const, wrongCount: 1,
       lastWrongDate: '2026-08-18', unproficient: false, ...e,
     })) as WrongEntry[],
+    schedule: {},
     settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] },
   }
 }

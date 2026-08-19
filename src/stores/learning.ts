@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel, CharMarkMap, CharMarkStats } from '@/types'
+import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel, CharMarkMap, CharMarkStats, Poem } from '@/types'
 import { loadData, saveData, importData as importDataUtil } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 import { parseLine } from '@/utils/charMark'
+import { buildSchedule, spreadReviews, PLACEHOLDER_DATE, type PaceOption } from '@/utils/schedule'
 
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
@@ -223,8 +224,66 @@ export const useLearningStore = defineStore('learning', () => {
     return record?.masteryLevel ?? '新'
   }
 
+  function getSchedule(): Record<string, string> {
+    return data.value.schedule
+  }
+
+  function setSchedule(schedule: Record<string, string>) {
+    data.value.schedule = schedule
+    persist()
+  }
+
+  function clearSchedule() {
+    data.value.schedule = {}
+    persist()
+  }
+
+  // 重排：未学诗按 pace 排 schedule；已标记已学且待排复习的诗按 reviewPerDay 摊开 nextReviewDate
+  function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string, reviewPerDay = 3) {
+    data.value.schedule = buildSchedule(unlearnedPoems, pace, today)
+
+    // 已标记已背且未到期的诗（占位或未来）→ 待排；艾宾浩斯到期诗 → 占名额
+    const marked: Record<string, string> = {}
+    const due: Record<string, string> = {}
+    for (const r of data.value.records) {
+      if (r.isMarkedLearned && r.nextReviewDate >= today) {
+        marked[r.poemId] = PLACEHOLDER_DATE
+      } else if (r.nextReviewDate <= today && r.reviewCount > 0) {
+        due[r.poemId] = r.nextReviewDate
+      }
+    }
+    const spread = spreadReviews(marked, due, reviewPerDay, today)
+    for (const [poemId, date] of Object.entries(spread)) {
+      const record = getRecord(poemId)
+      if (record && record.isMarkedLearned && record.nextReviewDate >= today) {
+        record.nextReviewDate = date
+      }
+    }
+    persist()
+  }
+
+  // 批量标记已学：创建最小学习记录（nextReviewDate 占位，待重排分配复习日期），并从排程移除
+  function markLearned(poemIds: string[]) {
+    const today = new Date().toISOString().split('T')[0]
+    for (const poemId of poemIds) {
+      if (!getRecord(poemId)) {
+        data.value.records.push({
+          poemId, lastReviewDate: today, reviewCount: 0,
+          nextReviewDate: PLACEHOLDER_DATE, correctness: [], reciteCorrectness: [],
+          masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
+          charMarkStats: [], firstLearnDate: today, isMarkedLearned: true,
+        })
+      }
+      // 从排程移除
+      if (poemId in data.value.schedule) {
+        delete data.value.schedule[poemId]
+      }
+    }
+    persist()
+  }
+
   function clearAllData() {
-    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
+    data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], schedule: {}, settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
   }
 
@@ -240,5 +299,6 @@ export const useLearningStore = defineStore('learning', () => {
     getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
     charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
+    getSchedule, setSchedule, clearSchedule, rebuildSchedule, markLearned,
   }
 })

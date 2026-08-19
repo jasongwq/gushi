@@ -18,7 +18,11 @@
       </button>
     </div>
 
-    <div class="grid grid-cols-4 gap-3">
+    <div class="grid grid-cols-5 gap-3">
+      <router-link to="/review-plan" class="shortcut-btn p-3 bg-white rounded-lg shadow text-center hover:shadow-md transition">
+        <div class="text-sm">复习计划</div>
+        <div class="text-lg">📅</div>
+      </router-link>
       <router-link to="/poems" class="shortcut-btn p-3 bg-white rounded-lg shadow text-center hover:shadow-md transition">
         <div class="text-sm">古诗集合</div>
         <div class="text-lg font-bold text-indigo-500">{{ poemStore.enabledPoems.length }}</div>
