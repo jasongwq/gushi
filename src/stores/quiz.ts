@@ -135,6 +135,15 @@ export const useQuizStore = defineStore('quiz', () => {
           options, correctIndex: options.indexOf(stripPunctuation(correctLine)),
         }
       }
+      case 'recite': {
+        return {
+          poemId: poem.id,
+          quizType: 'recite',
+          prompt: poem.title,
+          options: [],
+          correctIndex: 0,
+        }
+      }
       default:
         // recite is v2, fallback to nextLine
         return generateQuestion(poem, 'nextLine', allPoems)

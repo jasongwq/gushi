@@ -346,3 +346,29 @@ describe('startRecitation single poem', () => {
     expect(result).toBe(false)
   })
 })
+
+describe('startQuiz with recite type', () => {
+  it('generates recite questions in mixed queue', () => {
+    const store = useQuizStore()
+    const result = store.startQuiz('all', ['recite', 'fillBlank'], 2)
+    expect(result).toBe(true)
+    expect(store.session!.mode).toBe('quiz')
+    const reciteQ = store.session!.questions.filter(q => q.quizType === 'recite')
+    const fillQ = store.session!.questions.filter(q => q.quizType === 'fillBlank')
+    expect(reciteQ.length).toBeGreaterThan(0)
+    expect(fillQ.length).toBeGreaterThan(0)
+    // recite 题目结构
+    const first = reciteQ[0]
+    expect(first.options).toEqual([])
+    expect(first.correctIndex).toBe(0)
+    expect(first.prompt.length).toBeGreaterThan(0)
+  })
+
+  it('recite-only queue still uses quiz mode', () => {
+    const store = useQuizStore()
+    const result = store.startQuiz('all', ['recite'], 3)
+    expect(result).toBe(true)
+    expect(store.session!.mode).toBe('quiz')
+    expect(store.session!.questions.every(q => q.quizType === 'recite')).toBe(true)
+  })
+})
