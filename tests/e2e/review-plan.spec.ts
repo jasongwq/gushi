@@ -15,11 +15,11 @@ test('review plan page shows today section with schedule', async ({ page }) => {
 
 test('review plan page: pace selector and rebuild', async ({ page }) => {
   await page.goto('/#/review-plan')
-  await expect(page.locator('select')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('select').first()).toBeVisible({ timeout: 10000 })
   await expect(page.locator('button:has-text("重排")')).toBeVisible()
 
   // 切换节奏到"每天 1 首"并重排
-  await page.selectOption('select', '1')
+  await page.selectOption('select >> nth=0', '1')
   await page.click('button:has-text("重排")')
 
   // 今天区块仍在（每天1首 → 今天1首）
@@ -116,6 +116,37 @@ test('review plan page: batch mark poems as learned', async ({ page }) => {
     return data.records || []
   })
   expect(records.length).toBeGreaterThan(0)
+
+  // 标记的诗 nextReviewDate 为占位（2099），不会进今日待复习
+  const markedRecord = records.find((r: any) => r.nextReviewDate === '2099-01-01')
+  expect(markedRecord).toBeDefined()
+})
+
+test('review plan page: rebuild spreads marked-learned reviews', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  // 批量标记第一首
+  await page.click('button:has-text("批量配置")')
+  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+  const checkbox = page.locator('input[type="checkbox"]').first()
+  await checkbox.check()
+  await page.click('button:has-text("确认标记")')
+  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+
+  // 标记后该诗 nextReviewDate 为占位
+  const placeholder = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.records.some((r: any) => r.nextReviewDate === '2099-01-01')
+  })
+  expect(placeholder).toBe(true)
+
+  // 重排（默认复习数）后占位诗获得实际复习日期
+  await page.click('button:has-text("重排")')
+  await page.waitForTimeout(500)
+  const assigned = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.records.some((r: any) => r.nextReviewDate !== '2099-01-01' && r.reviewCount === 0)
+  })
+  expect(assigned).toBe(true)
 })
 
 test('review plan page: batch config cancel keeps state unchanged', async ({ page }) => {
