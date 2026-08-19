@@ -141,12 +141,36 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   }
 
-  function startRecitation(source: SourceType, count: number, grades?: string[]): boolean {
+  function startRecitation(source: SourceType, count: number, grades?: string[], poemId?: string): boolean {
     const poemStore = usePoemStore()
     const learningStore = useLearningStore()
     const today = new Date().toISOString().split('T')[0]
 
     const enabledPoems = poemStore.enabledPoems
+
+    // 单诗模式：直接以指定诗构造 session
+    if (poemId) {
+      const poem = poemStore.getPoemById(poemId)
+      if (!poem || !enabledPoems.some(p => p.id === poemId)) return false
+      session.value = {
+        source,
+        quizTypes: ['recite'],
+        questions: [{
+          poemId: poem.id,
+          quizType: 'recite' as QuizType,
+          prompt: poem.title,
+          options: [],
+          correctIndex: 0,
+        }],
+        currentIndex: 0,
+        answers: [],
+        startTime: new Date().toISOString(),
+        mode: 'recitation',
+        recitationResults: [],
+      }
+      resetCurrentRecitation()
+      return true
+    }
 
     let selectedPoems: Poem[]
     if (source === 'smart') {

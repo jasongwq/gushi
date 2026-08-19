@@ -313,3 +313,36 @@ describe('currentRecitation', () => {
     expect(store.currentRecitation.lineStatuses).toHaveLength(0)
   })
 })
+
+describe('startRecitation single poem', () => {
+  it('starts a recitation with only the given poem when poemId is provided', () => {
+    const store = useQuizStore()
+    const result = store.startRecitation('all', 3, undefined, 'p002')
+    expect(result).toBe(true)
+    expect(store.session).not.toBeNull()
+    expect(store.session!.mode).toBe('recitation')
+    expect(store.session!.questions).toHaveLength(1)
+    expect(store.session!.questions[0].poemId).toBe('p002')
+  })
+
+  it('ignores count when poemId is provided', () => {
+    const store = useQuizStore()
+    store.startRecitation('all', 20, undefined, 'p003')
+    expect(store.session!.questions).toHaveLength(1)
+    expect(store.session!.questions[0].poemId).toBe('p003')
+  })
+
+  it('returns false when poemId does not exist', () => {
+    const store = useQuizStore()
+    const result = store.startRecitation('all', 3, undefined, 'nonexistent')
+    expect(result).toBe(false)
+  })
+
+  it('returns false when poemId is disabled', () => {
+    const store = useQuizStore()
+    const learningStore = useLearningStore()
+    learningStore.updateSettings({ enabledPoems: ['p001', 'p002'] })
+    const result = store.startRecitation('all', 3, undefined, 'p004')
+    expect(result).toBe(false)
+  })
+})
