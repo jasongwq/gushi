@@ -73,3 +73,25 @@ test('wrong book: 点击错题类型标签，操作菜单可见', async ({ page 
 
   await expect(page.locator('[data-testid="entry-action-menu"]')).toBeVisible({ timeout: 5000 })
 })
+
+test('wrong book: 错题条目标签显示 note 格式', async ({ page }) => {
+  test.setTimeout(60000)
+  await reachWrongBookWithWrongChar(page)
+
+  // 卡顿行条目标签显示「第 1 句·卡顿」
+  const label = page.locator('[data-testid="wrong-entry-label"]', { hasText: '卡顿' })
+  await expect(label).toHaveText('第 1 句·卡顿', { timeout: 5000 })
+})
+
+test('wrong book: 弹窗内卡顿行有行级颜色标注', async ({ page }) => {
+  test.setTimeout(60000)
+  await reachWrongBookWithWrongChar(page)
+
+  await expect(page.locator('[data-testid="char-summary"]')).toContainText('错1字', { timeout: 5000 })
+  await page.locator('[data-testid="poem-title"]').click()
+
+  // 第一行（被标记卡顿）有 stuck 行级变色
+  await expect(page.locator('.popup-line-stuck')).toBeVisible({ timeout: 5000 })
+  // 字词高亮共存
+  await expect(page.locator('.popup-char-wrong')).toBeVisible()
+})
