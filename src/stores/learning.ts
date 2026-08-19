@@ -5,7 +5,7 @@ import { loadData, saveData, importData as importDataUtil } from '@/utils/storag
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 import { parseLine } from '@/utils/charMark'
-import { buildSchedule, spreadReviews, type PaceOption } from '@/utils/schedule'
+import { buildSchedule, spreadReviews, PLACEHOLDER_DATE, type PaceOption } from '@/utils/schedule'
 
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
@@ -242,12 +242,12 @@ export const useLearningStore = defineStore('learning', () => {
   function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string, reviewPerDay = 3) {
     data.value.schedule = buildSchedule(unlearnedPoems, pace, today)
 
-    // 已标记已学的诗（占位、今天或未来未到期 → 待排）与艾宾浩斯到期诗
+    // 已标记已背且未到期的诗（占位或未来）→ 待排；艾宾浩斯到期诗 → 占名额
     const marked: Record<string, string> = {}
     const due: Record<string, string> = {}
     for (const r of data.value.records) {
-      if (r.nextReviewDate === '2099-01-01' || (r.reviewCount === 0 && r.nextReviewDate >= today)) {
-        marked[r.poemId] = '2099-01-01'
+      if (r.isMarkedLearned && r.nextReviewDate >= today) {
+        marked[r.poemId] = PLACEHOLDER_DATE
       } else if (r.nextReviewDate <= today && r.reviewCount > 0) {
         due[r.poemId] = r.nextReviewDate
       }
@@ -255,7 +255,7 @@ export const useLearningStore = defineStore('learning', () => {
     const spread = spreadReviews(marked, due, reviewPerDay, today)
     for (const [poemId, date] of Object.entries(spread)) {
       const record = getRecord(poemId)
-      if (record && (record.nextReviewDate === '2099-01-01' || (record.reviewCount === 0 && record.nextReviewDate >= today))) {
+      if (record && record.isMarkedLearned && record.nextReviewDate >= today) {
         record.nextReviewDate = date
       }
     }
@@ -269,9 +269,9 @@ export const useLearningStore = defineStore('learning', () => {
       if (!getRecord(poemId)) {
         data.value.records.push({
           poemId, lastReviewDate: today, reviewCount: 0,
-          nextReviewDate: '2099-01-01', correctness: [], reciteCorrectness: [],
+          nextReviewDate: PLACEHOLDER_DATE, correctness: [], reciteCorrectness: [],
           masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
-          charMarkStats: [], firstLearnDate: today,
+          charMarkStats: [], firstLearnDate: today, isMarkedLearned: true,
         })
       }
       // 从排程移除

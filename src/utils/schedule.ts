@@ -1,6 +1,9 @@
 import type { Poem } from '@/types'
 import { addDays } from '@/utils/ebbinghaus'
 
+// "标记已背篇目"创建的最小记录占位日期：表示已学但待重排分配复习日期
+export const PLACEHOLDER_DATE = '2099-01-01'
+
 export type PaceOption =
   | { type: 'perDay'; count: number }      // 每天 count 首，count ∈ 1..5
   | { type: 'perDays'; days: number }       // 每 days 天 1 首，days ∈ 2/3/5
@@ -66,8 +69,10 @@ export function spreadReviews(
   today: string,
 ): Record<string, string> {
   const result: Record<string, string> = {}
+  // 守卫：复习名额必须为正，否则无可用位置（避免死循环）
+  if (reviewPerDay <= 0) return result
   // 待排的标记已学诗（按 poemId 顺序稳定）
-  const pending = Object.entries(markedLearned).filter(([, date]) => date === '2099-01-01')
+  const pending = Object.entries(markedLearned).filter(([, date]) => date === PLACEHOLDER_DATE)
   if (pending.length === 0) return result
 
   // 每天艾宾浩斯到期数（占名额）
@@ -93,7 +98,7 @@ export function spreadReviews(
 
   // 保留已分配实际日期的诗
   for (const [poemId, date] of Object.entries(markedLearned)) {
-    if (date !== '2099-01-01' && !(poemId in result)) {
+    if (date !== PLACEHOLDER_DATE && !(poemId in result)) {
       result[poemId] = date
     }
   }

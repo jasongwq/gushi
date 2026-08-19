@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import { buildReviewPlan, type ReviewReason } from '@/utils/reviewPlan'
-import { PACE_OPTIONS, parsePace } from '@/utils/schedule'
+import { PACE_OPTIONS, parsePace, PLACEHOLDER_DATE } from '@/utils/schedule'
 import type { Poem } from '@/types'
 
 const router = useRouter()
@@ -70,7 +70,7 @@ function initExpand() {
 }
 
 function rebuild() {
-  const pendingReviews = learningStore.records.filter(r => r.nextReviewDate === '2099-01-01').length
+  const pendingReviews = learningStore.records.filter(r => r.nextReviewDate === PLACEHOLDER_DATE).length
   if (unlearnedPoems.value.length === 0 && pendingReviews === 0) return
   const pace = parsePace(paceValue.value)
   learningStore.rebuildSchedule(unlearnedPoems.value, pace, new Date().toISOString().slice(0, 10), parseInt(reviewPerDayValue.value, 10))

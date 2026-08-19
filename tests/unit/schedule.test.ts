@@ -122,4 +122,9 @@ describe('spreadReviews', () => {
     expect(result['m01']).toBe('2026-08-25')
     expect(result['m02']).toBe('2026-08-19')
   })
+
+  it('returns empty when reviewPerDay is zero or negative (no infinite loop)', () => {
+    expect(spreadReviews(markedLearned, {}, 0, '2026-08-19')).toEqual({})
+    expect(spreadReviews(markedLearned, {}, -1, '2026-08-19')).toEqual({})
+  })
 })

@@ -27,6 +27,7 @@ export interface LearningRecord {
   unproficientCorrectStreak: number
   lastLearnDate?: string
   firstLearnDate?: string  // 首次学习日期，用于遗忘曲线时间线
+  isMarkedLearned?: boolean  // 通过"标记已背篇目"批量创建的最小记录标记
 }
 
 export interface QuizResult {

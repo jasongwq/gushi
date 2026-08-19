@@ -60,6 +60,19 @@ describe('markLearned', () => {
     expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-18')
   })
 
+  it('rebuildSchedule does not re-spread poems with wrong first answer', () => {
+    const store = useLearningStore()
+    // 用户做了一首诗，首次答错：reviewCount=0，nextReviewDate 为明天（艾宾浩斯回退调度）
+    store.recordAnswer('p001', 'fillBlank', false)
+    const record = store.getRecord('p001')!
+    expect(record.reviewCount).toBe(0)
+    const original = record.nextReviewDate
+    expect(original > '2026-08-19').toBe(true)
+    // 重排不应覆盖这首的调度（它没有 isMarkedLearned 标记）
+    store.rebuildSchedule([], { type: 'perDay', count: 1 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe(original)
+  })
+
   it('keeps existing records unchanged', () => {
     const store = useLearningStore()
     store.recordAnswer('p001', 'fillBlank', true)
