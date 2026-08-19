@@ -45,6 +45,7 @@
           :poem="currentPoem"
           reveal-mode
           :reveal-step="isReviewing ? 3 : revealStep"
+          :disabled="isReviewing"
           @reveal-step-change="revealStep++"
           @submit="onReciteSubmit"
         />

@@ -30,7 +30,7 @@ vi.mock('@/stores/learning', () => ({
   }),
 }))
 
-function mountCard(props?: Partial<{ poem: Poem; canGoPrev: boolean; revealMode: boolean; revealStep: number }>) {
+function mountCard(props?: Partial<{ poem: Poem; canGoPrev: boolean; revealMode: boolean; revealStep: number; disabled: boolean }>) {
   return mount(RecitationCard, {
     props: { poem: mockPoem, ...props },
     global: { stubs: {} },
@@ -602,6 +602,31 @@ describe('RecitationCard', () => {
       await wrapper.findAll('button').find(b => b.text() === '熟练')!.trigger('click')
       const result = wrapper.emitted('submit')![0][0] as any
       expect(result.overallStatus).toBe('mastered')
+    })
+  })
+
+  describe('disabled prop', () => {
+    it('self-assess buttons are disabled and do not emit submit when disabled', async () => {
+      const wrapper = mountCard({ disabled: true })
+      const masteredBtn = wrapper.findAll('button').find(b => b.text() === '熟练')!
+      const forgotAllBtn = wrapper.findAll('button').find(b => b.text() === '完全不会')!
+      expect(masteredBtn.attributes('disabled')).toBeDefined()
+      expect(forgotAllBtn.attributes('disabled')).toBeDefined()
+      await masteredBtn.trigger('click')
+      await forgotAllBtn.trigger('click')
+      expect(wrapper.emitted('submit')).toBeUndefined()
+    })
+
+    it('line status buttons are disabled when disabled', () => {
+      const wrapper = mountCard({ disabled: true })
+      const stuckBtns = wrapper.findAll('button').filter(b => b.text() === '卡顿')
+      expect(stuckBtns[0].attributes('disabled')).toBeDefined()
+    })
+
+    it('submit works normally when not disabled', async () => {
+      const wrapper = mountCard()
+      await wrapper.findAll('button').find(b => b.text() === '熟练')!.trigger('click')
+      expect(wrapper.emitted('submit')).toHaveLength(1)
     })
   })
 })

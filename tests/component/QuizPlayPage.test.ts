@@ -267,4 +267,16 @@ describe('recite questions in mixed queue', () => {
     const card = wrapper.findComponent({ name: 'RecitationCard' })
     expect(card.props('revealStep')).toBe(3)
   })
+
+  it('recite question in reviewing is disabled', async () => {
+    const session = reciteSession({
+      currentIndex: 1,
+      answers: [{ questionIndex: 0, selectedIndex: 0, correct: true }],
+    })
+    const wrapper = mountWithSession(session)
+    await wrapper.findAll('.dot')[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    const card = wrapper.findComponent({ name: 'RecitationCard' })
+    expect(card.props('disabled')).toBe(true)
+  })
 })

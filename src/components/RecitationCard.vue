@@ -9,6 +9,7 @@ const props = defineProps<{
   canGoPrev?: boolean
   revealMode?: boolean
   revealStep?: number
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -52,6 +53,7 @@ function charMarkClass(lineIndex: number, charIdx: number): string {
 }
 
 function toggleCharMark(lineIndex: number, charIdx: number) {
+  if (props.disabled) return
   learningStore.toggleCharMark(lineIndex, charIdx)
 }
 
@@ -67,6 +69,7 @@ watch(() => props.poem.id, () => {
 
 // 整首熟练：所有行都ok，作者/朝代都没标错
 function markMastered() {
+  if (props.disabled) return
   lineStatuses.value = props.poem.text.map((_, i) => ({ lineIndex: i, status: 'ok' as const }))
   authorCorrect.value = null
   dynastyCorrect.value = null
@@ -75,6 +78,7 @@ function markMastered() {
 
 // 完全不会：所有行都标不会
 function markForgot() {
+  if (props.disabled) return
   lineStatuses.value = props.poem.text.map((_, i) => ({ lineIndex: i, status: 'forgot' as const }))
   authorCorrect.value = false
   dynastyCorrect.value = false
@@ -82,16 +86,19 @@ function markForgot() {
 }
 
 function setLineStatus(index: number, status: 'ok' | 'stuck' | 'forgot') {
+  if (props.disabled) return
   lineStatuses.value[index] = { lineIndex: index, status }
 }
 
 function toggleAuthorCorrect() {
+  if (props.disabled) return
   if (authorCorrect.value === null) authorCorrect.value = false
   else if (authorCorrect.value === false) authorCorrect.value = true
   else authorCorrect.value = null
 }
 
 function toggleDynastyCorrect() {
+  if (props.disabled) return
   if (dynastyCorrect.value === null) dynastyCorrect.value = false
   else if (dynastyCorrect.value === false) dynastyCorrect.value = true
   else dynastyCorrect.value = null
@@ -106,6 +113,7 @@ const hasAnyIssue = computed(() => {
 })
 
 function submit() {
+  if (props.disabled) return
   submitResult(hasAnyIssue.value ? 'not-mastered' : 'mastered')
 }
 
@@ -135,11 +143,13 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
         <div class="flex items-center gap-2">
           <button
             data-testid="btn-author-forgot"
+            :disabled="disabled"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', authorCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
             @click.stop="toggleAuthorCorrect"
           >不会</button>
           <button
             data-testid="btn-dynasty-forgot"
+            :disabled="disabled"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', dynastyCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
             @click.stop="toggleDynastyCorrect"
           >不会</button>
@@ -170,10 +180,12 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
           </span>
           <div class="flex gap-1 shrink-0">
             <button
+              :disabled="disabled"
               :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'stuck' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 bg-white text-gray-400']"
               @click.stop="setLineStatus(index, lineStatuses[index].status === 'stuck' ? 'ok' : 'stuck')"
             >卡顿</button>
             <button
+              :disabled="disabled"
               :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'forgot' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
               @click.stop="setLineStatus(index, lineStatuses[index].status === 'forgot' ? 'ok' : 'forgot')"
             >不会</button>
@@ -205,6 +217,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     <div v-if="revealStep >= 3" class="flex gap-3 mb-3 shrink-0">
       <button
         data-testid="btn-mastered"
+        :disabled="disabled"
         class="flex-1 p-3 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-base cursor-pointer hover:bg-green-100 transition"
         @click.stop="markMastered"
       >
@@ -212,6 +225,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       </button>
       <button
         data-testid="btn-forgot"
+        :disabled="disabled"
         class="flex-1 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-base cursor-pointer hover:bg-red-100 transition"
         @click.stop="markForgot"
       >
