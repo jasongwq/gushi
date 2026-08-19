@@ -30,7 +30,7 @@ vi.mock('@/stores/learning', () => ({
   }),
 }))
 
-function mountCard(props?: Partial<{ poem: Poem; canGoPrev: boolean }>) {
+function mountCard(props?: Partial<{ poem: Poem; canGoPrev: boolean; revealMode: boolean; revealStep: number }>) {
   return mount(RecitationCard, {
     props: { poem: mockPoem, ...props },
     global: { stubs: {} },
@@ -544,6 +544,64 @@ describe('RecitationCard', () => {
       const charSpans = wrapper.findAll('.char-mark')
       expect(charSpans[0].classes().join(' ')).toContain('char-fuzzy')
       expect(charSpans[1].classes().join(' ')).toContain('char-wrong')
+    })
+  })
+
+  describe('revealMode', () => {
+    const mountReveal = (step = 0, canGoPrev = false) =>
+      mountCard({ revealMode: true, revealStep: step, canGoPrev })
+
+    it('step 0: only title shown, no author/yiwen/text/self-assess', () => {
+      const wrapper = mountReveal(0)
+      expect(wrapper.text()).toContain('静夜思')
+      expect(wrapper.text()).not.toContain('李白')
+      expect(wrapper.text()).not.toContain('翻译内容')
+      expect(wrapper.text()).not.toContain('床前明月光')
+      expect(wrapper.text()).not.toContain('熟练')
+      expect(wrapper.text()).not.toContain('完全不会')
+    })
+
+    it('step 1: author revealed, text/yiwen still hidden', () => {
+      const wrapper = mountReveal(1)
+      expect(wrapper.text()).toContain('李白')
+      expect(wrapper.text()).toContain('唐')
+      expect(wrapper.text()).not.toContain('翻译内容')
+      expect(wrapper.text()).not.toContain('床前明月光')
+      expect(wrapper.text()).not.toContain('熟练')
+    })
+
+    it('step 2: yiwen revealed directly, text still hidden', () => {
+      const wrapper = mountReveal(2)
+      expect(wrapper.text()).toContain('翻译内容')
+      expect(wrapper.text()).not.toContain('床前明月光')
+      expect(wrapper.text()).not.toContain('熟练')
+    })
+
+    it('step 3: full text and self-assess buttons visible', () => {
+      const wrapper = mountReveal(3)
+      expect(wrapper.text()).toContain('床前明月光')
+      expect(wrapper.text()).toContain('熟练')
+      expect(wrapper.text()).toContain('完全不会')
+    })
+
+    it('clicking card background emits reveal-step-change', async () => {
+      const wrapper = mountReveal(0)
+      await wrapper.find('.recitation-card h2').trigger('click')
+      expect(wrapper.emitted('revealStepChange')).toHaveLength(1)
+    })
+
+    it('clicking a button does not emit reveal-step-change', async () => {
+      const wrapper = mountReveal(3)
+      const masteredBtn = wrapper.findAll('button').find(b => b.text() === '熟练')!
+      await masteredBtn.trigger('click')
+      expect(wrapper.emitted('revealStepChange')).toBeUndefined()
+    })
+
+    it('submit still works in revealMode step 3', async () => {
+      const wrapper = mountReveal(3)
+      await wrapper.findAll('button').find(b => b.text() === '熟练')!.trigger('click')
+      const result = wrapper.emitted('submit')![0][0] as any
+      expect(result.overallStatus).toBe('mastered')
     })
   })
 })

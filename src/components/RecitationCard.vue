@@ -7,12 +7,26 @@ import { parseLine } from '@/utils/charMark'
 const props = defineProps<{
   poem: Poem
   canGoPrev?: boolean
+  revealMode?: boolean
+  revealStep?: number
 }>()
 
 const emit = defineEmits<{
   submit: [result: RecitationResult]
   goPrev: []
+  revealStepChange: []
 }>()
+
+const revealStep = computed(() => {
+  if (!props.revealMode) return 3 // 非揭示模式一切照常
+  return Math.max(0, Math.min(3, props.revealStep ?? 0))
+})
+
+function handleBackgroundClick() {
+  if (!props.revealMode) return
+  if (revealStep.value >= 3) return
+  emit('revealStepChange')
+}
 
 const learningStore = useLearningStore()
 const showYiwen = ref(learningStore.settings.showYiwen ?? false)
@@ -113,29 +127,30 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 </script>
 
 <template>
-  <div class="recitation-card py-2 w-full flex flex-col h-full">
+  <div class="recitation-card py-2 w-full flex flex-col h-full" @click="handleBackgroundClick">
     <div class="text-center mb-4 shrink-0">
       <h2 class="text-2xl font-bold mb-1">{{ poem.title }}</h2>
-      <div class="flex items-center justify-center gap-4 text-gray-500 text-sm">
+      <div v-if="revealStep >= 1" class="flex items-center justify-center gap-4 text-gray-500 text-sm">
         <span>{{ poem.dynasty }} · {{ poem.author }}</span>
         <div class="flex items-center gap-2">
           <button
             data-testid="btn-author-forgot"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', authorCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
-            @click="toggleAuthorCorrect"
+            @click.stop="toggleAuthorCorrect"
           >不会</button>
           <button
             data-testid="btn-dynasty-forgot"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', dynastyCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
-            @click="toggleDynastyCorrect"
+            @click.stop="toggleDynastyCorrect"
           >不会</button>
         </div>
       </div>
+      <p v-else class="text-gray-400 text-sm mt-1">作者 · ？？</p>
     </div>
 
     <!-- 正文区：全诗原文 + 逐句标记 + 译文，独立滚动 -->
     <!-- data-scroll-area：语义标记，供 PoemCardPage 手势逻辑识别滚动区（避免依赖展示类名） -->
-    <div data-scroll-area class="flex-1 min-h-0 overflow-y-auto mb-4">
+    <div v-if="revealStep >= 3" data-scroll-area class="flex-1 min-h-0 overflow-y-auto mb-4">
       <div class="mb-4">
         <div
           v-for="(line, index) in poem.text"
@@ -148,7 +163,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
                 v-if="segment.type === 'char'"
                 class="char-mark"
                 :class="charMarkClass(index, segment.charIdx ?? 0)"
-                @click="toggleCharMark(index, segment.charIdx ?? 0)"
+                @click.stop="toggleCharMark(index, segment.charIdx ?? 0)"
               >{{ segment.char }}</span>
               <span v-else class="punct">{{ segment.char }}</span>
             </template>
@@ -156,18 +171,18 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
           <div class="flex gap-1 shrink-0">
             <button
               :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'stuck' ? 'border-yellow-500 bg-yellow-50 text-yellow-700' : 'border-gray-200 bg-white text-gray-400']"
-              @click="setLineStatus(index, lineStatuses[index].status === 'stuck' ? 'ok' : 'stuck')"
+              @click.stop="setLineStatus(index, lineStatuses[index].status === 'stuck' ? 'ok' : 'stuck')"
             >卡顿</button>
             <button
               :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', lineStatuses[index].status === 'forgot' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
-              @click="setLineStatus(index, lineStatuses[index].status === 'forgot' ? 'ok' : 'forgot')"
+              @click.stop="setLineStatus(index, lineStatuses[index].status === 'forgot' ? 'ok' : 'forgot')"
             >不会</button>
           </div>
         </div>
       </div>
 
       <!-- 译文 -->
-      <div class="mb-3 text-center">
+      <div v-if="!revealMode" class="mb-3 text-center">
         <button
           :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
           @click="toggleYiwen"
@@ -175,31 +190,37 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
           {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
         </button>
       </div>
-      <div v-if="showYiwen" class="mb-3 p-3 bg-gray-50 rounded-lg text-center">
+      <!-- 非揭示模式：译文仍在正文滚动区内，行为不变 -->
+      <div v-if="!revealMode && showYiwen" class="mb-3 p-3 bg-gray-50 rounded-lg text-center">
         <p class="text-sm leading-relaxed text-gray-500">{{ poem.yiwen }}</p>
       </div>
     </div>
 
+    <!-- 揭示模式：译文在 step 2 直接显示（滚动区外） -->
+    <div v-if="revealMode && revealStep >= 2" class="mb-3 p-3 bg-gray-50 rounded-lg text-center">
+      <p class="text-sm leading-relaxed text-gray-500">{{ poem.yiwen }}</p>
+    </div>
+
     <!-- 操作按钮 -->
-    <div class="flex gap-3 mb-3 shrink-0">
+    <div v-if="revealStep >= 3" class="flex gap-3 mb-3 shrink-0">
       <button
         data-testid="btn-mastered"
         class="flex-1 p-3 bg-green-50 border-2 border-green-200 rounded-lg text-green-700 font-medium text-base cursor-pointer hover:bg-green-100 transition"
-        @click="markMastered"
+        @click.stop="markMastered"
       >
         熟练
       </button>
       <button
         data-testid="btn-forgot"
         class="flex-1 p-3 bg-red-50 border-2 border-red-200 rounded-lg text-red-700 font-medium text-base cursor-pointer hover:bg-red-100 transition"
-        @click="markForgot"
+        @click.stop="markForgot"
       >
         完全不会
       </button>
     </div>
 
     <!-- 上一首 / 下一首 -->
-    <div class="flex gap-3 shrink-0">
+    <div v-if="!revealMode" class="flex gap-3 shrink-0">
       <button
         :disabled="!props.canGoPrev"
         :class="['flex-1 p-3 rounded-lg text-base font-medium cursor-pointer transition', props.canGoPrev ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50' : 'bg-gray-100 text-gray-300 cursor-not-allowed']"
