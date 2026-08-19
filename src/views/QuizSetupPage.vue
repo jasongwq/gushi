@@ -56,6 +56,7 @@ const parentQuizTypeOptions: { value: QuizType; label: string }[] = [
 const selfQuizTypeOptions: { value: QuizType; label: string }[] = [
   { value: 'fillBlank', label: '补字选择' },
   { value: 'nextLine', label: '上下句接龙' },
+  { value: 'recite', label: '古诗背诵' },
 ]
 
 const countOptions = [5, 10, 20]
@@ -97,27 +98,13 @@ function startQuiz() {
     return
   }
 
-  // 如果选中了古诗抽背，走背诵流程
-  if (quizTypes.value.includes('recite')) {
-    const success = quizStore.startRecitation(source.value, count.value, grades)
-    if (!success) {
-      errorMsg.value = '没有符合条件的古诗，请调整设置'
-      return
-    }
-    router.push({ name: 'recitation-play' })
+  // 自助练习：走统一混排流程（startQuiz 现可生成 recite 题目）
+  const success = quizStore.startQuiz(source.value, quizTypes.value, count.value, grades)
+  if (!success) {
+    errorMsg.value = '没有符合条件的题目，请调整设置'
     return
   }
-
-  // 否则走普通测验流程
-  const normalTypes = quizTypes.value.filter(t => t !== 'recite') as QuizType[]
-  if (normalTypes.length > 0) {
-    const success = quizStore.startQuiz(source.value, normalTypes, count.value, grades)
-    if (!success) {
-      errorMsg.value = '没有符合条件的题目，请调整设置'
-      return
-    }
-    router.push({ name: 'quiz-play' })
-  }
+  router.push({ name: 'quiz-play' })
 }
 </script>
 
