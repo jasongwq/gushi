@@ -32,6 +32,15 @@ async function getClosedBoxCount(page: any): Promise<number> {
   return page.locator('.mystery-boxes button[data-state="closed"]').count()
 }
 
+// 辅助：获取当前 active slide 中背诵卡片的古诗标题
+// （loop 模式下隐藏 slide 也在 DOM 中且含 h2，必须从 .swiper-slide-active 取）
+async function activeSlideTitle(page: any): Promise<string | null> {
+  return page.evaluate(() => {
+    const active = document.querySelector('.card-swiper .swiper-slide-active')
+    return active?.querySelector('h2')?.textContent ?? null
+  })
+}
+
 test('switch to mystery mode shows 4 closed boxes', async ({ page }) => {
   await enterPoemCardPage(page)
   await switchToMysteryMode(page)
@@ -225,11 +234,77 @@ test('switch to global mode from mystery recite', async ({ page }) => {
   const progressText = page.locator('[data-testid="detail-progress"]')
   await expect(progressText).toHaveText('1/1', { timeout: 3000 })
 
+  // 记录当前背诵的古诗标题（active slide）
+  const boxTitles = await page.locator('.mystery-boxes button[data-state="revealed"] span.font-bold').allTextContents()
+  await expect.poll(() => activeSlideTitle(page), { timeout: 5000 }).toBe(boxTitles[0])
+  const poemTitleBefore = boxTitles[0]
+
   // 点击 "全部古诗" 按钮
   await page.locator('button:has-text("全部古诗")').click()
 
-  // 进度应该变成全局古诗数量
-  const newProgressText = await progressText.textContent()
-  // 不再是 1/1，而是更大的数字
-  expect(newProgressText).not.toBe('1/1')
+  // 进度应该变成全局古诗数量（不再是 1/1，而是更大的数字）
+  await expect
+    .poll(async () => progressText.textContent(), { timeout: 5000 })
+    .not.toBe('1/1')
+
+  // 切换后应保持当前古诗不变（全局列表定位到同一首）
+  await expect.poll(() => activeSlideTitle(page), { timeout: 5000 }).toBe(poemTitleBefore)
+})
+
+test('all revealed: clicking each box enters the matching poem detail', async ({ page }) => {
+  test.setTimeout(90000)
+  await enterPoemCardPage(page)
+  await switchToMysteryMode(page)
+
+  // 开4个盒子
+  for (let i = 0; i < 4; i++) {
+    await openOneBox(page)
+  }
+
+  // 记录每个盒子显示的标题（视觉顺序 = boxes 数组顺序）
+  const boxTitles = await page.locator('.mystery-boxes button[data-state="revealed"] span.font-bold').allTextContents()
+  expect(boxTitles).toHaveLength(4)
+
+  // 依次点击每个盒子，验证进入的详情标题与点击盒子一致
+  for (let i = 0; i < 4; i++) {
+    const boxTitle = boxTitles[i]
+    await page.locator('.mystery-boxes button[data-state="revealed"]').nth(i).click()
+    await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+    // 轮询等待 Swiper 定位到目标诗（onSwiper 对齐 + 过渡完成，状态驱动而非固定 sleep）
+    await expect.poll(() => activeSlideTitle(page), { timeout: 5000 }).toBe(boxTitle)
+
+    // 返回盲盒，继续下一个
+    await page.locator('[data-testid="recite-back"]').click()
+    await expect(page.locator('.mystery-boxes')).toBeVisible({ timeout: 3000 })
+  }
+})
+
+test('all revealed: last box then 下一首 returns to mystery', async ({ page }) => {
+  test.setTimeout(60000)
+  await enterPoemCardPage(page)
+  await switchToMysteryMode(page)
+
+  // 开4个盒子
+  for (let i = 0; i < 4; i++) {
+    await openOneBox(page)
+  }
+
+  // 点击右下角（第4个）盒子进入背诵
+  await page.locator('.mystery-boxes button[data-state="revealed"]').nth(3).click()
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 3000 })
+  // 轮询等待定位到最后一首
+  const boxTitles = await page.locator('.mystery-boxes button[data-state="revealed"] span.font-bold').allTextContents()
+  await expect.poll(() => activeSlideTitle(page), { timeout: 5000 }).toBe(boxTitles[3])
+
+  // 进度应显示 4/4（最后一首）
+  const progressText = page.locator('[data-testid="detail-progress"]')
+  await expect(progressText).toHaveText('4/4', { timeout: 3000 })
+
+  // 点击「熟练」提交最后一首 → 应回到盲盒
+  await page.evaluate(() => {
+    const active = document.querySelector('.card-swiper .swiper-slide-active')
+    const btn = [...(active?.querySelectorAll('button') ?? [])].find(b => b.textContent?.includes('熟练'))
+    btn?.click()
+  })
+  await expect(page.locator('.mystery-boxes')).toBeVisible({ timeout: 5000 })
 })

@@ -279,10 +279,26 @@ function onMysterySelectAndEnter(poem: Poem) {
 }
 
 function switchToGlobal() {
+  if (isNavigating.value) return
+  // 先捕获当前诗 id，再切换列表来源：
+  // fromMystery 置 false 后 poems 立即变成 allPoems，若之后再读 currentPoem
+  // 会得到 allPoems[currentIndex]（盲盒索引 ≠ 全局索引），导致切到错误古诗
+  const poemId = currentPoem.value?.id
   fromMystery.value = false
-  if (currentPoem.value) {
-    const idx = allPoems.value.findIndex(p => p.id === currentPoem.value?.id)
-    if (idx >= 0) currentIndex.value = idx
+  if (poemId) {
+    const idx = allPoems.value.findIndex(p => p.id === poemId)
+    if (idx >= 0) {
+      // poems 数量剧变（盲盒 1-4 首 → 全局 200 首），若不重建 Swiper，
+      // 运行中 slides 数量变化会让 loop 状态崩溃（active slide 丢失）。
+      // 复用 navigateToPoem 的重建序列：先缩回浏览（触发重建）再进入背诵
+      isNavigating.value = true
+      collapseSlide()
+      currentIndex.value = idx
+      nextTick(() => {
+        viewMode.value = 'recite'
+        isNavigating.value = false
+      })
+    }
   }
 }
 

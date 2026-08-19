@@ -229,6 +229,28 @@ describe('PoemCardPage source filters and navigation', () => {
     expect(vm.expandedPoemId).toBeNull()
   })
 
+  it('switchToGlobal keeps current poem and locates it in global list', async () => {
+    const wrapper = mountPage()
+    await wrapper.vm.$nextTick()
+    const vm = wrapper.vm as any
+    // 模拟盲盒来源：revealed 列表为 [p3, p1]，当前背诵 p3（盲盒索引 0，全局索引 2）
+    // 用盲盒索引 ≠ 全局索引的诗，才能区分修复前后的行为
+    vm.fromMystery = true
+    vm.mysteryRevealedPoems = [mockPoems[2], mockPoems[0]]
+    vm.currentIndex = 0
+    vm.viewMode = 'recite'
+    await wrapper.vm.$nextTick()
+    // 前置确认：当前诗是咏鹅（p3）
+    expect(vm.currentPoem?.id).toBe('p3')
+
+    vm.switchToGlobal()
+    // 同步断言（不 await nextTick）：switchToGlobal 本身同步设置 fromMystery/currentIndex，
+    // 后续 CardSwiper 的 Swiper 同步是组件副作用，不属于本函数逻辑
+    expect(vm.fromMystery).toBe(false)
+    expect(vm.currentIndex).toBe(2)
+    expect(vm.currentPoem?.id).toBe('p3')
+  })
+
   it('submit on last poem collapses back to browse mode', async () => {
     const wrapper = mountPage()
     await wrapper.vm.$nextTick()
