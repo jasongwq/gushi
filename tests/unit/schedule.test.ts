@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSchedule, parsePace, PACE_OPTIONS, type PaceOption } from '@/utils/schedule'
+import { buildSchedule, parsePace, spreadReviews, PACE_OPTIONS, type PaceOption } from '@/utils/schedule'
 import type { Poem } from '@/types'
 
 const poems: Poem[] = [
@@ -72,5 +72,54 @@ describe('parsePace', () => {
   it('falls back to default pace for invalid values', () => {
     expect(parsePace('99')).toEqual({ type: 'perDay', count: 3 })
     expect(parsePace('abc')).toEqual({ type: 'perDay', count: 3 })
+  })
+})
+
+describe('spreadReviews', () => {
+  // 已标记已学诗：poemId → 当前 nextReviewDate（'2099-01-01' 表示待排）
+  const markedLearned: Record<string, string> = {
+    m01: '2099-01-01',
+    m02: '2099-01-01',
+    m03: '2099-01-01',
+    m04: '2099-01-01',
+    m05: '2099-01-01',
+  }
+  // 艾宾浩斯到期诗：poemId → nextReviewDate（今天或已过）
+  const ebbinghausDue: Record<string, string> = {
+    e01: '2026-08-19',
+    e02: '2026-08-19',
+    e03: '2026-08-18',
+  }
+
+  it('spreads marked-learned poems into future days with daily quota', () => {
+    // 每天复习名额 2，但今天有 3 首艾宾浩斯到期 → 今天剩余 0，从明天开始排
+    const result = spreadReviews(markedLearned, ebbinghausDue, 2, '2026-08-19')
+    expect(result['m01']).toBe('2026-08-20')
+    expect(result['m02']).toBe('2026-08-20')
+    expect(result['m03']).toBe('2026-08-21')
+    expect(result['m04']).toBe('2026-08-21')
+    expect(result['m05']).toBe('2026-08-22')
+  })
+
+  it('uses today remaining quota when ebbinghaus due is below quota', () => {
+    const due = { e01: '2026-08-19' }
+    const result = spreadReviews(markedLearned, due, 2, '2026-08-19')
+    // 今天 1 首到期，剩 1 名额 → m01 今天
+    expect(result['m01']).toBe('2026-08-19')
+    expect(result['m02']).toBe('2026-08-20')
+    expect(result['m03']).toBe('2026-08-20')
+  })
+
+  it('returns empty when no marked-learned poems', () => {
+    const result = spreadReviews({}, ebbinghausDue, 2, '2026-08-19')
+    expect(result).toEqual({})
+  })
+
+  it('does not touch poems already assigned a real date', () => {
+    // m01 已有实际日期，跳过
+    const marked = { ...markedLearned, m01: '2026-08-25' }
+    const result = spreadReviews(marked, {}, 2, '2026-08-19')
+    expect(result['m01']).toBe('2026-08-25')
+    expect(result['m02']).toBe('2026-08-19')
   })
 })

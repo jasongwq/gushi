@@ -50,3 +50,52 @@ export function buildSchedule(
   }
   return result
 }
+
+/**
+ * 把已标记已学但待排复习的诗（nextReviewDate === '2099-01-01'）按每天复习名额 N 摊开。
+ * 全局配额算法：
+ * 1. 从今天起逐天检查
+ * 2. 每天先放艾宾浩斯到期的诗（占用当天名额）
+ * 3. 当天剩余名额（N - 艾宾浩斯到期数）给标记已学的诗，满则顺延下一天
+ * 已分配实际日期的诗（非 2099 占位）保持不变。
+ */
+export function spreadReviews(
+  markedLearned: Record<string, string>,  // poemId → 当前 nextReviewDate
+  ebbinghausDue: Record<string, string>,   // poemId → nextReviewDate（今天或已过，当天到期）
+  reviewPerDay: number,                    // 每天最多复习数 N
+  today: string,
+): Record<string, string> {
+  const result: Record<string, string> = {}
+  // 待排的标记已学诗（按 poemId 顺序稳定）
+  const pending = Object.entries(markedLearned).filter(([, date]) => date === '2099-01-01')
+  if (pending.length === 0) return result
+
+  // 每天艾宾浩斯到期数（占名额）
+  const dueCountByDay = new Map<string, number>()
+  for (const date of Object.values(ebbinghausDue)) {
+    const d = date <= today ? today : date
+    dueCountByDay.set(d, (dueCountByDay.get(d) ?? 0) + 1)
+  }
+
+  let pendingIdx = 0
+  let dayOffset = 0
+  while (pendingIdx < pending.length) {
+    const date = addDays(today, dayOffset)
+    const dueCount = dueCountByDay.get(date) ?? 0
+    const available = Math.max(0, reviewPerDay - dueCount)
+    for (let i = 0; i < available && pendingIdx < pending.length; i++) {
+      const [poemId] = pending[pendingIdx]
+      result[poemId] = date
+      pendingIdx++
+    }
+    dayOffset++
+  }
+
+  // 保留已分配实际日期的诗
+  for (const [poemId, date] of Object.entries(markedLearned)) {
+    if (date !== '2099-01-01' && !(poemId in result)) {
+      result[poemId] = date
+    }
+  }
+  return result
+}
