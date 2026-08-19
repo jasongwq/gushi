@@ -8,6 +8,7 @@ import type { Poem, LearningRecord } from '@/types'
 const mockPoems: Poem[] = [
   { id: 'p001', title: '静夜思', author: '李白', dynasty: '唐', grade: '一年级', text: ['床前明月光'], textType: '五言', yiwen: '' },
   { id: 'p002', title: '咏鹅', author: '骆宾王', dynasty: '唐', grade: '一年级', text: ['鹅鹅鹅'], textType: '其他', yiwen: '' },
+  { id: 'p003', title: '春晓', author: '孟浩然', dynasty: '唐', grade: '二年级', text: ['春眠不觉晓'], textType: '五言', yiwen: '' },
 ]
 
 // 可变的 poem store mock 状态
@@ -84,28 +85,50 @@ describe('ReviewPlanPage', () => {
     expect(wrapper.text()).toContain('暂无复习安排')
   })
 
-  it('shows today section expanded by default with reason tags', async () => {
+  it('auto-generates schedule on first visit with default pace', async () => {
     const store = useLearningStore()
-    store.data.records = [makeRecord('p001', '2026-08-20', { unproficient: true })]
     const wrapper = mountPage()
     await flushPromises()
-    // 今天区块标题
-    expect(wrapper.text()).toContain('今天')
-    // 今天的诗：p001 不熟练
-    expect(wrapper.text()).toContain('不熟练')
-    // 未学的 p002 是"新增学习"
+    // 首次进入无排程 → 自动生成，今天应有新增学习的诗
+    expect(store.getSchedule()).not.toEqual({})
     expect(wrapper.text()).toContain('新增学习')
   })
 
-  it('shows reason tags for due poem on a future day when expanded', async () => {
-    const store = useLearningStore()
-    store.data.records = [makeRecord('p001', '2026-08-20')]
+  it('shows pace selector and rebuild button', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    // 未来某天有 due 诗，默认折叠（看不到诗名）
-    expect(wrapper.text()).not.toContain('到期复习')
-    // 但日期标题可见（如 08-20）
-    expect(wrapper.text()).toContain('08-20')
+    expect(wrapper.find('select').exists()).toBe(true)
+    expect(wrapper.text()).toContain('重排')
+  })
+
+  it('rebuild reschedules unlearned poems from today', async () => {
+    const store = useLearningStore()
+    // 预先设置一个"错误"的排程
+    store.setSchedule({ p001: '2030-01-01' })
+    const wrapper = mountPage()
+    await flushPromises()
+    // 点重排
+    await wrapper.findAll('button').find(b => b.text().includes('重排'))!.trigger('click')
+    await flushPromises()
+    // 排程被重建，p001 应在今天（每天3首，第1首）
+    const today = new Date().toISOString().slice(0, 10)
+    expect(store.getSchedule()['p001']).toBe(today)
+  })
+
+  it('shows learned marker for scheduled poems with records', async () => {
+    const store = useLearningStore()
+    store.data.records = [makeRecord('p001', '2026-08-20')]
+    store.setSchedule({ p001: new Date().toISOString().slice(0, 10) })
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.text()).toContain('已学')
+  })
+
+  it('shows today section expanded by default', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    expect(wrapper.text()).toContain('今天')
+    expect(wrapper.text()).toContain('新增学习')
   })
 
   it('toggles calc tip on clicking the help icon', async () => {
@@ -118,38 +141,25 @@ describe('ReviewPlanPage', () => {
     expect(wrapper.text()).not.toContain('复习计划按以下规则计算')
   })
 
-  it('expands and collapses a future day when clicking the day header', async () => {
-    const store = useLearningStore()
-    store.data.records = [makeRecord('p001', '2026-08-20')]
+  it('shows not-learned section with unlearned poems', async () => {
     const wrapper = mountPage()
     await flushPromises()
-    // 点击包含 08-20 的日期标题展开
-    const dayHeader = wrapper.findAll('.p-3.bg-white').find(d => d.text().includes('08-20'))
-    expect(dayHeader).toBeDefined()
-    await dayHeader!.trigger('click')
-    expect(wrapper.text()).toContain('到期复习')
-    // 再点折叠
-    await dayHeader!.trigger('click')
-    expect(wrapper.text()).not.toContain('到期复习')
-  })
-
-  it('shows multiple reason tags for the same poem', async () => {
-    const store = useLearningStore()
-    // p002 逾期未复习 + 不熟练 → 今天同时命中 due 和 unproficient
-    store.data.records = [makeRecord('p002', '2026-08-01', { unproficient: true })]
-    const wrapper = mountPage()
+    // 切换为每天1首并重排后，3 首诗排到今天/明天/后天
+    const select = wrapper.find('select')
+    await select.setValue('1')
+    await wrapper.findAll('button').find(b => b.text().includes('重排'))!.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('到期复习')
-    expect(wrapper.text()).toContain('不熟练')
+    // 未学区块存在
+    expect(wrapper.text()).toContain('未学')
   })
 
   it('navigates to poem detail when clicking a poem', async () => {
     const store = useLearningStore()
-    store.data.records = [makeRecord('p001', '2026-08-01')]
+    store.setSchedule({ p001: new Date().toISOString().slice(0, 10) })
     const wrapper = mountPage()
     await flushPromises()
-    // 用 poem item 的具体 class 精确定位（避免匹配到外层 day header）
-    const poemItem = wrapper.find('.flex.items-center.gap-2')
+    // 用诗行的精确 class 定位（选择器行也有 flex items-center gap-2）
+    const poemItem = wrapper.find('.hover\\:bg-gray-50')
     expect(poemItem.exists()).toBe(true)
     await poemItem.trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'poem-detail', params: { id: 'p001' } })
