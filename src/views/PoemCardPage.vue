@@ -415,15 +415,15 @@ const detailProgress = computed(() => {
         <div v-if="viewMode === 'recite'" class="px-4 pt-2 pb-1">
           <div class="flex items-center justify-between mb-1">
             <span data-testid="detail-progress" class="text-xs text-gray-400">{{ detailProgress.text }}</span>
-            <div class="flex items-center">
+            <div class="flex items-center gap-2">
               <button
                 v-if="fromMystery"
-                class="ml-3 text-xs text-purple-400 cursor-pointer"
+                class="px-4 py-2 rounded-xl text-sm font-medium bg-purple-50 text-purple-600 border border-purple-200 cursor-pointer hover:bg-purple-100 active:scale-95 transition"
                 @click="collapseSlide(); viewMode = 'mystery'"
               >返回盲盒</button>
               <button
                 v-if="fromMystery"
-                class="ml-2 text-xs text-indigo-400 cursor-pointer"
+                class="px-4 py-2 rounded-xl text-sm font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 cursor-pointer hover:bg-indigo-100 active:scale-95 transition"
                 @click="switchToGlobal"
               >全部古诗</button>
             </div>
