@@ -8,7 +8,7 @@ beforeEach(() => {
 })
 
 describe('markLearned', () => {
-  it('creates minimal records for the given poems', () => {
+  it('creates minimal records with placeholder nextReviewDate', () => {
     const store = useLearningStore()
     store.markLearned(['p001', 'p002'])
     const r1 = store.getRecord('p001')
@@ -16,9 +16,25 @@ describe('markLearned', () => {
     expect(r1).toBeDefined()
     expect(r1!.reviewCount).toBe(0)
     expect(r1!.masteryLevel).toBe('新')
-    expect(r1!.lastReviewDate).toBe(new Date().toISOString().split('T')[0])
+    expect(r1!.nextReviewDate).toBe('2099-01-01')
     expect(r2).toBeDefined()
-    expect(r2!.reviewCount).toBe(0)
+    expect(r2!.nextReviewDate).toBe('2099-01-01')
+  })
+
+  it('placeholder date does not make poems due today', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001'])
+    expect(store.reviewDueCount).toBe(0)
+  })
+
+  it('rebuildSchedule spreads marked-learned poems with review quota', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002', 'p003'])
+    // 每天复习名额 1，今天无艾宾浩斯到期 → p001 今天，p002 明天，p003 后天
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-20')
+    expect(store.getRecord('p003')!.nextReviewDate).toBe('2026-08-21')
   })
 
   it('keeps existing records unchanged', () => {

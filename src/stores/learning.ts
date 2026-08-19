@@ -5,7 +5,7 @@ import { loadData, saveData, importData as importDataUtil } from '@/utils/storag
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 import { parseLine } from '@/utils/charMark'
-import { buildSchedule, type PaceOption } from '@/utils/schedule'
+import { buildSchedule, spreadReviews, type PaceOption } from '@/utils/schedule'
 
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
@@ -238,19 +238,38 @@ export const useLearningStore = defineStore('learning', () => {
     persist()
   }
 
-  function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string) {
+  // 重排：未学诗按 pace 排 schedule；已标记已学且待排复习的诗按 reviewPerDay 摊开 nextReviewDate
+  function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string, reviewPerDay = 3) {
     data.value.schedule = buildSchedule(unlearnedPoems, pace, today)
+
+    // 已标记已学的诗（有记录且 nextReviewDate 为占位）与艾宾浩斯到期诗
+    const marked: Record<string, string> = {}
+    const due: Record<string, string> = {}
+    for (const r of data.value.records) {
+      if (r.nextReviewDate === '2099-01-01') {
+        marked[r.poemId] = r.nextReviewDate
+      } else if (r.nextReviewDate <= today && r.reviewCount > 0) {
+        due[r.poemId] = r.nextReviewDate
+      }
+    }
+    const spread = spreadReviews(marked, due, reviewPerDay, today)
+    for (const [poemId, date] of Object.entries(spread)) {
+      const record = getRecord(poemId)
+      if (record && record.nextReviewDate === '2099-01-01') {
+        record.nextReviewDate = date
+      }
+    }
     persist()
   }
 
-  // 批量标记已学：创建最小学习记录（不触发复习调度），并从排程移除
+  // 批量标记已学：创建最小学习记录（nextReviewDate 占位，待重排分配复习日期），并从排程移除
   function markLearned(poemIds: string[]) {
     const today = new Date().toISOString().split('T')[0]
     for (const poemId of poemIds) {
       if (!getRecord(poemId)) {
         data.value.records.push({
           poemId, lastReviewDate: today, reviewCount: 0,
-          nextReviewDate: today, correctness: [], reciteCorrectness: [],
+          nextReviewDate: '2099-01-01', correctness: [], reciteCorrectness: [],
           masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
           charMarkStats: [], firstLearnDate: today,
         })
