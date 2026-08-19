@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSchedule, PACE_OPTIONS, type PaceOption } from '@/utils/schedule'
+import { buildSchedule, parsePace, PACE_OPTIONS, type PaceOption } from '@/utils/schedule'
 import type { Poem } from '@/types'
 
 const poems: Poem[] = [
@@ -54,5 +54,23 @@ describe('PACE_OPTIONS', () => {
   it('has 8 options covering perDay 1-5 and perDays 2/3/5', () => {
     expect(PACE_OPTIONS).toHaveLength(8)
     expect(PACE_OPTIONS.map(o => o.value)).toEqual(['1', '2', '3', '4', '5', 'every2', 'every3', 'every5'])
+  })
+})
+
+describe('parsePace', () => {
+  it('parses perDay values', () => {
+    expect(parsePace('1')).toEqual({ type: 'perDay', count: 1 })
+    expect(parsePace('5')).toEqual({ type: 'perDay', count: 5 })
+  })
+
+  it('parses perDays values', () => {
+    expect(parsePace('every2')).toEqual({ type: 'perDays', days: 2 })
+    expect(parsePace('every3')).toEqual({ type: 'perDays', days: 3 })
+    expect(parsePace('every5')).toEqual({ type: 'perDays', days: 5 })
+  })
+
+  it('falls back to default pace for invalid values', () => {
+    expect(parsePace('99')).toEqual({ type: 'perDay', count: 3 })
+    expect(parsePace('abc')).toEqual({ type: 'perDay', count: 3 })
   })
 })
