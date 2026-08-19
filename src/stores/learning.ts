@@ -243,6 +243,26 @@ export const useLearningStore = defineStore('learning', () => {
     persist()
   }
 
+  // 批量标记已学：创建最小学习记录（不触发复习调度），并从排程移除
+  function markLearned(poemIds: string[]) {
+    const today = new Date().toISOString().split('T')[0]
+    for (const poemId of poemIds) {
+      if (!getRecord(poemId)) {
+        data.value.records.push({
+          poemId, lastReviewDate: today, reviewCount: 0,
+          nextReviewDate: today, correctness: [], reciteCorrectness: [],
+          masteryLevel: '新', unproficient: false, unproficientCorrectStreak: 0,
+          charMarkStats: [], firstLearnDate: today,
+        })
+      }
+      // 从排程移除
+      if (poemId in data.value.schedule) {
+        delete data.value.schedule[poemId]
+      }
+    }
+    persist()
+  }
+
   function clearAllData() {
     data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], schedule: {}, settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
@@ -260,6 +280,6 @@ export const useLearningStore = defineStore('learning', () => {
     getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
     charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
-    getSchedule, setSchedule, clearSchedule, rebuildSchedule,
+    getSchedule, setSchedule, clearSchedule, rebuildSchedule, markLearned,
   }
 })
