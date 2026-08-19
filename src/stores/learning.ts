@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel, CharMarkMap, CharMarkStats } from '@/types'
+import type { LearningRecord, QuizResult, WrongEntry, UserData, MasteryLevel, CharMarkMap, CharMarkStats, Poem } from '@/types'
 import { loadData, saveData, importData as importDataUtil } from '@/utils/storage'
 import { calculateNextReview } from '@/utils/ebbinghaus'
 import { checkAutoUnmark } from '@/utils/unproficient'
 import { parseLine } from '@/utils/charMark'
+import { buildSchedule, type PaceOption } from '@/utils/schedule'
 
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
@@ -223,6 +224,25 @@ export const useLearningStore = defineStore('learning', () => {
     return record?.masteryLevel ?? '新'
   }
 
+  function getSchedule(): Record<string, string> {
+    return data.value.schedule
+  }
+
+  function setSchedule(schedule: Record<string, string>) {
+    data.value.schedule = schedule
+    persist()
+  }
+
+  function clearSchedule() {
+    data.value.schedule = {}
+    persist()
+  }
+
+  function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string) {
+    data.value.schedule = buildSchedule(unlearnedPoems, pace, today)
+    persist()
+  }
+
   function clearAllData() {
     data.value = { records: [], quizResults: [], reciteRecords: [], wrongBook: [], schedule: {}, settings: { enabledPoems: [], quizCount: 5, source: 'smart', quizTypes: ['fillBlank', 'nextLine'], selectedGrades: [] } }
     persist()
@@ -240,5 +260,6 @@ export const useLearningStore = defineStore('learning', () => {
     getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
     charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
+    getSchedule, setSchedule, clearSchedule, rebuildSchedule,
   }
 })
