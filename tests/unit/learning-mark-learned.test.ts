@@ -37,6 +37,29 @@ describe('markLearned', () => {
     expect(store.getRecord('p003')!.nextReviewDate).toBe('2026-08-21')
   })
 
+  it('rebuildSchedule re-spreads future-dated marked-learned poems on new quota', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002'])
+    // 先按每天 1 首摊开
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-20')
+    // 重排改为每天 2 首 → 未来未到期的重新摊开：p002（原08-20）重摊到 08-19，p001 不动（已到期）
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 2)
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-19')
+    expect(store.getRecord('p002')!.nextReviewDate).toBe('2026-08-19')
+  })
+
+  it('rebuildSchedule keeps already-due marked-learned poems untouched', () => {
+    const store = useLearningStore()
+    store.markLearned(['p001'])
+    // 手动把 p001 设为已到期（昨天）
+    store.getRecord('p001')!.nextReviewDate = '2026-08-18'
+    store.rebuildSchedule([], { type: 'perDay', count: 3 }, '2026-08-19', 1)
+    // 已到期的不重新摊，保持原日期
+    expect(store.getRecord('p001')!.nextReviewDate).toBe('2026-08-18')
+  })
+
   it('keeps existing records unchanged', () => {
     const store = useLearningStore()
     store.recordAnswer('p001', 'fillBlank', true)

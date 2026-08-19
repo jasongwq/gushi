@@ -12,6 +12,7 @@ const poemStore = usePoemStore()
 const learningStore = useLearningStore()
 
 const paceValue = ref('3')
+const reviewPerDayValue = ref('3')
 const showCalcTip = ref(false)
 
 const isLoading = computed(() => poemStore.loading)
@@ -69,9 +70,10 @@ function initExpand() {
 }
 
 function rebuild() {
-  if (unlearnedPoems.value.length === 0) return
+  const pendingReviews = learningStore.records.filter(r => r.nextReviewDate === '2099-01-01').length
+  if (unlearnedPoems.value.length === 0 && pendingReviews === 0) return
   const pace = parsePace(paceValue.value)
-  learningStore.rebuildSchedule(unlearnedPoems.value, pace, new Date().toISOString().slice(0, 10))
+  learningStore.rebuildSchedule(unlearnedPoems.value, pace, new Date().toISOString().slice(0, 10), parseInt(reviewPerDayValue.value, 10))
   initExpand()
 }
 
@@ -219,6 +221,16 @@ function goToDetail(poemId: string) {
       >批量配置</button>
     </div>
     <p class="text-xs text-gray-400 text-center mb-3">切换节奏后点「重排」生效</p>
+
+    <div class="flex items-center gap-2 mb-2">
+      <label class="flex-1 text-sm text-gray-500">每天复习数</label>
+      <select v-model="reviewPerDayValue" class="flex-1 p-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-indigo-300 focus:outline-none">
+        <option value="1">1 首</option>
+        <option value="3">3 首</option>
+        <option value="5">5 首</option>
+        <option value="10">10 首</option>
+      </select>
+    </div>
 
     <div v-if="showCalcTip" class="text-xs text-gray-500 bg-indigo-50 rounded-lg p-3 mb-4 leading-relaxed">
       复习计划按以下规则计算：

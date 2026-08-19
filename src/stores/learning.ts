@@ -242,12 +242,12 @@ export const useLearningStore = defineStore('learning', () => {
   function rebuildSchedule(unlearnedPoems: Poem[], pace: PaceOption, today: string, reviewPerDay = 3) {
     data.value.schedule = buildSchedule(unlearnedPoems, pace, today)
 
-    // 已标记已学的诗（有记录且 nextReviewDate 为占位）与艾宾浩斯到期诗
+    // 已标记已学的诗（占位、今天或未来未到期 → 待排）与艾宾浩斯到期诗
     const marked: Record<string, string> = {}
     const due: Record<string, string> = {}
     for (const r of data.value.records) {
-      if (r.nextReviewDate === '2099-01-01') {
-        marked[r.poemId] = r.nextReviewDate
+      if (r.nextReviewDate === '2099-01-01' || (r.reviewCount === 0 && r.nextReviewDate >= today)) {
+        marked[r.poemId] = '2099-01-01'
       } else if (r.nextReviewDate <= today && r.reviewCount > 0) {
         due[r.poemId] = r.nextReviewDate
       }
@@ -255,7 +255,7 @@ export const useLearningStore = defineStore('learning', () => {
     const spread = spreadReviews(marked, due, reviewPerDay, today)
     for (const [poemId, date] of Object.entries(spread)) {
       const record = getRecord(poemId)
-      if (record && record.nextReviewDate === '2099-01-01') {
+      if (record && (record.nextReviewDate === '2099-01-01' || (record.reviewCount === 0 && record.nextReviewDate >= today))) {
         record.nextReviewDate = date
       }
     }

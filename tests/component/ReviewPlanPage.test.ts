@@ -231,4 +231,22 @@ describe('ReviewPlanPage', () => {
     const confirmBtn = wrapper.findAll('button').find(b => b.text().includes('确认标记'))
     expect(confirmBtn!.text()).toContain('0')
   })
+
+  it('rebuild spreads marked-learned poems with review quota', async () => {
+    const store = useLearningStore()
+    store.markLearned(['p001', 'p002'])
+    const wrapper = mountPage()
+    await flushPromises()
+    // 切换复习数到 1 并重排
+    const reviewSelect = wrapper.findAll('select')[1]
+    await reviewSelect.setValue('1')
+    await wrapper.findAll('button').find(b => b.text().includes('重排'))!.trigger('click')
+    await flushPromises()
+    // p001 今天，p002 明天（每天1首，今天无艾宾浩斯到期）
+    const today = new Date().toISOString().slice(0, 10)
+    const r1 = store.getRecord('p001')!.nextReviewDate
+    const r2 = store.getRecord('p002')!.nextReviewDate
+    expect(r1).toBe(today)
+    expect(r2 > r1).toBe(true)
+  })
 })
