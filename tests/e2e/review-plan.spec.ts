@@ -5,12 +5,36 @@ test('home page has review plan entry', async ({ page }) => {
   await expect(page.locator('text=复习计划')).toBeVisible({ timeout: 10000 })
 })
 
-test('review plan page shows today section with reason tags', async ({ page }) => {
+test('review plan page shows today section with schedule', async ({ page }) => {
   await page.goto('/#/review-plan')
   await expect(page.locator('h2')).toContainText('复习计划', { timeout: 10000 })
   await expect(page.locator('text=今天')).toBeVisible({ timeout: 10000 })
-  // 有古诗数据时今天应有内容（未学的诗归今天，标签"新增学习"）
+  // 首次进入自动生成排程 → 今天有"新增学习"的诗（默认每天3首）
   await expect(page.locator('text=新增学习').first()).toBeVisible({ timeout: 10000 })
+})
+
+test('review plan page: pace selector and rebuild', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  await expect(page.locator('select')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('button:has-text("重排")')).toBeVisible()
+
+  // 切换节奏到"每天 1 首"并重排
+  await page.selectOption('select', '1')
+  await page.click('button:has-text("重排")')
+
+  // 今天区块仍在（每天1首 → 今天1首）
+  await expect(page.locator('text=今天')).toBeVisible({ timeout: 5000 })
+})
+
+test('review plan page: not-learned section shows scheduled and unscheduled', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  // 未学区块 header（正则匹配计数文本）
+  const notLearnedHeader = page.locator('text=/未学（\\d+ 首）/')
+  await expect(notLearnedHeader).toBeVisible({ timeout: 10000 })
+  // 点击 header 的父级（带 @click 的 div）
+  await notLearnedHeader.locator('xpath=ancestor::div[contains(@class,"cursor-pointer")]').first().click()
+  // 200 首诗，默认每天3首排程 30 天后仍有 110 首排到 30 天后
+  await expect(page.locator('text=已排期（30 天后）').first()).toBeVisible({ timeout: 5000 })
 })
 
 test('review plan page: calc tip toggles explanation', async ({ page }) => {

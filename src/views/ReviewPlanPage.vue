@@ -83,10 +83,7 @@ onMounted(async () => {
   initExpand()
 })
 
-// 底部未学区块分组
-const notScheduled = computed(() =>
-  unlearnedPoems.value.filter(p => !(p.id in schedule.value))
-)
+// 底部未学区块：排到 30 天后的未学诗
 const scheduledBeyond30 = computed(() =>
   unlearnedPoems.value.filter(p => {
     const date = schedule.value[p.id]
@@ -199,7 +196,7 @@ function goToDetail(poemId: string) {
         @click="showNotLearned = !showNotLearned"
       >
         <div class="flex items-center justify-between">
-          <div class="font-medium">未学（{{ notScheduled.length + scheduledBeyond30.length }} 首）</div>
+          <div class="font-medium">未学（{{ scheduledBeyond30.length }} 首）</div>
           <div class="text-xs text-gray-400">{{ showNotLearned ? '▴' : '▾' }}</div>
         </div>
         <div v-if="showNotLearned" class="mt-2 space-y-1">
@@ -207,18 +204,6 @@ function goToDetail(poemId: string) {
             <div class="text-xs text-gray-400 mb-1">已排期（30 天后）</div>
             <div
               v-for="p in scheduledBeyond30"
-              :key="p.id"
-              class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-              @click.stop="goToDetail(p.id)"
-            >
-              <span class="flex-1 text-sm">{{ p.title }}</span>
-              <span v-if="p.author" class="text-xs text-gray-400">{{ p.author }}</span>
-            </div>
-          </div>
-          <div v-if="notScheduled.length > 0" class="mt-1">
-            <div class="text-xs text-gray-400 mb-1">未排期</div>
-            <div
-              v-for="p in notScheduled"
               :key="p.id"
               class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
               @click.stop="goToDetail(p.id)"
