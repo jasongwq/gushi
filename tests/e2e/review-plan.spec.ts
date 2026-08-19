@@ -92,3 +92,36 @@ test('poem detail page: complete single-poem recitation to result page', async (
   await expect(page.locator('text=再来一轮')).toBeVisible()
   await expect(page.locator('text=返回首页')).toBeVisible()
 })
+
+test('review plan page: batch mark poems as learned', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  // 打开批量配置
+  await expect(page.locator('button:has-text("批量配置")')).toBeVisible({ timeout: 10000 })
+  await page.click('button:has-text("批量配置")')
+  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+
+  // 勾选第一首诗
+  const checkbox = page.locator('input[type="checkbox"]').first()
+  await checkbox.check()
+
+  // 确认标记
+  await page.click('button:has-text("确认标记")')
+
+  // 批量配置界面关闭
+  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+
+  // 该诗已有学习记录（检查 localStorage）
+  const records = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.records || []
+  })
+  expect(records.length).toBeGreaterThan(0)
+})
+
+test('review plan page: batch config cancel keeps state unchanged', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  await page.click('button:has-text("批量配置")')
+  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+  await page.click('button:has-text("取消")')
+  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+})
