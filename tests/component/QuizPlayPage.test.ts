@@ -6,10 +6,30 @@ import QuizPlayPage from '@/views/QuizPlayPage.vue'
 import type { QuizSession } from '@/types'
 
 // 避免 happy-dom 中真实 fetch('/poems.json') 产生未处理网络错误
+const mockPoemForRecite = {
+  id: 'p1', title: '静夜思', author: '李白', dynasty: '唐', grade: '一年级',
+  text: ['床前明月光', '疑是地上霜', '举头望明月', '低头思故乡'],
+  textType: '五言', yiwen: '译文',
+}
+
 vi.mock('@/stores/poem', () => ({
   usePoemStore: () => ({
     fetchPoems: vi.fn(() => Promise.resolve()),
-    getPoemById: vi.fn(() => undefined),
+    getPoemById: vi.fn(() => mockPoemForRecite),
+  }),
+}))
+
+vi.mock('@/stores/learning', () => ({
+  useLearningStore: () => ({
+    settings: { showYiwen: false },
+    updateSettings: vi.fn(),
+    charMarks: {},
+    toggleCharMark: vi.fn(),
+    initCharMarks: vi.fn(),
+    recordReciteWithCharMarks: vi.fn(),
+    // quiz store 的 submitRecitationResult 会调用这些
+    recordAnswer: vi.fn(),
+    recordDetail: vi.fn(),
   }),
 }))
 
@@ -193,5 +213,58 @@ describe('QuizPlayPage', () => {
     const wrapper = mountWithSession(session)
     const dots = wrapper.findAll('.dot')
     expect(dots[0].attributes('aria-label')).toContain('第1题')
+  })
+})
+
+describe('recite questions in mixed queue', () => {
+  const reciteSession = (overrides: Partial<QuizSession> = {}): QuizSession => ({
+    source: 'all',
+    quizTypes: ['recite', 'fillBlank'],
+    questions: [
+      { poemId: 'p1', quizType: 'recite', prompt: '静夜思', options: [], correctIndex: 0 },
+      { poemId: 'p2', quizType: 'fillBlank', prompt: '春眠不觉晓\n处处闻啼鸟', options: ['晓', '鸟', '花', '月', '风', '雨'], correctIndex: 0, blankPositions: [4] },
+    ],
+    currentIndex: 0,
+    answers: [],
+    startTime: '2026-01-01T00:00:00.000Z',
+    mode: 'quiz',
+    recitationResults: [],
+    ...overrides,
+  })
+
+  it('renders RecitationCard in revealMode for recite question', () => {
+    const wrapper = mountWithSession(reciteSession())
+    expect(wrapper.findComponent({ name: 'RecitationCard' }).exists()).toBe(true)
+    expect(wrapper.findComponent({ name: 'RecitationCard' }).props('revealMode')).toBe(true)
+  })
+
+  it('recite question submit pushes answer and advances', async () => {
+    const wrapper = mountWithSession(reciteSession())
+    const card = wrapper.findComponent({ name: 'RecitationCard' })
+    await card.vm.$emit('submit', {
+      poemId: 'p1',
+      overallStatus: 'mastered',
+      lines: [],
+      authorCorrect: null,
+      dynastyCorrect: null,
+      charMarks: {},
+    })
+    await wrapper.vm.$nextTick()
+    const quizStore = (wrapper.vm as any).quizStore
+    expect(quizStore.session.answers).toHaveLength(1)
+    expect(quizStore.session.answers[0].correct).toBe(true)
+    expect(quizStore.session.currentIndex).toBe(1)
+  })
+
+  it('recite question in reviewing shows revealStep 3', async () => {
+    const session = reciteSession({
+      currentIndex: 1,
+      answers: [{ questionIndex: 0, selectedIndex: 0, correct: true }],
+    })
+    const wrapper = mountWithSession(session)
+    await wrapper.findAll('.dot')[0].trigger('click')
+    await wrapper.vm.$nextTick()
+    const card = wrapper.findComponent({ name: 'RecitationCard' })
+    expect(card.props('revealStep')).toBe(3)
   })
 })

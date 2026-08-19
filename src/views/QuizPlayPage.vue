@@ -32,12 +32,21 @@
           @answer="selectAnswer"
         />
         <NextLineQuiz
-          v-else
+          v-else-if="currentDisplayQuestion.quizType === 'nextLine'"
           :key="'q-' + displayIndex"
           :question="currentDisplayQuestion"
           :selected-option="currentSelectedOption"
           :disabled="isReviewing"
           @answer="selectAnswer"
+        />
+        <RecitationCard
+          v-else-if="currentDisplayQuestion.quizType === 'recite' && currentPoem"
+          :key="'q-' + displayIndex"
+          :poem="currentPoem"
+          reveal-mode
+          :reveal-step="isReviewing ? 3 : revealStep"
+          @reveal-step-change="revealStep++"
+          @submit="onReciteSubmit"
         />
       </template>
     </div>
@@ -53,15 +62,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, onMounted } from 'vue'
+import { ref, computed, onUnmounted, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '@/stores/quiz'
 import { usePoemStore } from '@/stores/poem'
+import { useLearningStore } from '@/stores/learning'
 import FillBlankQuiz from '@/components/FillBlankQuiz.vue'
 import NextLineQuiz from '@/components/NextLineQuiz.vue'
+import RecitationCard from '@/components/RecitationCard.vue'
+import type { RecitationResult } from '@/types'
 
 const quizStore = useQuizStore()
 const poemStore = usePoemStore()
+const learningStore = useLearningStore()
 const router = useRouter()
 
 onMounted(() => poemStore.fetchPoems())
@@ -74,6 +87,29 @@ const currentDisplayQuestion = computed(() => {
   if (!quizStore.session) return null
   return quizStore.session.questions[displayIndex.value] ?? null
 })
+
+const revealStep = ref(0)
+
+// 切换题目时重置揭示状态
+watch(displayIndex, () => { revealStep.value = 0 })
+
+const currentPoem = computed(() => {
+  if (!currentDisplayQuestion.value) return null
+  return poemStore.getPoemById(currentDisplayQuestion.value.poemId) ?? null
+})
+
+function onReciteSubmit(result: RecitationResult) {
+  if (!quizStore.session || !currentDisplayQuestion.value) return
+  // 字级标记统计（与 RecitationPlayPage 一致）
+  const poem = poemStore.getPoemById(result.poemId)
+  if (poem) {
+    learningStore.recordReciteWithCharMarks(result.poemId, result.overallStatus === 'mastered', poem.text, result.charMarks)
+  }
+  quizStore.submitRecitationResult(result)
+  if (quizStore.isFinished) {
+    router.push({ name: 'quiz-result' })
+  }
+}
 
 // Whether we are viewing an already-answered question
 const isReviewing = computed(() => {
