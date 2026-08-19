@@ -25,6 +25,7 @@ const revealStep = computed(() => {
 
 function handleBackgroundClick() {
   if (!props.revealMode) return
+  if (props.disabled) return
   if (revealStep.value >= 3) return
   emit('revealStepChange')
 }

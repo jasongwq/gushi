@@ -101,10 +101,12 @@ const currentPoem = computed(() => {
 
 function onReciteSubmit(result: RecitationResult) {
   if (!quizStore.session || !currentDisplayQuestion.value) return
-  // 字级标记统计（与 RecitationPlayPage 一致）
-  const poem = poemStore.getPoemById(result.poemId)
-  if (poem) {
-    learningStore.recordReciteWithCharMarks(result.poemId, result.overallStatus === 'mastered', poem.text, result.charMarks)
+  // 字级标记统计（与 RecitationPlayPage 一致，仅在有字级标记时记录）
+  if (result.charMarks && Object.keys(result.charMarks).length > 0) {
+    const poem = poemStore.getPoemById(result.poemId)
+    if (poem) {
+      learningStore.recordReciteWithCharMarks(result.poemId, result.overallStatus === 'mastered', poem.text, result.charMarks)
+    }
   }
   quizStore.submitRecitationResult(result)
   if (quizStore.isFinished) {
