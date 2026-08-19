@@ -16,8 +16,10 @@ onMounted(async () => {
 
 const showCalcTip = ref(false)
 
+const isLoading = computed(() => poemStore.loading)
+
 const plan = computed(() => {
-  if (poemStore.enabledPoems.length === 0) return []
+  if (poemStore.poems.length === 0) return []
   return buildReviewPlan(learningStore.records, learningStore.wrongBook, poemStore.enabledPoems, 30)
 })
 
@@ -89,7 +91,10 @@ function goToDetail(poemId: string) {
       </ul>
     </div>
 
-    <div v-if="activeDays.length === 0" class="text-center text-gray-400 text-sm py-10">
+    <div v-if="isLoading" class="text-center text-gray-400 text-sm py-10">
+      加载中…
+    </div>
+    <div v-else-if="activeDays.length === 0" class="text-center text-gray-400 text-sm py-10">
       暂无复习安排
     </div>
 

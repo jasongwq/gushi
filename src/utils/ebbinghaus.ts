@@ -15,7 +15,9 @@ export function getMasteryLevel(reviewCount: number): MasteryLevel {
 }
 
 export function addDays(dateStr: string, days: number): string {
-  const date = new Date(dateStr + 'T00:00:00')
+  // 用正午时刻构造日期，避免本地时区偏移导致 toISOString 回退到前一天
+  // （如 UTC+8 下 '2026-08-19T00:00:00' 会变成 UTC 前一天的 16:00）
+  const date = new Date(dateStr + 'T12:00:00')
   date.setDate(date.getDate() + days)
   return date.toISOString().slice(0, 10)
 }
