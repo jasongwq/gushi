@@ -156,3 +156,29 @@ test('review plan page: batch config cancel keeps state unchanged', async ({ pag
   await page.click('button:has-text("取消")')
   await expect(page.locator('text=勾选已经背过的诗')).not.toBeVisible({ timeout: 5000 })
 })
+
+test('review plan page: grade checkbox selects all poems of that grade', async ({ page }) => {
+  await page.goto('/#/review-plan')
+  await page.click('button:has-text("标记已背篇目")')
+  await expect(page.locator('text=勾选已经背过的诗')).toBeVisible({ timeout: 5000 })
+
+  // 点击一年级（第一个年级）的复选框 → 全选该年级所有诗
+  const gradeCheckbox = page.locator('label:has-text("一年级（") input[type="checkbox"]').first()
+  await gradeCheckbox.check()
+
+  // 确认按钮计数显示选中数量 > 0
+  const confirmBtn = page.locator('button:has-text("确认标记")')
+  await expect(confirmBtn).toContainText('确认标记（', { timeout: 5000 })
+  const text = await confirmBtn.textContent()
+  const count = parseInt(text!.match(/（(\d+)）/)![1], 10)
+  expect(count).toBeGreaterThan(1)
+
+  // 确认标记 → 该年级诗都创建记录
+  await confirmBtn.click()
+  await expect(page.locator('text=勾选已经背过的诗')).not.toBeVisible({ timeout: 5000 })
+  const markedCount = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return (data.records || []).filter((r: any) => r.isMarkedLearned === true).length
+  })
+  expect(markedCount).toBe(count)
+})
