@@ -164,4 +164,34 @@ describe('ReviewPlanPage', () => {
     await poemItem.trigger('click')
     expect(pushMock).toHaveBeenCalledWith({ name: 'poem-detail', params: { id: 'p001' } })
   })
+
+  it('opens batch config and marks poems as learned', async () => {
+    const store = useLearningStore()
+    const wrapper = mountPage()
+    await flushPromises()
+    // 打开批量配置
+    await wrapper.findAll('button').find(b => b.text().includes('批量配置'))!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('批量配置已学')
+    // 勾选第一首并确认
+    const checkbox = wrapper.find('input[type="checkbox"]')
+    await checkbox.trigger('change')
+    await wrapper.findAll('button').find(b => b.text().includes('确认标记'))!.trigger('click')
+    await flushPromises()
+    // 该诗已有学习记录
+    const learned = store.records.filter(r => r.reviewCount === 0)
+    expect(learned.length).toBeGreaterThan(0)
+  })
+
+  it('cancel closes batch config without changes', async () => {
+    const store = useLearningStore()
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text().includes('批量配置'))!.trigger('click')
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text() === '取消')!.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('批量配置已学')
+    expect(store.records.length).toBe(0)
+  })
 })

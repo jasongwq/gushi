@@ -5,6 +5,7 @@ import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
 import { buildReviewPlan, type ReviewReason } from '@/utils/reviewPlan'
 import { PACE_OPTIONS, parsePace } from '@/utils/schedule'
+import type { Poem } from '@/types'
 
 const router = useRouter()
 const poemStore = usePoemStore()
@@ -96,6 +97,44 @@ const scheduledBeyond30 = computed(() =>
 
 const showNotLearned = ref(false)
 
+// 批量配置已学
+const showBatchConfig = ref(false)
+const selectedLearned = ref<Set<string>>(new Set())
+
+// 按年级分组的未学诗
+const unlearnedByGrade = computed(() => {
+  const map = new Map<string, Poem[]>()
+  for (const p of unlearnedPoems.value) {
+    const list = map.get(p.grade) ?? []
+    list.push(p)
+    map.set(p.grade, list)
+  }
+  return [...map.entries()]
+})
+
+function openBatchConfig() {
+  selectedLearned.value = new Set()
+  showBatchConfig.value = true
+}
+
+function toggleSelect(poemId: string) {
+  const next = new Set(selectedLearned.value)
+  if (next.has(poemId)) next.delete(poemId)
+  else next.add(poemId)
+  selectedLearned.value = next
+}
+
+function isSelected(poemId: string): boolean {
+  return selectedLearned.value.has(poemId)
+}
+
+function confirmMarkLearned() {
+  if (selectedLearned.value.size === 0) return
+  learningStore.markLearned([...selectedLearned.value])
+  showBatchConfig.value = false
+  initExpand()
+}
+
 const reasonLabels: Record<ReviewReason, string> = {
   due: '到期复习',
   unproficient: '不熟练',
@@ -141,6 +180,10 @@ function goToDetail(poemId: string) {
         class="px-3 py-2 bg-indigo-500 text-white rounded-lg text-sm cursor-pointer hover:bg-indigo-600 transition"
         @click="rebuild"
       >重排</button>
+      <button
+        class="px-3 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm cursor-pointer hover:bg-indigo-50 transition"
+        @click="openBatchConfig"
+      >批量配置</button>
     </div>
     <p class="text-xs text-gray-400 text-center mb-3">切换节奏后点「重排」生效</p>
 
@@ -217,5 +260,45 @@ function goToDetail(poemId: string) {
     </div>
 
     <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm mt-6">返回首页</router-link>
+
+    <!-- 批量配置已学 覆盖层 -->
+    <div v-if="showBatchConfig" class="fixed inset-0 z-50 bg-white overflow-y-auto">
+      <div class="max-w-md mx-auto p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-bold">批量配置已学</h3>
+          <button class="text-sm text-gray-500 cursor-pointer" @click="showBatchConfig = false">关闭</button>
+        </div>
+        <p class="text-xs text-gray-400 mb-3">勾选已学过的诗（已从学习队列移除，不再排入新增学习）</p>
+
+        <div v-for="[grade, list] in unlearnedByGrade" :key="grade" class="mb-4">
+          <div class="text-sm font-medium text-gray-500 mb-1">{{ grade }}（{{ list.length }} 首）</div>
+          <div class="space-y-1">
+            <label
+              v-for="p in list"
+              :key="p.id"
+              class="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+            >
+              <input type="checkbox" :checked="isSelected(p.id)" @change="toggleSelect(p.id)" class="w-4 h-4" />
+              <span class="flex-1 text-sm">{{ p.title }}</span>
+              <span v-if="p.author" class="text-xs text-gray-400">{{ p.author }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div v-if="unlearnedByGrade.length === 0" class="text-center text-gray-400 text-sm py-8">
+          没有未学的诗
+        </div>
+
+        <button
+          class="w-full p-4 text-white rounded-lg text-lg font-medium cursor-pointer hover:bg-indigo-600 transition mb-3"
+          :disabled="selectedLearned.size === 0"
+          :class="selectedLearned.size === 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-500'"
+          @click="confirmMarkLearned"
+        >确认标记（{{ selectedLearned.size }}）</button>
+        <button class="w-full p-3 bg-white border border-gray-200 rounded-lg text-gray-500 text-sm cursor-pointer hover:bg-gray-50 transition" @click="showBatchConfig = false">
+          取消
+        </button>
+      </div>
+    </div>
   </div>
 </template>
