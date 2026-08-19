@@ -106,7 +106,9 @@ test('self practice: mixed recite+nextLine completes to result page', async ({ p
 
   await expect(page.locator('h2')).toContainText('抽查结果')
   await expect(page.locator('.text-5xl')).toBeVisible()
-  // 背诵条目（无“你的答案”明细行）渲染在结果页
+  // 背诵条目（无“你的答案”明细行）渲染在结果页：5 首诗 × 2 题型 = 10 题，
+  // 5 道背诵题均熟练提交 → 恰好 5 行无“你的答案”明细、且都是绿色（✓ 熟练）
   const reciteRows = page.locator('.border-l-4').filter({ hasNotText: '你的答案' })
-  await expect(reciteRows.first()).toBeVisible()
+  await expect(reciteRows).toHaveCount(5)
+  await expect(reciteRows.filter({ hasNot: page.locator('.text-red-500') })).toHaveCount(5)
 })
