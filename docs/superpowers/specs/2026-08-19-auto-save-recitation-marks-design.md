@@ -42,6 +42,8 @@
 
 `submitRecitationResult`（quiz store）和 `PoemCardPage.saveResult` 中现有的 `recordDetail` 细节写入逻辑删除，避免与即时保存重复。整体调度 `recordAnswer` 保留。
 
+注：`recordReciteWithCharMarks`（字级标记快照 + 聚合统计）在提交路径保留——它位于页面层（`QuizPlayPage.onReciteSubmit`、`RecitationPlayPage.onSubmit`、`PoemCardPage.saveResult`），store 的 `submitRecitationResult` 本身不含该调用。
+
 ### 3. 按钮文字
 
 `RecitationCard.vue` 标题区两个按钮：
