@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePoemStore } from '@/stores/poem'
 import { useLearningStore } from '@/stores/learning'
@@ -127,6 +127,39 @@ function toggleSelect(poemId: string) {
 function isSelected(poemId: string): boolean {
   return selectedLearned.value.has(poemId)
 }
+
+// 年级全选状态：'all' | 'partial' | 'none'
+function gradeSelectionState(list: Poem[]): 'all' | 'partial' | 'none' {
+  const total = list.length
+  if (total === 0) return 'none'
+  const selectedCount = list.filter(p => selectedLearned.value.has(p.id)).length
+  if (selectedCount === total) return 'all'
+  if (selectedCount > 0) return 'partial'
+  return 'none'
+}
+
+function toggleGrade(list: Poem[]) {
+  const next = new Set(selectedLearned.value)
+  const allSelected = gradeSelectionState(list) === 'all'
+  for (const p of list) {
+    if (allSelected) next.delete(p.id)
+    else next.add(p.id)
+  }
+  selectedLearned.value = next
+}
+
+// 同步年级复选框的半选状态（Vue 不直接支持 :indeterminate 绑定）
+const gradeCheckboxRefs: Record<string, HTMLInputElement | null> = {}
+function setGradeCheckboxRef(el: unknown, grade: string) {
+  gradeCheckboxRefs[grade] = el as HTMLInputElement | null
+}
+
+watch(selectedLearned, () => {
+  for (const [grade, list] of unlearnedByGrade.value) {
+    const el = gradeCheckboxRefs[grade]
+    if (el) el.indeterminate = gradeSelectionState(list) === 'partial'
+  }
+}, { deep: true })
 
 function confirmMarkLearned() {
   if (selectedLearned.value.size === 0) return
@@ -271,7 +304,16 @@ function goToDetail(poemId: string) {
         <p class="text-xs text-gray-400 mb-3">勾选已学过的诗（已从学习队列移除，不再排入新增学习）</p>
 
         <div v-for="[grade, list] in unlearnedByGrade" :key="grade" class="mb-4">
-          <div class="text-sm font-medium text-gray-500 mb-1">{{ grade }}（{{ list.length }} 首）</div>
+          <label class="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1 cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="gradeSelectionState(list) === 'all'"
+              :ref="(el) => setGradeCheckboxRef(el, grade)"
+              @change="toggleGrade(list)"
+              class="w-4 h-4"
+            />
+            {{ grade }}（{{ list.length }} 首）
+          </label>
           <div class="space-y-1">
             <label
               v-for="p in list"

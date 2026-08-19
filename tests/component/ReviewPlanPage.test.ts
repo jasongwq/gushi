@@ -194,4 +194,41 @@ describe('ReviewPlanPage', () => {
     expect(wrapper.text()).not.toContain('批量配置已学')
     expect(store.records.length).toBe(0)
   })
+
+  it('grade checkbox selects all poems in that grade', async () => {
+    const store = useLearningStore()
+    const wrapper = mountPage()
+    await flushPromises()
+    // 打开批量配置
+    await wrapper.findAll('button').find(b => b.text().includes('批量配置'))!.trigger('click')
+    await flushPromises()
+    // 一年级有 p001、p002；点一年级年级复选框全选
+    const gradeLabels = wrapper.findAll('label').filter(l => l.text().includes('一年级（'))
+    expect(gradeLabels.length).toBeGreaterThan(0)
+    const gradeCheckbox = gradeLabels[0].find('input[type="checkbox"]')
+    await gradeCheckbox.trigger('change')
+    await flushPromises()
+    // 确认标记后，一年级的两首都被创建记录
+    await wrapper.findAll('button').find(b => b.text().includes('确认标记'))!.trigger('click')
+    await flushPromises()
+    const learned = store.records
+    expect(learned.some(r => r.poemId === 'p001')).toBe(true)
+    expect(learned.some(r => r.poemId === 'p002')).toBe(true)
+  })
+
+  it('grade checkbox unselects all poems when already all selected', async () => {
+    const wrapper = mountPage()
+    await flushPromises()
+    await wrapper.findAll('button').find(b => b.text().includes('批量配置'))!.trigger('click')
+    await flushPromises()
+    // 先全选一年级，再点一次取消
+    const gradeCheckbox = wrapper.findAll('label').filter(l => l.text().includes('一年级（'))[0].find('input[type="checkbox"]')
+    await gradeCheckbox.trigger('click')
+    await flushPromises()
+    await gradeCheckbox.trigger('click')
+    await flushPromises()
+    // 确认按钮应显示 0（无选中）
+    const confirmBtn = wrapper.findAll('button').find(b => b.text().includes('确认标记'))
+    expect(confirmBtn!.text()).toContain('0')
+  })
 })
