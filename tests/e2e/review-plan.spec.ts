@@ -95,10 +95,10 @@ test('poem detail page: complete single-poem recitation to result page', async (
 
 test('review plan page: batch mark poems as learned', async ({ page }) => {
   await page.goto('/#/review-plan')
-  // 打开批量配置
-  await expect(page.locator('button:has-text("批量配置")')).toBeVisible({ timeout: 10000 })
-  await page.click('button:has-text("批量配置")')
-  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+  // 打开标记已读篇目
+  await expect(page.locator('button:has-text("标记已读篇目")')).toBeVisible({ timeout: 10000 })
+  await page.click('button:has-text("标记已读篇目")')
+  await expect(page.locator('text=勾选已经读过的诗')).toBeVisible({ timeout: 5000 })
 
   // 勾选第一首诗
   const checkbox = page.locator('input[type="checkbox"]').first()
@@ -107,8 +107,8 @@ test('review plan page: batch mark poems as learned', async ({ page }) => {
   // 确认标记
   await page.click('button:has-text("确认标记")')
 
-  // 批量配置界面关闭
-  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+  // 标记已读篇目界面关闭
+  await expect(page.locator('text=勾选已经读过的诗')).not.toBeVisible({ timeout: 5000 })
 
   // 该诗已有学习记录（检查 localStorage）
   const records = await page.evaluate(() => {
@@ -125,12 +125,12 @@ test('review plan page: batch mark poems as learned', async ({ page }) => {
 test('review plan page: rebuild spreads marked-learned reviews', async ({ page }) => {
   await page.goto('/#/review-plan')
   // 批量标记第一首
-  await page.click('button:has-text("批量配置")')
-  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+  await page.click('button:has-text("标记已读篇目")')
+  await expect(page.locator('text=勾选已经读过的诗')).toBeVisible({ timeout: 5000 })
   const checkbox = page.locator('input[type="checkbox"]').first()
   await checkbox.check()
   await page.click('button:has-text("确认标记")')
-  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+  await expect(page.locator('text=勾选已经读过的诗')).not.toBeVisible({ timeout: 5000 })
 
   // 标记后该诗 nextReviewDate 为占位
   const placeholder = await page.evaluate(() => {
@@ -151,8 +151,8 @@ test('review plan page: rebuild spreads marked-learned reviews', async ({ page }
 
 test('review plan page: batch config cancel keeps state unchanged', async ({ page }) => {
   await page.goto('/#/review-plan')
-  await page.click('button:has-text("批量配置")')
-  await expect(page.locator('text=批量配置已学')).toBeVisible({ timeout: 5000 })
+  await page.click('button:has-text("标记已读篇目")')
+  await expect(page.locator('text=勾选已经读过的诗')).toBeVisible({ timeout: 5000 })
   await page.click('button:has-text("取消")')
-  await expect(page.locator('text=批量配置已学')).not.toBeVisible({ timeout: 5000 })
+  await expect(page.locator('text=勾选已经读过的诗')).not.toBeVisible({ timeout: 5000 })
 })

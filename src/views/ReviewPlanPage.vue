@@ -208,22 +208,13 @@ function goToDetail(poemId: string) {
     <p class="text-sm text-gray-500 text-center mb-4">未来 30 天复习安排</p>
 
     <div class="flex items-center gap-2 mb-2">
+      <label class="w-20 text-sm text-gray-500">每天学习数</label>
       <select v-model="paceValue" class="flex-1 p-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-indigo-300 focus:outline-none">
         <option v-for="opt in PACE_OPTIONS" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
-      <button
-        class="px-3 py-2 bg-indigo-500 text-white rounded-lg text-sm cursor-pointer hover:bg-indigo-600 transition"
-        @click="rebuild"
-      >重排</button>
-      <button
-        class="px-3 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm cursor-pointer hover:bg-indigo-50 transition"
-        @click="openBatchConfig"
-      >批量配置</button>
     </div>
-    <p class="text-xs text-gray-400 text-center mb-3">切换节奏后点「重排」生效</p>
-
     <div class="flex items-center gap-2 mb-2">
-      <label class="flex-1 text-sm text-gray-500">每天复习数</label>
+      <label class="w-20 text-sm text-gray-500">每天复习数</label>
       <select v-model="reviewPerDayValue" class="flex-1 p-2 border border-gray-200 rounded-lg text-sm bg-white focus:border-indigo-300 focus:outline-none">
         <option value="1">1 首</option>
         <option value="3">3 首</option>
@@ -231,6 +222,17 @@ function goToDetail(poemId: string) {
         <option value="10">10 首</option>
       </select>
     </div>
+    <div class="flex items-center gap-2 mb-2">
+      <button
+        class="flex-1 p-2 bg-indigo-500 text-white rounded-lg text-sm cursor-pointer hover:bg-indigo-600 transition"
+        @click="rebuild"
+      >重排</button>
+      <button
+        class="flex-1 p-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-sm cursor-pointer hover:bg-indigo-50 transition"
+        @click="openBatchConfig"
+      >标记已读篇目</button>
+    </div>
+    <p class="text-xs text-gray-400 text-center mb-3">切换参数后点「重排」生效</p>
 
     <div v-if="showCalcTip" class="text-xs text-gray-500 bg-indigo-50 rounded-lg p-3 mb-4 leading-relaxed">
       复习计划按以下规则计算：
@@ -306,14 +308,14 @@ function goToDetail(poemId: string) {
 
     <router-link :to="{ name: 'home' }" class="block text-center text-indigo-500 no-underline text-sm mt-6">返回首页</router-link>
 
-    <!-- 批量配置已学 覆盖层 -->
+    <!-- 标记已读篇目 覆盖层 -->
     <div v-if="showBatchConfig" class="fixed inset-0 z-50 bg-white overflow-y-auto">
       <div class="max-w-md mx-auto p-4">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold">批量配置已学</h3>
+          <h3 class="text-lg font-bold">标记已读篇目</h3>
           <button class="text-sm text-gray-500 cursor-pointer" @click="showBatchConfig = false">关闭</button>
         </div>
-        <p class="text-xs text-gray-400 mb-3">勾选已学过的诗（已从学习队列移除，不再排入新增学习）</p>
+        <p class="text-xs text-gray-400 mb-3">勾选已经读过的诗（从学习队列移除，不再排入新增学习）</p>
 
         <div v-for="[grade, list] in unlearnedByGrade" :key="grade" class="mb-4">
           <label class="flex items-center gap-2 text-sm font-medium text-gray-500 mb-1 cursor-pointer">
