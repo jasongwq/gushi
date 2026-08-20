@@ -182,3 +182,53 @@ test('review plan page: grade checkbox selects all poems of that grade', async (
   })
   expect(markedCount).toBe(count)
 })
+
+test('single poem: marking a line saves immediately and wrongbook repairs schedule', async ({ page }) => {
+  // 清空状态
+  await page.goto('/')
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+  await page.reload()
+  await page.waitForTimeout(300)
+
+  // 古诗详情 → 背诵复习
+  await page.goto('/#/poem/p001')
+  await page.waitForLoadState('load')
+  await expect(page.locator('button:has-text("背诵复习")')).toBeVisible({ timeout: 10000 })
+  await page.locator('button:has-text("背诵复习")').click()
+
+  // 标记一行「卡顿」（不点下一首）
+  await expect(page.locator('.recitation-card').locator('button:has-text("卡顿")').first()).toBeVisible({ timeout: 5000 })
+  await page.locator('.recitation-card').locator('button:has-text("卡顿")').first().click()
+
+  // 验证错题本已即时写入（localStorage）
+  const wb = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.wrongBook || []
+  })
+  const lineEntry = wb.find((w: any) => w.quizType === 'line' && w.note === '第1句:stuck')
+  expect(lineEntry).toBeTruthy()
+
+  // 验证待调度标记已写入
+  const pending = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('poem-quiz-pending-recite') || '[]')
+  )
+  expect(pending).toContain('p001')
+
+  // 直接离开（不点下一首），进入错题本
+  await page.goto('/#/wrong')
+  await page.waitForLoadState('load')
+  await page.waitForTimeout(300)
+
+  // 验证 recordAnswer 已补：records 含 p001（错误回答不增加 reviewCount，验证 quizResults 有 recite 条目）
+  const data = await page.evaluate(() => JSON.parse(localStorage.getItem('poem-quiz-data') || '{}'))
+  const record = data.records.find((r: any) => r.poemId === 'p001')
+  expect(record).toBeTruthy()
+  const reciteResult = data.quizResults.find((q: any) => q.poemId === 'p001' && q.quizType === 'recite')
+  expect(reciteResult).toBeTruthy()
+  expect(reciteResult.correct).toBe(false)
+  // 待调度列表已清空
+  const pendingAfter = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('poem-quiz-pending-recite') || '[]')
+  )
+  expect(pendingAfter).toEqual([])
+})
