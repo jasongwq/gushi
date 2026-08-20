@@ -7,6 +7,21 @@ import { checkAutoUnmark } from '@/utils/unproficient'
 import { parseLine } from '@/utils/charMark'
 import { buildSchedule, spreadReviews, PLACEHOLDER_DATE, type PaceOption } from '@/utils/schedule'
 
+const PENDING_RECITE_KEY = 'poem-quiz-pending-recite'
+
+function loadPendingReciteSchedules(): string[] {
+  try {
+    const raw = localStorage.getItem(PENDING_RECITE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function savePendingReciteSchedules(list: string[]) {
+  localStorage.setItem(PENDING_RECITE_KEY, JSON.stringify(list))
+}
+
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
 
@@ -29,6 +44,32 @@ export const useLearningStore = defineStore('learning', () => {
     if (current === 'fuzzy') charMarks.value[key] = 'wrong'
     else if (current === 'wrong') delete charMarks.value[key]
     else charMarks.value[key] = 'fuzzy'
+  }
+
+  // 待补整体背诵调度的 poemId 列表（localStorage 持久化，进错题本时补 recordAnswer）
+  const pendingReciteSchedules = ref<string[]>(loadPendingReciteSchedules())
+
+  function syncPendingReciteSchedule(poemId: string, hasIssue: boolean) {
+    if (hasIssue) {
+      if (!pendingReciteSchedules.value.includes(poemId)) {
+        pendingReciteSchedules.value.push(poemId)
+      }
+    } else {
+      pendingReciteSchedules.value = pendingReciteSchedules.value.filter(id => id !== poemId)
+    }
+    savePendingReciteSchedules(pendingReciteSchedules.value)
+  }
+
+  function unmarkPendingReciteSchedule(poemId: string) {
+    pendingReciteSchedules.value = pendingReciteSchedules.value.filter(id => id !== poemId)
+    savePendingReciteSchedules(pendingReciteSchedules.value)
+  }
+
+  function flushPendingReciteSchedules(): string[] {
+    const list = [...pendingReciteSchedules.value]
+    pendingReciteSchedules.value = []
+    savePendingReciteSchedules([])
+    return list
   }
 
   function getRecord(poemId: string): LearningRecord | undefined {
@@ -300,5 +341,6 @@ export const useLearningStore = defineStore('learning', () => {
     updateSettings, importUserData, exportUserData, clearAllData, persist,
     charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
     getSchedule, setSchedule, clearSchedule, rebuildSchedule, markLearned,
+    pendingReciteSchedules, syncPendingReciteSchedule, unmarkPendingReciteSchedule, flushPendingReciteSchedules,
   }
 })

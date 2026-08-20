@@ -386,3 +386,54 @@ describe('computed properties', () => {
     expect(store.wrongCount).toBe(1)
   })
 })
+
+describe('pendingReciteSchedules', () => {
+  it('syncPendingReciteSchedule adds poemId when hasIssue', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    expect(store.pendingReciteSchedules).toContain('p001')
+  })
+
+  it('syncPendingReciteSchedule removes poemId when no issue', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    store.syncPendingReciteSchedule('p001', false)
+    expect(store.pendingReciteSchedules).not.toContain('p001')
+  })
+
+  it('is idempotent when adding same poemId twice', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    store.syncPendingReciteSchedule('p001', true)
+    expect(store.pendingReciteSchedules).toEqual(['p001'])
+  })
+
+  it('persists to localStorage and restores on new store', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    const raw = localStorage.getItem('poem-quiz-pending-recite')
+    expect(raw).toBeTruthy()
+    expect(JSON.parse(raw!)).toEqual(['p001'])
+
+    // 新 store 实例从 localStorage 恢复
+    setActivePinia(createPinia())
+    const store2 = useLearningStore()
+    expect(store2.pendingReciteSchedules).toEqual(['p001'])
+  })
+
+  it('unmarkPendingReciteSchedule removes poemId', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    store.syncPendingReciteSchedule('p002', true)
+    store.unmarkPendingReciteSchedule('p001')
+    expect(store.pendingReciteSchedules).toEqual(['p002'])
+  })
+
+  it('flushPendingReciteSchedules returns and clears list', () => {
+    const store = useLearningStore()
+    store.syncPendingReciteSchedule('p001', true)
+    const flushed = store.flushPendingReciteSchedules()
+    expect(flushed).toEqual(['p001'])
+    expect(store.pendingReciteSchedules).toEqual([])
+  })
+})
