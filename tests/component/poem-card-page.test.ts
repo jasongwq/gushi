@@ -21,6 +21,7 @@ vi.mock('@/stores/poem', () => ({
 const recordAnswerMock = vi.fn()
 const recordDetailMock = vi.fn()
 const recordReciteWithCharMarksMock = vi.fn()
+const unmarkPendingReciteScheduleMock = vi.fn()
 
 vi.mock('@/stores/learning', () => ({
   useLearningStore: () => ({
@@ -29,6 +30,7 @@ vi.mock('@/stores/learning', () => ({
     recordAnswer: recordAnswerMock,
     recordDetail: recordDetailMock,
     recordReciteWithCharMarks: recordReciteWithCharMarksMock,
+    unmarkPendingReciteSchedule: unmarkPendingReciteScheduleMock,
     getRecord: vi.fn(() => undefined),
     records: [],
     wrongBook: [],
@@ -193,8 +195,7 @@ describe('PoemCardPage source filters and navigation', () => {
       charMarks: { '0-0': 'wrong' },
     })
     expect(recordAnswerMock).toHaveBeenCalledWith('p1', 'recite', false)
-    expect(recordDetailMock).toHaveBeenCalledWith('p1', 'line', '第1句:stuck')
-    expect(recordDetailMock).toHaveBeenCalledWith('p1', 'author')
+    expect(recordDetailMock).not.toHaveBeenCalled()
     expect(recordReciteWithCharMarksMock).toHaveBeenCalledWith('p1', false, expect.any(Array), { '0-0': 'wrong' })
   })
 

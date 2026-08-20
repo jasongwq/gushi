@@ -30,6 +30,7 @@ vi.mock('@/stores/learning', () => ({
     // quiz store 的 submitRecitationResult 会调用这些
     recordAnswer: vi.fn(),
     recordDetail: vi.fn(),
+    unmarkPendingReciteSchedule: vi.fn(),
   }),
 }))
 

@@ -273,7 +273,7 @@ describe('submitRecitationResult separation', () => {
     expect(record!.reviewCount).toBe(0)
   })
 
-  it('detail entries go to wrongBook via recordDetail', () => {
+  it('submitRecitationResult only schedules via recordAnswer, details saved by card', () => {
     const store = useQuizStore()
     const learningStore = useLearningStore()
     store.startRecitation('all', 3)
@@ -286,10 +286,17 @@ describe('submitRecitationResult separation', () => {
       dynastyCorrect: null,
       charMarks: {},
     })
-    // Should have line + author wrongBook entries
+    // recordAnswer 调用一次（quizResults 1 条）
+    const quizResults = learningStore.data.quizResults.filter(r => r.poemId === poemId)
+    expect(quizResults).toHaveLength(1)
+    expect(quizResults[0].quizType).toBe('recite')
+    expect(quizResults[0].correct).toBe(false)
+    // 不再写 line/author 细节（即时保存负责）
     const wbEntries = learningStore.wrongBook.filter(w => w.poemId === poemId)
-    expect(wbEntries.some(w => w.quizType === 'line')).toBe(true)
-    expect(wbEntries.some(w => w.quizType === 'author')).toBe(true)
+    expect(wbEntries.some(w => w.quizType === 'line')).toBe(false)
+    expect(wbEntries.some(w => w.quizType === 'author')).toBe(false)
+    // 正常提交移除待调度标记
+    expect(learningStore.pendingReciteSchedules).not.toContain(poemId)
   })
 })
 

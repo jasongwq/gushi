@@ -245,21 +245,8 @@ export const useQuizStore = defineStore('quiz', () => {
 
     // 整体只调用一次 recordAnswer
     learningStore.recordAnswer(result.poemId, 'recite', result.overallStatus === 'mastered')
-
-    // 细节用 recordDetail，不影响复习调度
-    if (result.overallStatus !== 'mastered') {
-      for (const line of result.lines) {
-        if (line.status === 'stuck' || line.status === 'forgot') {
-          learningStore.recordDetail(result.poemId, 'line', `第${line.lineIndex + 1}句:${line.status}`)
-        }
-      }
-    }
-    if (result.authorCorrect === false) {
-      learningStore.recordDetail(result.poemId, 'author')
-    }
-    if (result.dynastyCorrect === false) {
-      learningStore.recordDetail(result.poemId, 'dynasty')
-    }
+    // 正常提交，移除待调度标记（细节已由 RecitationCard 即时保存）
+    learningStore.unmarkPendingReciteSchedule(result.poemId)
 
     session.value.currentIndex++
     resetCurrentRecitation()
