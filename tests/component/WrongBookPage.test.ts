@@ -215,3 +215,23 @@ describe('WrongBookPage', () => {
     expect(wrapper.text()).not.toContain('第 1 句·卡顿')
   })
 })
+
+describe('进入错题本自动补调度', () => {
+  it('onMounted 对待调度列表补 recordAnswer(poemId, recite, false)', async () => {
+    const store = useLearningStore()
+    // 预置待调度标记
+    store.syncPendingReciteSchedule('p1', true)
+    const recordAnswerSpy = vi.spyOn(store, 'recordAnswer')
+    await mountPage()
+    expect(recordAnswerSpy).toHaveBeenCalledWith('p1', 'recite', false)
+    // 补完清空待调度列表
+    expect(store.pendingReciteSchedules).toEqual([])
+  })
+
+  it('无待调度时不调用 recordAnswer', async () => {
+    const store = useLearningStore()
+    const recordAnswerSpy = vi.spyOn(store, 'recordAnswer')
+    await mountPage()
+    expect(recordAnswerSpy).not.toHaveBeenCalled()
+  })
+})

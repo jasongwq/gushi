@@ -18,7 +18,14 @@ interface GroupedWrongEntry {
 const learningStore = useLearningStore()
 const poemStore = usePoemStore()
 
-onMounted(() => poemStore.fetchPoems())
+onMounted(() => {
+  poemStore.fetchPoems()
+  // 补未提交的整体背诵调度（关闭页面/直接返回时细节已即时入错题本，但 recordAnswer 未调用）
+  const pending = learningStore.flushPendingReciteSchedules()
+  for (const poemId of pending) {
+    learningStore.recordAnswer(poemId, 'recite', false)
+  }
+})
 
 const popupVisible = ref(false)
 const popupPoemId = ref('')
