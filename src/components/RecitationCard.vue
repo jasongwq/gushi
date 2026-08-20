@@ -88,7 +88,16 @@ function markForgot() {
 
 function setLineStatus(index: number, status: 'ok' | 'stuck' | 'forgot') {
   if (props.disabled) return
+  const prev = lineStatuses.value[index].status
   lineStatuses.value[index] = { lineIndex: index, status }
+  const note = `第${index + 1}句:${status}`
+  const prevNote = `第${index + 1}句:${prev}`
+  if (status === 'stuck' || status === 'forgot') {
+    if (prev !== status) learningStore.recordDetail(props.poem.id, 'line', note)
+  } else {
+    learningStore.removeWrongEntry(props.poem.id, 'line', prevNote)
+  }
+  syncPending()
 }
 
 function toggleAuthorCorrect() {
@@ -96,6 +105,12 @@ function toggleAuthorCorrect() {
   if (authorCorrect.value === null) authorCorrect.value = false
   else if (authorCorrect.value === false) authorCorrect.value = true
   else authorCorrect.value = null
+  if (authorCorrect.value === false) {
+    learningStore.recordDetail(props.poem.id, 'author')
+  } else {
+    learningStore.removeWrongEntry(props.poem.id, 'author')
+  }
+  syncPending()
 }
 
 function toggleDynastyCorrect() {
@@ -103,15 +118,29 @@ function toggleDynastyCorrect() {
   if (dynastyCorrect.value === null) dynastyCorrect.value = false
   else if (dynastyCorrect.value === false) dynastyCorrect.value = true
   else dynastyCorrect.value = null
+  if (dynastyCorrect.value === false) {
+    learningStore.recordDetail(props.poem.id, 'dynasty')
+  } else {
+    learningStore.removeWrongEntry(props.poem.id, 'dynasty')
+  }
+  syncPending()
 }
 
-const hasAnyIssue = computed(() => {
+// 显式计算当前是否有异常（computed 惰性求值，函数内同步调用需用显式计算）
+function computeHasIssue(): boolean {
   const hasLineIssue = lineStatuses.value.some(l => l.status !== 'ok')
   const hasAuthorIssue = authorCorrect.value === false
   const hasDynastyIssue = dynastyCorrect.value === false
   const hasCharIssue = Object.keys(learningStore.charMarks).length > 0
   return hasLineIssue || hasAuthorIssue || hasDynastyIssue || hasCharIssue
-})
+}
+
+// 同步待调度标记：有异常则记入，全清则移除
+function syncPending() {
+  learningStore.syncPendingReciteSchedule(props.poem.id, computeHasIssue())
+}
+
+const hasAnyIssue = computed(() => computeHasIssue())
 
 function submit() {
   if (props.disabled) return
@@ -147,13 +176,13 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
             :disabled="disabled"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', authorCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
             @click.stop="toggleAuthorCorrect"
-          >不会</button>
+          >作者不会</button>
           <button
             data-testid="btn-dynasty-forgot"
             :disabled="disabled"
             :class="['px-2 py-1 text-xs rounded border-2 cursor-pointer transition', dynastyCorrect === false ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-400']"
             @click.stop="toggleDynastyCorrect"
-          >不会</button>
+          >朝代不会</button>
         </div>
       </div>
       <p v-else class="text-gray-400 text-sm mt-1">作者 · ？？</p>

@@ -14,10 +14,13 @@ const mockPoem: Poem = {
   yiwen: '翻译内容',
 }
 
-const { toggleCharMarkMock, initCharMarksMock, charMarksMock } = vi.hoisted(() => ({
+const { toggleCharMarkMock, initCharMarksMock, charMarksMock, recordDetailMock, removeWrongEntryMock, syncPendingReciteScheduleMock } = vi.hoisted(() => ({
   toggleCharMarkMock: vi.fn(),
   initCharMarksMock: vi.fn(),
   charMarksMock: {} as Record<string, string>,
+  recordDetailMock: vi.fn(),
+  removeWrongEntryMock: vi.fn(),
+  syncPendingReciteScheduleMock: vi.fn(),
 }))
 
 vi.mock('@/stores/learning', () => ({
@@ -27,6 +30,9 @@ vi.mock('@/stores/learning', () => ({
     charMarks: charMarksMock,
     toggleCharMark: toggleCharMarkMock,
     initCharMarks: initCharMarksMock,
+    recordDetail: recordDetailMock,
+    removeWrongEntry: removeWrongEntryMock,
+    syncPendingReciteSchedule: syncPendingReciteScheduleMock,
   }),
 }))
 
@@ -75,6 +81,12 @@ function getAuthorDynastyButtons(wrapper: ReturnType<typeof mountCard>) {
     dynastyForgot: wrapper.find('[data-testid="btn-dynasty-forgot"]'),
   }
 }
+
+beforeEach(() => {
+  recordDetailMock.mockClear()
+  removeWrongEntryMock.mockClear()
+  syncPendingReciteScheduleMock.mockClear()
+})
 
 describe('RecitationCard', () => {
   it('renders poem title, author and dynasty', () => {
@@ -362,6 +374,80 @@ describe('RecitationCard', () => {
       // false → true: no issue
       await authorForgot!.trigger('click')
       expect(nextBtn.attributes('disabled')).toBeDefined()
+    })
+  })
+
+  describe('即时保存', () => {
+    beforeEach(() => {
+      Object.keys(charMarksMock).forEach(k => delete charMarksMock[k])
+    })
+
+    it('点「卡顿」立即调用 recordDetail 写错题本', async () => {
+      const wrapper = mountCard()
+      const stuckBtns = getStuckButtons(wrapper)
+      await stuckBtns[0].trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'line', '第1句:stuck')
+    })
+
+    it('点「不会」立即调用 recordDetail 写错题本', async () => {
+      const wrapper = mountCard()
+      const forgotBtns = getForgotButtons(wrapper)
+      await forgotBtns[2].trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'line', '第3句:forgot')
+    })
+
+    it('撤销「卡顿」调用 removeWrongEntry 移除错题本条目', async () => {
+      const wrapper = mountCard()
+      const stuckBtns = getStuckButtons(wrapper)
+      await stuckBtns[0].trigger('click')
+      await stuckBtns[0].trigger('click')
+      expect(removeWrongEntryMock).toHaveBeenCalledWith('test-1', 'line', '第1句:stuck')
+    })
+
+    it('点「作者不会」调用 recordDetail author', async () => {
+      const wrapper = mountCard()
+      const { authorForgot } = getAuthorDynastyButtons(wrapper)
+      await authorForgot!.trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'author')
+    })
+
+    it('点「朝代不会」调用 recordDetail dynasty', async () => {
+      const wrapper = mountCard()
+      const { dynastyForgot } = getAuthorDynastyButtons(wrapper)
+      await dynastyForgot!.trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'dynasty')
+    })
+
+    it('撤销作者调用 removeWrongEntry author', async () => {
+      const wrapper = mountCard()
+      const { authorForgot } = getAuthorDynastyButtons(wrapper)
+      await authorForgot!.trigger('click')
+      await authorForgot!.trigger('click') // false → true
+      expect(removeWrongEntryMock).toHaveBeenCalledWith('test-1', 'author')
+    })
+
+    it('首次标记任何异常时 syncPendingReciteSchedule(poemId, true)', async () => {
+      const wrapper = mountCard()
+      const stuckBtns = getStuckButtons(wrapper)
+      await stuckBtns[0].trigger('click')
+      expect(syncPendingReciteScheduleMock).toHaveBeenCalledWith('test-1', true)
+    })
+
+    it('撤销全清后 syncPendingReciteSchedule(poemId, false)', async () => {
+      const wrapper = mountCard()
+      const stuckBtns = getStuckButtons(wrapper)
+      await stuckBtns[0].trigger('click')
+      await stuckBtns[0].trigger('click')
+      expect(syncPendingReciteScheduleMock).toHaveBeenCalledWith('test-1', false)
+    })
+  })
+
+  describe('按钮文字', () => {
+    it('作者/朝代按钮分别显示「作者不会」「朝代不会」', () => {
+      const wrapper = mountCard()
+      const { authorForgot, dynastyForgot } = getAuthorDynastyButtons(wrapper)
+      expect(authorForgot.text()).toBe('作者不会')
+      expect(dynastyForgot.text()).toBe('朝代不会')
     })
   })
 
