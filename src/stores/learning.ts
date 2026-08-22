@@ -46,19 +46,28 @@ export const useLearningStore = defineStore('learning', () => {
 
   function persist() { saveData(data.value) }
 
-  // 当前会话的字级标记（不持久化，切换诗时重置）
-  const charMarks = ref<CharMarkMap>({})
+  // 字级标记按诗隔离（不持久化，切换诗时仅清当前诗的标记）
+  const charMarks = ref<Record<string, CharMarkMap>>({})
 
-  function initCharMarks() {
-    charMarks.value = {}
+  function getCharMarks(poemId: string): CharMarkMap {
+    return charMarks.value[poemId] ?? {}
   }
 
-  function toggleCharMark(lineIndex: number, charIndex: number) {
+  function initCharMarks(poemId: string) {
+    const next = { ...charMarks.value }
+    delete next[poemId]
+    charMarks.value = next
+  }
+
+  function toggleCharMark(poemId: string, lineIndex: number, charIndex: number) {
+    const currentMap = charMarks.value[poemId] ?? {}
+    const next = { ...currentMap }
     const key = `${lineIndex}-${charIndex}`
-    const current = charMarks.value[key]
-    if (current === 'fuzzy') charMarks.value[key] = 'wrong'
-    else if (current === 'wrong') delete charMarks.value[key]
-    else charMarks.value[key] = 'fuzzy'
+    const current = next[key]
+    if (current === 'fuzzy') next[key] = 'wrong'
+    else if (current === 'wrong') delete next[key]
+    else next[key] = 'fuzzy'
+    charMarks.value = { ...charMarks.value, [poemId]: next }
   }
 
   // 待补整体背诵调度的 poemId 列表（localStorage 持久化，进错题本时补 recordAnswer）
@@ -380,7 +389,7 @@ export const useLearningStore = defineStore('learning', () => {
     data, records, wrongBook, settings, reviewDueCount, unproficientCount, wrongCount,
     getRecord, getOrCreateRecord, getMasteryLevel, recordAnswer, recordDetail, recordRecite, toggleUnproficient, removeWrongEntry,
     updateSettings, importUserData, exportUserData, clearAllData, persist,
-    charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
+    charMarks, getCharMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
     getSchedule, setSchedule, clearSchedule, rebuildSchedule, markLearned,
     pendingReciteSchedules, syncPendingReciteSchedule, unmarkPendingReciteSchedule, flushPendingReciteSchedules,
     pendingCharMarks, syncPendingCharMarks, flushPendingCharMarks, aggregateCharMarks,

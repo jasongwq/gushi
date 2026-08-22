@@ -10,29 +10,43 @@ beforeEach(() => {
 describe('char marks in learning store', () => {
   it('initCharMarks resets current char marks', () => {
     const store = useLearningStore()
-    store.toggleCharMark(0, 2)
-    expect(Object.keys(store.charMarks)).toHaveLength(1)
-    store.initCharMarks()
-    expect(Object.keys(store.charMarks)).toHaveLength(0)
+    store.toggleCharMark('p001', 0, 2)
+    expect(Object.keys(store.getCharMarks('p001'))).toHaveLength(1)
+    store.initCharMarks('p001')
+    expect(Object.keys(store.getCharMarks('p001'))).toHaveLength(0)
   })
 
   it('toggleCharMark cycles ok→fuzzy→wrong→ok', () => {
     const store = useLearningStore()
     // ok → fuzzy
-    store.toggleCharMark(0, 0)
-    expect(store.charMarks['0-0']).toBe('fuzzy')
+    store.toggleCharMark('p001', 0, 0)
+    expect(store.getCharMarks('p001')['0-0']).toBe('fuzzy')
     // fuzzy → wrong
-    store.toggleCharMark(0, 0)
-    expect(store.charMarks['0-0']).toBe('wrong')
+    store.toggleCharMark('p001', 0, 0)
+    expect(store.getCharMarks('p001')['0-0']).toBe('wrong')
     // wrong → ok (删除条目)
-    store.toggleCharMark(0, 0)
-    expect(store.charMarks['0-0']).toBeUndefined()
+    store.toggleCharMark('p001', 0, 0)
+    expect(store.getCharMarks('p001')['0-0']).toBeUndefined()
   })
 
   it('toggleCharMark key format is lineIndex-charIndex', () => {
     const store = useLearningStore()
-    store.toggleCharMark(2, 5)
-    expect(store.charMarks['2-5']).toBe('fuzzy')
+    store.toggleCharMark('p001', 2, 5)
+    expect(store.getCharMarks('p001')['2-5']).toBe('fuzzy')
+  })
+
+  it('char marks are isolated per poem', () => {
+    const store = useLearningStore()
+    store.toggleCharMark('p001', 0, 0)
+    store.toggleCharMark('p002', 0, 1)
+    expect(store.getCharMarks('p001')['0-0']).toBe('fuzzy')
+    expect(store.getCharMarks('p001')['0-1']).toBeUndefined()
+    expect(store.getCharMarks('p002')['0-1']).toBe('fuzzy')
+    expect(store.getCharMarks('p002')['0-0']).toBeUndefined()
+    // 只清 p001，p002 保留
+    store.initCharMarks('p001')
+    expect(Object.keys(store.getCharMarks('p001'))).toHaveLength(0)
+    expect(Object.keys(store.getCharMarks('p002'))).toHaveLength(1)
   })
 
   it('recordReciteWithCharMarks saves charMarks snapshot and updates stats', () => {

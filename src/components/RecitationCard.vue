@@ -45,9 +45,9 @@ const lineStatuses = ref<{ lineIndex: number; status: 'ok' | 'stuck' | 'forgot' 
 const authorCorrect = ref<boolean | null>(null)
 const dynastyCorrect = ref<boolean | null>(null)
 
-// 当前诗的字级标记状态（直接读 store）
+// 当前诗的字级标记状态（按诗隔离，直接读 store）
 function charMarkClass(lineIndex: number, charIdx: number): string {
-  const status = learningStore.charMarks[`${lineIndex}-${charIdx}`]
+  const status = learningStore.getCharMarks(props.poem.id)[`${lineIndex}-${charIdx}`]
   if (status === 'fuzzy') return 'char-fuzzy'
   if (status === 'wrong') return 'char-wrong'
   return ''
@@ -55,9 +55,9 @@ function charMarkClass(lineIndex: number, charIdx: number): string {
 
 function toggleCharMark(lineIndex: number, charIdx: number) {
   if (props.disabled) return
-  learningStore.toggleCharMark(lineIndex, charIdx)
+  learningStore.toggleCharMark(props.poem.id, lineIndex, charIdx)
   // 字级标记即时保存：同步待聚合快照 + 待调度标记
-  learningStore.syncPendingCharMarks(props.poem.id, { ...learningStore.charMarks })
+  learningStore.syncPendingCharMarks(props.poem.id, { ...learningStore.getCharMarks(props.poem.id) })
   syncPending()
 }
 
@@ -67,8 +67,8 @@ watch(() => props.poem.id, () => {
   authorCorrect.value = null
   dynastyCorrect.value = null
   showYiwen.value = learningStore.settings.showYiwen ?? false
-  // 切换古诗时重置当前会话的字级标记
-  learningStore.initCharMarks()
+  // 切换古诗时仅重置当前诗的字级标记（不影响其他诗）
+  learningStore.initCharMarks(props.poem.id)
 })
 
 // 整首熟练：所有行都ok，作者/朝代都没标错
@@ -134,7 +134,7 @@ function computeHasIssue(): boolean {
   const hasLineIssue = lineStatuses.value.some(l => l.status !== 'ok')
   const hasAuthorIssue = authorCorrect.value === false
   const hasDynastyIssue = dynastyCorrect.value === false
-  const hasCharIssue = Object.keys(learningStore.charMarks).length > 0
+  const hasCharIssue = Object.keys(learningStore.getCharMarks(props.poem.id)).length > 0
   return hasLineIssue || hasAuthorIssue || hasDynastyIssue || hasCharIssue
 }
 
@@ -159,11 +159,11 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       : [],
     authorCorrect: authorCorrect.value,
     dynastyCorrect: dynastyCorrect.value,
-    charMarks: { ...learningStore.charMarks },
+    charMarks: { ...learningStore.getCharMarks(props.poem.id) },
   }
   emit('submit', result)
-  // 提交后重置当前会话的字级标记
-  learningStore.initCharMarks()
+  // 提交后重置当前诗的字级标记（不影响其他诗）
+  learningStore.initCharMarks(props.poem.id)
 }
 </script>
 

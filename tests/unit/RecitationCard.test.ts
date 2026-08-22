@@ -28,7 +28,7 @@ vi.mock('@/stores/learning', () => ({
   useLearningStore: () => ({
     settings: { showYiwen: false },
     updateSettings: vi.fn(),
-    charMarks: charMarksMock,
+    getCharMarks: () => charMarksMock,
     toggleCharMark: toggleCharMarkMock,
     initCharMarks: initCharMarksMock,
     recordDetail: recordDetailMock,
@@ -626,7 +626,7 @@ describe('RecitationCard', () => {
       const wrapper = mountCard()
       const charSpans = wrapper.findAll('.char-mark')
       await charSpans[2].trigger('click')
-      expect(toggleCharMarkMock).toHaveBeenCalledWith(0, 2)
+      expect(toggleCharMarkMock).toHaveBeenCalledWith('test-1', 0, 2)
     })
 
     it('switching poem calls initCharMarks to reset session marks', async () => {

@@ -23,7 +23,7 @@ vi.mock('@/stores/learning', () => ({
   useLearningStore: () => ({
     settings: { showYiwen: false },
     updateSettings: vi.fn(),
-    charMarks: {},
+    getCharMarks: () => ({}),
     toggleCharMark: vi.fn(),
     initCharMarks: vi.fn(),
     recordReciteWithCharMarks: vi.fn(),
