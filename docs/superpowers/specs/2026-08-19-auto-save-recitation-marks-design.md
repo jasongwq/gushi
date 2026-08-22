@@ -83,8 +83,23 @@
 
 ## 范围限制
 
-- **字级标记（点单个汉字）不在本次即时保存范围**：它走 `recordReciteWithCharMarks` 的「快照 + 聚合统计」模型，即时保存需要新增增量增/减统计接口，且会话内高亮恢复语义复杂。字级标记维持提交时快照。
+- **字级标记（点单个汉字）采用方案 A：临时会话标记 + 进错题本时聚合**（而非增量增/减统计接口）。点字/撤销字时把当前字级标记快照写入 localStorage 待聚合列表（`pendingCharMarks: { poemId: CharMarkMap }`）；正常提交（下一首/熟练/完全不会）时 `recordReciteWithCharMarks` 聚合后清除该 poemId 的 pending；进错题本时对剩余 pending 诗聚合到 `charMarkStats` 后清除。同一批标记只聚合一次（提交过的不会在错题本重复聚合），避免 `charMarkStats` 重复计数。
 - 错题本标签、结果页详情文案维持现状（`作者`/`朝代`、`作者不正确`/`朝代不正确`）。
+
+### 1c. 字级标记待聚合（方案 A）
+
+`pendingCharMarks`（localStorage，`poem-quiz-pending-char-marks`）：
+
+| 时机 | 操作 |
+|------|------|
+| 点字/撤销字（`toggleCharMark` 后） | 将当前 `charMarks` 快照写入 `pendingCharMarks[poemId]`；快照为空则删除该键 |
+| 点字后有异常 | 同时 `syncPendingReciteSchedule(poemId, true)`（字级标记计入待调度，进错题本补 recordAnswer） |
+| 正常提交（三个页面调 `recordReciteWithCharMarks`） | 聚合后删除 `pendingCharMarks[poemId]` |
+| 进错题本（`WrongBookPage` onMounted） | 对剩余 `pendingCharMarks` 每首诗聚合到 `charMarkStats` 后删除 |
+
+**进错题本聚合复用 `recordReciteWithCharMarks` 的聚合逻辑**（`parseLine` 解析 + fuzzyCount/wrongCount 增量），但**不追加 reciteCorrectness、不推 reciteRecords 快照、不触调度**——只聚合统计。实现为内部辅助 `aggregateCharMarks(poemId, poemText, charMarkMap)`，`recordReciteWithCharMarks` 与进错题本路径共用。
+
+**去重保障**：提交路径聚合后删除 pending，错题本只处理未提交的 pending——同批标记不会聚合两次。撤销全清后快照为空，pending 键删除，无残留。`syncPending` 在字级标记变化后同样调用（`computeHasIssue` 已含 `hasCharIssue`）。
 
 ## 测试计划
 
@@ -104,9 +119,12 @@
   - `syncPendingReciteSchedule` 有异常标记 / 全清移除
   - `recordAnswer`（recite 路径）后自动移除待调度标记
   - 待调度列表 localStorage 持久化（初始化读、变化写）
+  - `pendingCharMarks`：点字写入快照 / 撤销清空删除键 / localStorage 持久化 / 进错题本聚合后清除
+  - `recordReciteWithCharMarks` 聚合后清除 `pendingCharMarks[poemId]`（去重）
 - `tests/unit/quiz-store-full.test.ts`：更新 detail 相关测试——submit 只调度 recordAnswer 一次，不再写 detail
 - `tests/component/poem-card-page.test.ts`：更新 saveResult 断言——recordDetail 不再被调用（由组件即时保存），recordAnswer/recordReciteWithCharMarks 保留
-- `tests/component/WrongBookPage.test.ts`：onMounted 时对待调度列表补 recordAnswer
+- `tests/component/WrongBookPage.test.ts`：onMounted 时对待调度列表补 recordAnswer；对 pendingCharMarks 聚合字级统计
+- `tests/unit/RecitationCard.test.ts`：点字后 `syncPendingReciteSchedule(poemId, true)` 且 `pendingCharMarks[poemId]` 快照同步
 
 ### e2e
 
@@ -121,9 +139,9 @@
 
 | 文件 | 改动 |
 |------|------|
-| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字；待调度标记同步 |
-| `src/stores/learning.ts` | `pendingReciteSchedules` + localStorage 持久化 + `syncPendingReciteSchedule`；recordAnswer recite 路径移除待调度 |
-| `src/views/WrongBookPage.vue` | onMounted 补未提交的 recordAnswer 调度 |
+| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字；待调度标记同步；点字同步 pendingCharMarks |
+| `src/stores/learning.ts` | `pendingReciteSchedules` + localStorage 持久化 + `syncPendingReciteSchedule`；`pendingCharMarks` 待聚合；`aggregateCharMarks` 辅助；recordReciteWithCharMarks 聚合后清 pending；recordAnswer recite 路径移除待调度 |
+| `src/views/WrongBookPage.vue` | onMounted 补未提交的 recordAnswer 调度 + 聚合 pendingCharMarks |
 | `src/stores/quiz.ts` | `submitRecitationResult` 移除重复 recordDetail |
 | `src/views/PoemCardPage.vue` | `saveResult` 移除重复 recordDetail |
 | `tests/unit/RecitationCard.test.ts` | 即时保存单测 + 按钮文字断言 + 待调度标记 |
