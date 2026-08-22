@@ -95,3 +95,120 @@ test('wrong book: 弹窗内卡顿行有行级颜色标注', async ({ page }) => 
   // 字词高亮共存
   await expect(page.locator('.popup-char-wrong')).toBeVisible()
 })
+
+test('wrong book: 家长抽查标记错字后不点下一首，返回进错题本角标可见', async ({ page }) => {
+  test.setTimeout(60000)
+  // 清空状态
+  await page.goto('/')
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+  await page.reload()
+  await page.waitForTimeout(300)
+
+  // 家长抽查 → 点卡片展开进入背诵
+  await page.click('text=家长抽查')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 5000 })
+
+  // 标记第一个汉字为 wrong（dispatchEvent 绕过滚动区视口检查；点击两次：fuzzy → wrong）
+  const charSpans = page.locator('.recitation-card .char-mark')
+  await expect(charSpans.first()).toBeVisible({ timeout: 5000 })
+  await charSpans.first().dispatchEvent('click')
+  await charSpans.first().dispatchEvent('click')
+  await expect(charSpans.first()).toHaveClass(/char-wrong/)
+
+  // 不点下一首，直接返回浏览模式
+  await page.locator('[data-testid="recite-back"]').dispatchEvent('click')
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
+
+  // 进错题本：错字角标应可见（字级标记已即时保存 + 进错题本聚合）
+  // 先回首页再导航，避免从 poem-card 硬跳转 hash 路由的边界情况
+  await page.goto('/')
+  await page.goto('/#/wrong')
+  await page.waitForTimeout(500)
+  await expect(page.locator('h2', { hasText: '错题本' }).first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('[data-testid="char-summary"]')).toContainText('错1字', { timeout: 5000 })
+})
+
+test('wrong book: 家长抽查切到下一首，上一首的字级标记不残留', async ({ page }) => {
+  test.setTimeout(60000)
+  // 清空状态
+  await page.goto('/')
+  await page.evaluate(() => { localStorage.clear(); sessionStorage.clear() })
+  await page.reload()
+  await page.waitForTimeout(300)
+
+  // 家长抽查 → 点卡片展开进入背诵
+  await page.click('text=家长抽查')
+  await expect(page.locator('.poem-card-page').first()).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 5000 })
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 5000 })
+
+  // 标记第一个汉字为 wrong（dispatchEvent 绕过滚动区视口检查；点击两次：fuzzy → wrong）
+  const charSpans = page.locator('.recitation-card .char-mark')
+  await expect(charSpans.first()).toBeVisible({ timeout: 5000 })
+  await charSpans.first().dispatchEvent('click')
+  await charSpans.first().dispatchEvent('click')
+  await expect(charSpans.first()).toHaveClass(/char-wrong/)
+
+  // 记录被标记的诗 ID（通过本地存储确认第一首诗的标记已按诗隔离保存）
+  const markedPoem = await page.evaluate(() => {
+    const data = JSON.parse(localStorage.getItem('poem-quiz-data') || '{}')
+    return data.records?.[0]?.poemId ?? null
+  })
+
+  // 返回浏览模式 → 横向拖拽切到下一首 → 再点卡片进入背诵
+  await page.locator('[data-testid="recite-back"]').dispatchEvent('click')
+  await expect(page.locator('.poem-card').first()).toBeVisible({ timeout: 3000 })
+
+  const swiperBox = await page.locator('.card-swiper').first().boundingBox()
+  expect(swiperBox).toBeTruthy()
+  const startX = swiperBox!.x + swiperBox!.width * 0.7
+  const endX = swiperBox!.x + swiperBox!.width * 0.2
+  const y = swiperBox!.y + swiperBox!.height / 2
+  await page.mouse.move(startX, y)
+  await page.mouse.down()
+  for (let i = 1; i <= 20; i++) {
+    await page.mouse.move(startX + (endX - startX) * (i / 20), y)
+  }
+  await page.mouse.up()
+  await page.waitForTimeout(600)
+
+  // 诊断：滑动后当前 active slide 的标题
+  const activeTitle = await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    return active?.textContent?.slice(0, 30) ?? 'N/A'
+  })
+  console.log(`滑动后 active slide 文本: ${activeTitle}`)
+
+  // 点当前卡片进入背诵模式
+  await page.evaluate(() => {
+    const active = document.querySelector('.swiper-slide-active') as HTMLElement
+    const rect = active.getBoundingClientRect()
+    const el = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    ;(el as HTMLElement)?.click()
+  })
+  await expect(page.locator('.recitation-card').first()).toBeVisible({ timeout: 5000 })
+
+  // 诊断：背诵模式当前 active slide 内的诗标题（限定 active，避免匹配隐藏 slide）
+  const reciteTitle = await page.locator('.swiper-slide-active .recitation-card h2').textContent()
+  console.log(`背诵模式当前诗标题: ${reciteTitle}`)
+
+  // 当前 active 诗不应有被标记的 wrong 字（上一首的标记不残留）
+  // 限定 active slide：Swiper 会渲染所有 slide 的 DOM，但只有 active 可见
+  const wrongChars = await page.locator('.swiper-slide-active .recitation-card .char-wrong').count()
+  expect(wrongChars).toBe(0)
+  console.log(`active 诗 wrong 标记数: ${wrongChars}（上一首诗: ${markedPoem}）`)
+})
