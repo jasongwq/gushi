@@ -25,6 +25,14 @@ onMounted(() => {
   for (const poemId of pending) {
     learningStore.recordAnswer(poemId, 'recite', false)
   }
+  // 聚合未提交的字级标记（提交过的已由 recordReciteWithCharMarks 清除，不会重复）
+  const pendingChars = learningStore.flushPendingCharMarks()
+  for (const [poemId, marks] of Object.entries(pendingChars)) {
+    const poem = poemStore.getPoemById(poemId)
+    if (poem && Object.keys(marks).length > 0) {
+      learningStore.aggregateCharMarks(poemId, poem.text, marks)
+    }
+  }
 })
 
 const popupVisible = ref(false)

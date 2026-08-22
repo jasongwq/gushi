@@ -56,6 +56,9 @@ function charMarkClass(lineIndex: number, charIdx: number): string {
 function toggleCharMark(lineIndex: number, charIdx: number) {
   if (props.disabled) return
   learningStore.toggleCharMark(lineIndex, charIdx)
+  // 字级标记即时保存：同步待聚合快照 + 待调度标记
+  learningStore.syncPendingCharMarks(props.poem.id, { ...learningStore.charMarks })
+  syncPending()
 }
 
 // 当 poem 变化时重置状态

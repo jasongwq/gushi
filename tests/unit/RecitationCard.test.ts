@@ -14,13 +14,14 @@ const mockPoem: Poem = {
   yiwen: '翻译内容',
 }
 
-const { toggleCharMarkMock, initCharMarksMock, charMarksMock, recordDetailMock, removeWrongEntryMock, syncPendingReciteScheduleMock } = vi.hoisted(() => ({
+const { toggleCharMarkMock, initCharMarksMock, charMarksMock, recordDetailMock, removeWrongEntryMock, syncPendingReciteScheduleMock, syncPendingCharMarksMock } = vi.hoisted(() => ({
   toggleCharMarkMock: vi.fn(),
   initCharMarksMock: vi.fn(),
   charMarksMock: {} as Record<string, string>,
   recordDetailMock: vi.fn(),
   removeWrongEntryMock: vi.fn(),
   syncPendingReciteScheduleMock: vi.fn(),
+  syncPendingCharMarksMock: vi.fn(),
 }))
 
 vi.mock('@/stores/learning', () => ({
@@ -33,6 +34,7 @@ vi.mock('@/stores/learning', () => ({
     recordDetail: recordDetailMock,
     removeWrongEntry: removeWrongEntryMock,
     syncPendingReciteSchedule: syncPendingReciteScheduleMock,
+    syncPendingCharMarks: syncPendingCharMarksMock,
   }),
 }))
 
@@ -86,6 +88,8 @@ beforeEach(() => {
   recordDetailMock.mockClear()
   removeWrongEntryMock.mockClear()
   syncPendingReciteScheduleMock.mockClear()
+  syncPendingCharMarksMock.mockClear()
+  Object.keys(charMarksMock).forEach(k => delete charMarksMock[k])
 })
 
 describe('RecitationCard', () => {
@@ -439,6 +443,15 @@ describe('RecitationCard', () => {
       await stuckBtns[0].trigger('click')
       await stuckBtns[0].trigger('click')
       expect(syncPendingReciteScheduleMock).toHaveBeenCalledWith('test-1', false)
+    })
+
+    it('点字后同步 pendingCharMarks 快照并 syncPendingReciteSchedule(poemId, true)', async () => {
+      charMarksMock['0-2'] = 'wrong'
+      const wrapper = mountCard()
+      const charSpans = wrapper.findAll('.char-mark')
+      await charSpans[2].trigger('click')
+      expect(syncPendingCharMarksMock).toHaveBeenCalledWith('test-1', expect.objectContaining({ '0-2': 'wrong' }))
+      expect(syncPendingReciteScheduleMock).toHaveBeenCalledWith('test-1', true)
     })
   })
 

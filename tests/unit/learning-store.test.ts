@@ -437,3 +437,70 @@ describe('pendingReciteSchedules', () => {
     expect(store.pendingReciteSchedules).toEqual([])
   })
 })
+
+describe('pendingCharMarks', () => {
+  it('syncPendingCharMarks writes snapshot to localStorage and reads back', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    const raw = localStorage.getItem('poem-quiz-pending-char-marks')
+    expect(raw).toBeTruthy()
+    expect(JSON.parse(raw!)).toEqual({ p001: { '0-2': 'wrong' } })
+    // 新 store 实例恢复
+    setActivePinia(createPinia())
+    const store2 = useLearningStore()
+    expect(store2.pendingCharMarks).toEqual({ p001: { '0-2': 'wrong' } })
+  })
+
+  it('empty snapshot removes the poemId key', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    store.syncPendingCharMarks('p001', {})
+    expect(store.pendingCharMarks).toEqual({})
+    const raw = localStorage.getItem('poem-quiz-pending-char-marks')
+    expect(JSON.parse(raw!)).toEqual({})
+  })
+
+  it('flushPendingCharMarks returns and clears list', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    const flushed = store.flushPendingCharMarks()
+    expect(flushed).toEqual({ p001: { '0-2': 'wrong' } })
+    expect(store.pendingCharMarks).toEqual({})
+  })
+
+  it('aggregateCharMarks increments charMarkStats counts', () => {
+    const store = useLearningStore()
+    // 先造记录
+    store.recordAnswer('p001', 'recite', false)
+    const poemText = ['床前明月光']
+    store.aggregateCharMarks('p001', poemText, { '0-2': 'wrong', '0-3': 'fuzzy' })
+    const stats = store.getRecord('p001')!.charMarkStats
+    expect(stats).toHaveLength(2)
+    const wrongStat = stats.find(s => s.charIndex === 2)!
+    expect(wrongStat.char).toBe('明')
+    expect(wrongStat.wrongCount).toBe(1)
+    const fuzzyStat = stats.find(s => s.charIndex === 3)!
+    expect(fuzzyStat.fuzzyCount).toBe(1)
+    // 再聚合同字 → 计数累加
+    store.aggregateCharMarks('p001', poemText, { '0-2': 'wrong' })
+    expect(store.getRecord('p001')!.charMarkStats.find(s => s.charIndex === 2)!.wrongCount).toBe(2)
+  })
+
+  it('recordReciteWithCharMarks clears pendingCharMarks for poem', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    store.recordReciteWithCharMarks('p001', false, ['床前明月光'], { '0-2': 'wrong' })
+    expect(store.pendingCharMarks).toEqual({})
+  })
+
+  it('aggregateCharMarks does not append reciteCorrectness or push reciteRecords', () => {
+    const store = useLearningStore()
+    store.recordAnswer('p001', 'recite', false)
+    const reciteRecordsBefore = store.data.reciteRecords.length
+    store.aggregateCharMarks('p001', ['床前明月光'], { '0-2': 'wrong' })
+    expect(store.data.reciteRecords).toHaveLength(reciteRecordsBefore)
+    const record = store.getRecord('p001')!
+    // recordAnswer(false) 不追加 reciteCorrectness；aggregate 也不应追加
+    expect(record.reciteCorrectness).toEqual([])
+  })
+})

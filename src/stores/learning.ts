@@ -22,6 +22,21 @@ function savePendingReciteSchedules(list: string[]) {
   localStorage.setItem(PENDING_RECITE_KEY, JSON.stringify(list))
 }
 
+const PENDING_CHAR_MARKS_KEY = 'poem-quiz-pending-char-marks'
+
+function loadPendingCharMarks(): Record<string, CharMarkMap> {
+  try {
+    const raw = localStorage.getItem(PENDING_CHAR_MARKS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function savePendingCharMarks(map: Record<string, CharMarkMap>) {
+  localStorage.setItem(PENDING_CHAR_MARKS_KEY, JSON.stringify(map))
+}
+
 export const useLearningStore = defineStore('learning', () => {
   const data = ref<UserData>(loadData())
 
@@ -70,6 +85,52 @@ export const useLearningStore = defineStore('learning', () => {
     pendingReciteSchedules.value = []
     savePendingReciteSchedules([])
     return list
+  }
+
+  // 待聚合的字级标记（localStorage 持久化，进错题本/提交时聚合到 charMarkStats）
+  const pendingCharMarks = ref<Record<string, CharMarkMap>>(loadPendingCharMarks())
+
+  function syncPendingCharMarks(poemId: string, snapshot: CharMarkMap) {
+    if (Object.keys(snapshot).length > 0) {
+      pendingCharMarks.value = { ...pendingCharMarks.value, [poemId]: snapshot }
+    } else {
+      const next = { ...pendingCharMarks.value }
+      delete next[poemId]
+      pendingCharMarks.value = next
+    }
+    savePendingCharMarks(pendingCharMarks.value)
+  }
+
+  function flushPendingCharMarks(): Record<string, CharMarkMap> {
+    const map = { ...pendingCharMarks.value }
+    pendingCharMarks.value = {}
+    savePendingCharMarks({})
+    return map
+  }
+
+  // 聚合字级标记到 charMarkStats（只增量统计，不追加 reciteCorrectness / 不推 reciteRecords / 不触调度）
+  function aggregateCharMarks(poemId: string, poemText: string[], charMarksSnapshot: CharMarkMap) {
+    const record = getOrCreateRecord(poemId)
+    const stats = [...record.charMarkStats]
+    const lineSegments = poemText.map(line => parseLine(line))
+    for (const [key, status] of Object.entries(charMarksSnapshot)) {
+      const [lineIndex, charIndex] = key.split('-').map(Number)
+      const seg = lineSegments[lineIndex]?.find(s => s.type === 'char' && s.charIdx === charIndex)
+      const char = seg?.char ?? ''
+      const existing = stats.find(s => s.poemId === poemId && s.lineIndex === lineIndex && s.charIndex === charIndex)
+      if (existing) {
+        if (status === 'fuzzy') existing.fuzzyCount++
+        else existing.wrongCount++
+      } else {
+        stats.push({
+          poemId, lineIndex, charIndex, char,
+          fuzzyCount: status === 'fuzzy' ? 1 : 0,
+          wrongCount: status === 'wrong' ? 1 : 0,
+        })
+      }
+    }
+    record.charMarkStats = stats
+    persist()
   }
 
   function getRecord(poemId: string): LearningRecord | undefined {
@@ -183,30 +244,10 @@ export const useLearningStore = defineStore('learning', () => {
 
     // 聚合统计
     if (Object.keys(charMarksSnapshot).length > 0) {
-      const record = getRecord(poemId)
-      if (record) {
-        const stats = [...record.charMarkStats]
-        // 用 parseLine 将诗行拆成段，通过 charIdx 找到对应汉字（跳过标点）
-        const lineSegments = poemText.map(line => parseLine(line))
-        for (const [key, status] of Object.entries(charMarksSnapshot)) {
-          const [lineIndex, charIndex] = key.split('-').map(Number)
-          const seg = lineSegments[lineIndex]?.find(s => s.type === 'char' && s.charIdx === charIndex)
-          const char = seg?.char ?? ''
-          const existing = stats.find(s => s.poemId === poemId && s.lineIndex === lineIndex && s.charIndex === charIndex)
-          if (existing) {
-            if (status === 'fuzzy') existing.fuzzyCount++
-            else existing.wrongCount++
-          } else {
-            stats.push({
-              poemId, lineIndex, charIndex, char,
-              fuzzyCount: status === 'fuzzy' ? 1 : 0,
-              wrongCount: status === 'wrong' ? 1 : 0,
-            })
-          }
-        }
-        record.charMarkStats = stats
-      }
+      aggregateCharMarks(poemId, poemText, charMarksSnapshot)
     }
+    // 正常提交，清除待聚合字级标记（同批标记只聚合一次）
+    syncPendingCharMarks(poemId, {})
     persist()
   }
 
@@ -342,5 +383,6 @@ export const useLearningStore = defineStore('learning', () => {
     charMarks, initCharMarks, toggleCharMark, recordReciteWithCharMarks, getCharMarkStats,
     getSchedule, setSchedule, clearSchedule, rebuildSchedule, markLearned,
     pendingReciteSchedules, syncPendingReciteSchedule, unmarkPendingReciteSchedule, flushPendingReciteSchedules,
+    pendingCharMarks, syncPendingCharMarks, flushPendingCharMarks, aggregateCharMarks,
   }
 })

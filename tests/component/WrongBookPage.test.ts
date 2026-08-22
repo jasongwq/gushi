@@ -234,4 +234,15 @@ describe('进入错题本自动补调度', () => {
     await mountPage()
     expect(recordAnswerSpy).not.toHaveBeenCalled()
   })
+
+  it('onMounted 聚合 pendingCharMarks 到 charMarkStats 并清除', async () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p1', { '0-0': 'wrong' })
+    await mountPage()
+    // 聚合后 record 有 charMarkStats
+    const record = store.getRecord('p1')
+    expect(record).toBeTruthy()
+    expect(record!.charMarkStats.some(s => s.charIndex === 0 && s.wrongCount > 0)).toBe(true)
+    expect(store.pendingCharMarks).toEqual({})
+  })
 })
