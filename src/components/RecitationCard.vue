@@ -303,7 +303,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 
 <style scoped>
 .reveal-dashed {
-  border: 2px dashed var(--color-primary, #6366f1);
+  border: 2px dashed #4f46e5;
   border-radius: 12px;
   padding: 16px;
   background: #fafbff;

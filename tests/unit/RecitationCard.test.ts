@@ -716,6 +716,13 @@ describe('RecitationCard', () => {
       expect(mountReveal(2).text()).toContain('点击查看正文')
       expect(mountReveal(3).text()).not.toContain('点击查看')
     })
+
+    it('disabled: clicking background does not emit reveal-step-change', async () => {
+      const wrapper = mountReveal(0)
+      await wrapper.setProps({ disabled: true })
+      await wrapper.find('.recitation-card h2').trigger('click')
+      expect(wrapper.emitted('revealStepChange')).toBeUndefined()
+    })
   })
 
   describe('disabled prop', () => {
