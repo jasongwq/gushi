@@ -101,6 +101,9 @@ function togglePopup(poemId: string) {
           <p :class="item.isCorrect ? 'text-green-600' : 'text-red-500'">你的答案：{{ item.selected }}</p>
           <p v-if="!item.isCorrect" class="text-green-600">正确答案：{{ item.correct }}</p>
         </div>
+        <div v-else class="mt-1 text-xs">
+          <p :class="item.isCorrect ? 'text-green-600' : 'text-red-500'">{{ item.selected }}</p>
+        </div>
       </div>
     </div>
 
