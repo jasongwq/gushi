@@ -625,6 +625,296 @@ def do_validate() -> bool:
     return all_ok
 
 
+# ── Pinyin (拼音) fetching from cngwzj.com (古文之家) ──────────────────────
+
+# Greek-letter markers used by cngwzj to flag polyphonic characters
+_PINYIN_SPECIAL_MAP = {
+    "γ": "g",
+    "β": "b",
+    "ω": "o",
+}
+
+# 多音字校正表：古诗语境下 pypinyin 默认读音不正确时的正确读音
+_PINYIN_POLYPHONE = {
+    "曲": "qǔ", "教": "jiào", "看": "kàn", "见": "xiàn", "为": "wèi",
+    "还": "huán", "应": "yīng", "朝": "zhāo", "更": "gèng", "单": "chán",
+    "燕": "yān", "塞": "sài", "骑": "qí", "没": "mò", "觉": "jué",
+    "亡": "wú", "降": "xiáng", "兴": "xìng", "笼": "lóng", "数": "shù",
+    "解": "xiè",  # 不解藏踪迹
+}
+
+
+def _pinpy_suspicious(py: str) -> bool:
+    """Return True if a pinyin string looks broken/incomplete.
+
+    A valid pinyin must contain at least one vowel (including toned vowels).
+    """
+    if not py:
+        return False
+    return not re.search(r"[aeiouāáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü]", py)
+
+# cngwzj 朝代分类名映射
+_CNGWZJ_DYNASTY_MAP = {
+    "唐": "TangDai", "盛唐": "TangDai", "初唐": "TangDai", "中唐": "TangDai", "晚唐": "TangDai",
+    "北宋": "SongDai", "南宋": "SongDai", "宋": "SongDai",
+    "清": "QingDai",
+    "明": "MingDai",
+    "元": "YuanDai",
+    "现代": "XianDai",
+    "先秦": "XianQin", "春秋": "XianQin", "战国": "XianQin",
+    "汉": "LiangHan", "两汉": "LiangHan", "西汉": "LiangHan", "东汉": "LiangHan",
+    "三国": "LiangHan", "三国·魏": "LiangHan", "东晋": "NanBeiChao", "北朝": "NanBeiChao",
+    "南北朝": "NanBeiChao", "南朝": "NanBeiChao",
+}
+
+# 小学生必背古诗词合集页（cngwzj），覆盖大部分小学必背篇目
+_CNGWZJ_COLLECTION_PAGES = [
+    "https://www.cngwzj.com/tangshi300/3396.html",  # 2025新版小学必备古诗词文言文
+    "https://www.cngwzj.com/tangshi300/3392.html",  # 小学课外古诗词第一辑
+    "https://www.cngwzj.com/tangshi300/3393.html",  # 小学课外古诗词第二辑
+    "https://www.cngwzj.com/tangshi300/3399.html",  # 小学课外古诗词第三辑
+    "https://www.cngwzj.com/tangshi300/3400.html",  # 小学课外古诗词第四辑
+    "https://www.cngwzj.com/BBGShiCi/3401.html",    # 小学课外古诗词第五辑
+]
+
+
+def _cngwzj_norm_title(title: str) -> str:
+    """Normalise a poem title for cross-site matching."""
+    t = re.sub(r"[《》\s]", "", title)
+    t = re.sub(r"[·.。，、:：]", "", t)
+    t = t.replace("节选", "")
+    t = t.replace("其一", "1").replace("其二", "2").replace("其三", "3")
+    t = t.replace("其四", "4").replace("其五", "5").replace("其六", "6")
+    t = t.replace("其七", "7").replace("其八", "8")
+    t = re.sub(r"[（(](.+?)[）)]", r"\1", t)  # 括号内容并入（含序号）
+    t = t.replace("一", "1").replace("二", "2").replace("三", "3")
+    t = t.replace("四", "4").replace("五", "5").replace("六", "6")
+    t = t.replace("七", "7").replace("八", "8").replace("九", "9")
+    return t
+
+
+def _cngwzj_title_score(our: str, cg: str) -> int:
+    """Score how well our title matches a cngwzj collection title (0-100)."""
+    n1, n2 = _cngwzj_norm_title(our), _cngwzj_norm_title(cg)
+    if not n1 or not n2:
+        return 0
+    if n1 == n2:
+        return 100
+    # 数字化标题：去掉序号后再比较
+    n1_base = re.sub(r"\d", "", n1)
+    n2_base = re.sub(r"\d", "", n2)
+    if n1_base and n1_base == n2_base:
+        return 95  # 同题不同序号（如 悯农 vs 悯农2）
+    # 包含关系：需要较长标题才可信，避免 "绝句" 匹配 "绝句漫兴"
+    if len(n1_base) >= 3 and (n1_base in n2_base or n2_base in n1_base):
+        return 80
+    # 同前缀
+    if len(n1_base) >= 3 and n2_base.startswith(n1_base):
+        return 70
+    return 0
+
+
+def build_cngwzj_url_index() -> dict[str, list[str]]:
+    """Build a normalised-title -> list of URLs index from cngwzj collection pages.
+
+    Multiple URLs per title are kept (e.g. two different 绝句), so the caller
+    must disambiguate by comparing poem text.
+    Returns: {normalised_title: [url1, url2, ...]}
+    """
+    index: dict[str, list[str]] = {}
+    for page_url in _CNGWZJ_COLLECTION_PAGES:
+        try:
+            resp = requests.get(page_url, headers=HEADERS, timeout=15, verify=False)
+            resp.encoding = "utf-8"
+            if resp.status_code != 200:
+                continue
+            soup = BeautifulSoup(resp.text, "html.parser")
+            for a in soup.find_all("a", href=re.compile(r"pygushi/")):
+                title = a.get_text(strip=True)
+                href = a["href"]
+                m = re.match(r"\d+\.《(.+?)》", title)
+                if m:
+                    core = _cngwzj_norm_title(m.group(1))
+                    index.setdefault(core, [])
+                    if href not in index[core]:
+                        index[core].append(href)
+        except Exception:
+            continue
+    return index
+
+
+def _extract_hanzi(text_lines: list[str]) -> str:
+    """Join poem text lines into a pure-hanzi sequence."""
+    return "".join(ch for line in text_lines for ch in line if "\u4e00" <= ch <= "\u9fff")
+
+
+def fetch_pinyin_from_cngwzj(url: str, expected_hanzi: str = "") -> list[dict[str, str]] | None:
+    """Fetch and parse pinyin from a cngwzj poem page.
+
+    Args:
+        url: cngwzj poem page URL.
+        expected_hanzi: if provided, the page's hanzi sequence must contain it
+            (>= 60% of the expected characters) for the result to be accepted.
+    Returns a list of {char, pinyin} pairs, or None if unavailable/mismatched.
+    """
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=15, verify=False)
+        resp.encoding = "utf-8"
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        text = soup.get_text()
+
+        # Locate 拼音全文 section
+        idx = text.find("拼音全文：")
+        if idx < 0:
+            idx = text.find("拼音全文:")
+        if idx < 0:
+            return None
+        start = idx + 5
+        # Skip the disclaimer line (我们坚持...)
+        skip = text.find("），", start)
+        if 0 <= skip < start + 200:
+            start = skip + 2
+        py_section = text[start:start + 2000]
+        for end_marker in ["注：以上标红", "参考书籍", "（诵读仅作参考", "(诵读仅作参考", "下载《"]:
+            end = text.find(end_marker, start)
+            if 0 < end < start + 2000:
+                py_section = text[start:end]
+                break
+
+        # Parse "pinyin汉字" pairs BEFORE replacing markers, so we can detect
+        # characters whose pinyin uses Greek-letter markers (polyphonic flags).
+        pairs: list[dict[str, str]] = []
+        marked_chars: set[str] = set()  # chars whose pinyin carried a marker
+        pinyin_re = re.compile(r"([a-zāáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜüńňǹêγβω]+)([\u4e00-\u9fff])")
+        for m in pinyin_re.finditer(py_section):
+            raw_py = m.group(1)
+            ch = m.group(2)
+            if re.search(r"[γβω]", raw_py):
+                marked_chars.add(ch)
+                raw_py = re.sub(r"[γβω]", "", raw_py)
+            pairs.append({"char": ch, "pinyin": raw_py})
+        if len(pairs) < 4:
+            return None
+
+        # Content verification & trimming: locate expected hanzi sequence
+        # within the page's char sequence, trimming the title/author prefix.
+        if expected_hanzi:
+            chars = [p["char"] for p in pairs]
+            expected_list = list(expected_hanzi)
+            # Sliding window: find earliest window matching the expected sequence
+            best_start, best_ratio = -1, 0.0
+            for start in range(max(0, len(chars) - len(expected_list) + 1)):
+                window = chars[start:start + len(expected_list)]
+                matched = sum(1 for a, b in zip(window, expected_list) if a == b)
+                ratio = matched / len(expected_list)
+                if ratio > best_ratio:
+                    best_ratio, best_start = ratio, start
+                if ratio >= 0.9:
+                    break
+            if best_ratio >= 0.6 and best_start >= 0:
+                pairs = pairs[best_start:best_start + len(expected_list)]
+            else:
+                return None
+
+        # Correct marked/suspicious pinyin using pypinyin + polyphone table.
+        from pypinyin import pinyin as _py, Style as _Style
+        for p in pairs:
+            ch, site_py = p["char"], p["pinyin"]
+            if ch in _PINYIN_POLYPHONE:
+                p["pinyin"] = _PINYIN_POLYPHONE[ch]
+            elif ch in marked_chars or _pinpy_suspicious(site_py):
+                gen = _py(ch, style=_Style.TONE, errors="default")
+                p["pinyin"] = gen[0][0] if gen and gen[0] else site_py
+        return pairs
+    except Exception:
+        return None
+
+
+def pinyin_with_pypinyin(text_lines: list[str]) -> list[dict[str, str]]:
+    """Generate pinyin ruby pairs using pypinyin (fallback)."""
+    from pypinyin import pinyin, Style
+
+    pairs: list[dict[str, str]] = []
+    for line in text_lines:
+        for ch in line:
+            if "\u4e00" <= ch <= "\u9fff":
+                py = pinyin(ch, style=Style.TONE, errors="default")
+                pairs.append({"char": ch, "pinyin": py[0][0] if py and py[0] else ch})
+            else:
+                # Keep punctuation as a pair with empty pinyin (so front-end can render)
+                pairs.append({"char": ch, "pinyin": ""})
+    return pairs
+
+
+def do_fetch_pinyin() -> None:
+    """Fetch pinyin for all poems from cngwzj, falling back to pypinyin."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    print("Building cngwzj URL index from collection pages...")
+    url_index = build_cngwzj_url_index()
+    print(f"cngwzj index: {len(url_index)} titles")
+
+    # Also build a per-dynasty list fallback index by scanning list pages lazily
+    # (skipped unless a poem is not found in collection index)
+
+    stats = {"cngwzj": 0, "pypinyin": 0, "missing": 0}
+    missing_list = []
+
+    for meta in POEMS:
+        seq = meta["seq"]
+        cache_id = f"p{seq:03d}"
+        cached = load_cache(seq)
+        if not cached:
+            continue
+        if cached.get("pinyin"):
+            print(f"  {cache_id}: pinyin already cached, skipping")
+            continue
+
+        title = meta["title"]
+        text_lines = cached.get("text", [])
+        if not text_lines:
+            stats["missing"] += 1
+            missing_list.append(f"{cache_id}:{title}")
+            continue
+
+        # Strategy 1: match against cngwzj collection index
+        pinyin_pairs = None
+        norm = _cngwzj_norm_title(title)
+        best_urls, best_score = [], 0
+        for cg_title, cg_urls in url_index.items():
+            s = _cngwzj_title_score(norm, cg_title)
+            if s > best_score:
+                best_score, best_urls = s, cg_urls
+        expected = _extract_hanzi(text_lines)
+        if best_urls and best_score >= 50:
+            for cand_url in best_urls:
+                pinyin_pairs = fetch_pinyin_from_cngwzj(cand_url, expected)
+                if pinyin_pairs:
+                    break
+
+        if pinyin_pairs:
+            stats["cngwzj"] += 1
+            src = "cngwzj"
+        else:
+            # Strategy 2: pypinyin fallback
+            pinyin_pairs = pinyin_with_pypinyin(text_lines)
+            stats["pypinyin"] += 1
+            src = "pypinyin"
+
+        cached["pinyin"] = pinyin_pairs
+        save_cache(seq, cached)
+        if src == "pypinyin":
+            missing_list.append(f"{cache_id}:{title} (pypinyin)")
+
+        # Rate limit
+        time.sleep(0.3)
+
+    print(f"\nPinyin complete: cngwzj={stats['cngwzj']}, pypinyin={stats['pypinyin']}, missing={stats['missing']}")
+    if missing_list:
+        print(f"Fallback/missing ({len(missing_list)}): {', '.join(missing_list[:20])}")
+
+
 # ── Task 5: CLI + Generation ──────────────────────────────────────────────
 
 def do_generate() -> None:
@@ -652,6 +942,7 @@ def do_generate() -> None:
             "text": cached.get("text", []),
             "textType": cached.get("textType", "其他"),
             "yiwen": cached.get("yiwen", ""),
+            "pinyin": cached.get("pinyin", []),
         }
         poems.append(poem)
 
@@ -671,13 +962,14 @@ def main():
     parser = argparse.ArgumentParser(description="Fetch and validate Chinese poems")
     parser.add_argument("--fetch", action="store_true", help="Fetch all poems from the web")
     parser.add_argument("--fetch-yiwen", action="store_true", help="Fetch 译文 (translation) for all poems")
+    parser.add_argument("--fetch-pinyin", action="store_true", help="Fetch 拼音 (pinyin) for all poems")
     parser.add_argument("--validate", action="store_true", help="Validate cached poems")
     parser.add_argument("--generate", action="store_true", help="Validate and generate poems.json")
     parser.add_argument("--force", action="store_true", help="Force re-fetch even if cached")
 
     args = parser.parse_args()
 
-    if not any([args.fetch, args.fetch_yiwen, args.validate, args.generate]):
+    if not any([args.fetch, args.fetch_yiwen, args.fetch_pinyin, args.validate, args.generate]):
         parser.print_help()
         sys.exit(1)
 
@@ -686,6 +978,9 @@ def main():
 
     if args.fetch_yiwen:
         do_fetch_yiwen()
+
+    if args.fetch_pinyin:
+        do_fetch_pinyin()
 
     if args.validate:
         do_validate()
