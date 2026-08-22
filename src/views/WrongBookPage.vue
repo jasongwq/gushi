@@ -18,14 +18,17 @@ interface GroupedWrongEntry {
 const learningStore = useLearningStore()
 const poemStore = usePoemStore()
 
-onMounted(() => {
-  poemStore.fetchPoems()
+onMounted(async () => {
   // 补未提交的整体背诵调度（关闭页面/直接返回时细节已即时入错题本，但 recordAnswer 未调用）
+  // recordAnswer 不依赖 poem 数据，可立即执行
   const pending = learningStore.flushPendingReciteSchedules()
   for (const poemId of pending) {
     learningStore.recordAnswer(poemId, 'recite', false)
   }
+
   // 聚合未提交的字级标记（提交过的已由 recordReciteWithCharMarks 清除，不会重复）
+  // 依赖 poem.text 解析汉字，必须等 poems 加载完成，否则 getPoemById 返回 undefined 导致标记永久丢失
+  await poemStore.fetchPoems()
   const pendingChars = learningStore.flushPendingCharMarks()
   for (const [poemId, marks] of Object.entries(pendingChars)) {
     const poem = poemStore.getPoemById(poemId)

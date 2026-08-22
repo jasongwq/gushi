@@ -106,7 +106,13 @@ function setLineStatus(index: number, status: 'ok' | 'stuck' | 'forgot') {
   const note = `第${index + 1}句:${status}`
   const prevNote = `第${index + 1}句:${prev}`
   if (status === 'stuck' || status === 'forgot') {
-    if (prev !== status) learningStore.recordDetail(props.poem.id, 'line', note)
+    if (prev !== status) {
+      // 切换状态时先移除旧状态条目（prev 也是非 ok 的情况），避免 note 残留
+      if (prev === 'stuck' || prev === 'forgot') {
+        learningStore.removeWrongEntry(props.poem.id, 'line', prevNote)
+      }
+      learningStore.recordDetail(props.poem.id, 'line', note)
+    }
   } else {
     learningStore.removeWrongEntry(props.poem.id, 'line', prevNote)
   }

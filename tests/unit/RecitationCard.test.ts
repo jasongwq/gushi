@@ -393,6 +393,19 @@ describe('RecitationCard', () => {
       expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'line', '第1句:stuck')
     })
 
+    it('从「不会」切到「卡顿」时移除旧 forgot 条目', async () => {
+      const wrapper = mountCard()
+      const forgotBtns = getForgotButtons(wrapper)
+      const stuckBtns = getStuckButtons(wrapper)
+      // 先标不会 → 写入 第1句:forgot
+      await forgotBtns[0].trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'line', '第1句:forgot')
+      // 再切卡顿 → 写入 第1句:stuck 并移除 第1句:forgot
+      await stuckBtns[0].trigger('click')
+      expect(recordDetailMock).toHaveBeenCalledWith('test-1', 'line', '第1句:stuck')
+      expect(removeWrongEntryMock).toHaveBeenCalledWith('test-1', 'line', '第1句:forgot')
+    })
+
     it('点「不会」立即调用 recordDetail 写错题本', async () => {
       const wrapper = mountCard()
       const forgotBtns = getForgotButtons(wrapper)
