@@ -614,6 +614,279 @@ git commit -m "test(e2e): single poem marking auto-saves and wrongbook repairs s
 
 ---
 
+### Task 6: 字级标记待聚合（方案 A）
+
+**Files:**
+- Modify: `src/stores/learning.ts`
+- Modify: `src/components/RecitationCard.vue`
+- Modify: `src/views/WrongBookPage.vue`
+- Test: `tests/unit/learning-store.test.ts`
+- Test: `tests/unit/RecitationCard.test.ts`
+- Test: `tests/component/WrongBookPage.test.ts`
+
+**背景**：字级标记（点单字标模糊/错）当前只存会话级 `charMarks`，不点提交即丢失。方案 A：点字/撤销字时把快照写入 localStorage 待聚合列表（`pendingCharMarks: { poemId: CharMarkMap }`）；提交时 `recordReciteWithCharMarks` 聚合后清除；进错题本时对剩余 pending 聚合。同批标记只聚合一次，避免 `charMarkStats` 重复计数。
+
+- [ ] **Step 1: 写失败测试**
+
+`tests/unit/learning-store.test.ts` 末尾追加：
+
+```typescript
+describe('pendingCharMarks', () => {
+  it('syncPendingCharMarks writes snapshot to localStorage and reads back', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    const raw = localStorage.getItem('poem-quiz-pending-char-marks')
+    expect(raw).toBeTruthy()
+    expect(JSON.parse(raw!)).toEqual({ p001: { '0-2': 'wrong' } })
+    // 新 store 实例恢复
+    setActivePinia(createPinia())
+    const store2 = useLearningStore()
+    expect(store2.pendingCharMarks).toEqual({ p001: { '0-2': 'wrong' } })
+  })
+
+  it('empty snapshot removes the poemId key', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    store.syncPendingCharMarks('p001', {})
+    expect(store.pendingCharMarks).toEqual({})
+    const raw = localStorage.getItem('poem-quiz-pending-char-marks')
+    expect(JSON.parse(raw!)).toEqual({})
+  })
+
+  it('flushPendingCharMarks returns and clears list', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    const flushed = store.flushPendingCharMarks()
+    expect(flushed).toEqual({ p001: { '0-2': 'wrong' } })
+    expect(store.pendingCharMarks).toEqual({})
+  })
+
+  it('aggregateCharMarks increments charMarkStats counts', () => {
+    const store = useLearningStore()
+    // 先造记录
+    store.recordAnswer('p001', 'recite', false)
+    const poemText = ['床前明月光']
+    store.aggregateCharMarks('p001', poemText, { '0-2': 'wrong', '0-3': 'fuzzy' })
+    const stats = store.getRecord('p001')!.charMarkStats
+    expect(stats).toHaveLength(2)
+    const wrongStat = stats.find(s => s.charIndex === 2)!
+    expect(wrongStat.char).toBe('明')
+    expect(wrongStat.wrongCount).toBe(1)
+    const fuzzyStat = stats.find(s => s.charIndex === 3)!
+    expect(fuzzyStat.fuzzyCount).toBe(1)
+    // 再聚合同字 → 计数累加
+    store.aggregateCharMarks('p001', poemText, { '0-2': 'wrong' })
+    expect(store.getRecord('p001')!.charMarkStats.find(s => s.charIndex === 2)!.wrongCount).toBe(2)
+  })
+
+  it('recordReciteWithCharMarks clears pendingCharMarks for poem', () => {
+    const store = useLearningStore()
+    store.syncPendingCharMarks('p001', { '0-2': 'wrong' })
+    store.recordReciteWithCharMarks('p001', false, ['床前明月光'], { '0-2': 'wrong' })
+    expect(store.pendingCharMarks).toEqual({})
+  })
+
+  it('aggregateCharMarks does not append reciteCorrectness or push reciteRecords', () => {
+    const store = useLearningStore()
+    store.recordAnswer('p001', 'recite', false)
+    const reciteRecordsBefore = store.data.reciteRecords.length
+    store.aggregateCharMarks('p001', ['床前明月光'], { '0-2': 'wrong' })
+    expect(store.data.reciteRecords).toHaveLength(reciteRecordsBefore)
+    const record = store.getRecord('p001')!
+    // recordAnswer(false) 不追加 reciteCorrectness；aggregate 也不应追加
+    expect(record.reciteCorrectness).toEqual([])
+  })
+})
+```
+
+`tests/unit/RecitationCard.test.ts`：在「即时保存」describe 中新增：
+
+```typescript
+it('点字后 syncPendingReciteSchedule(poemId, true) 且同步 pendingCharMarks 快照', async () => {
+  charMarksMock['0-2'] = 'wrong'
+  const wrapper = mountCard()
+  const charSpans = wrapper.findAll('.char-mark')
+  await charSpans[2].trigger('click')
+  expect(syncPendingReciteScheduleMock).toHaveBeenCalledWith('test-1', true)
+})
+```
+
+（`charMarks` 由 store 管理；`RecitationCard.toggleCharMark` 在调用 store 后需同步 pending 快照与待调度——测试通过 mock 的 `syncPendingCharMarks` 断言。若组件需新增该 store 方法，mock 同步补上。）
+
+`tests/component/WrongBookPage.test.ts`：在「进入错题本自动补调度」describe 中新增：
+
+```typescript
+it('onMounted 聚合 pendingCharMarks 到 charMarkStats 并清除', async () => {
+  const store = useLearningStore()
+  store.syncPendingCharMarks('p1', { '0-0': 'wrong' })
+  await mountPage()
+  // 聚合后 record 有 charMarkStats
+  const record = store.getRecord('p1')
+  expect(record).toBeTruthy()
+  expect(record!.charMarkStats.some(s => s.charIndex === 0 && s.wrongCount > 0)).toBe(true)
+  expect(store.pendingCharMarks).toEqual({})
+})
+```
+
+- [ ] **Step 2: 运行测试确认失败**
+
+Run: `npx vitest run tests/unit/learning-store.test.ts tests/unit/RecitationCard.test.ts tests/component/WrongBookPage.test.ts`
+Expected: FAIL（`syncPendingCharMarks` / `pendingCharMarks` / `aggregateCharMarks` 不存在）
+
+- [ ] **Step 3: 实现**
+
+**`src/stores/learning.ts`**：
+
+```typescript
+const PENDING_CHAR_MARKS_KEY = 'poem-quiz-pending-char-marks'
+
+function loadPendingCharMarks(): Record<string, CharMarkMap> {
+  try {
+    const raw = localStorage.getItem(PENDING_CHAR_MARKS_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function savePendingCharMarks(map: Record<string, CharMarkMap>) {
+  localStorage.setItem(PENDING_CHAR_MARKS_KEY, JSON.stringify(map))
+}
+```
+
+状态与函数（放在 pendingReciteSchedules 之后）：
+
+```typescript
+  // 待聚合的字级标记（localStorage 持久化，进错题本/提交时聚合到 charMarkStats）
+  const pendingCharMarks = ref<Record<string, CharMarkMap>>(loadPendingCharMarks())
+
+  function syncPendingCharMarks(poemId: string, snapshot: CharMarkMap) {
+    if (Object.keys(snapshot).length > 0) {
+      pendingCharMarks.value = { ...pendingCharMarks.value, [poemId]: snapshot }
+    } else {
+      const next = { ...pendingCharMarks.value }
+      delete next[poemId]
+      pendingCharMarks.value = next
+    }
+    savePendingCharMarks(pendingCharMarks.value)
+  }
+
+  function flushPendingCharMarks(): Record<string, CharMarkMap> {
+    const map = { ...pendingCharMarks.value }
+    pendingCharMarks.value = {}
+    savePendingCharMarks({})
+    return map
+  }
+```
+
+聚合辅助（把 `recordReciteWithCharMarks` 内的聚合循环抽出来）：
+
+```typescript
+  // 聚合字级标记到 charMarkStats（只增量统计，不追加 reciteCorrectness / 不推 reciteRecords / 不触调度）
+  function aggregateCharMarks(poemId: string, poemText: string[], charMarksSnapshot: CharMarkMap) {
+    const record = getRecord(poemId)
+    if (!record) return
+    const stats = [...record.charMarkStats]
+    const lineSegments = poemText.map(line => parseLine(line))
+    for (const [key, status] of Object.entries(charMarksSnapshot)) {
+      const [lineIndex, charIndex] = key.split('-').map(Number)
+      const seg = lineSegments[lineIndex]?.find(s => s.type === 'char' && s.charIdx === charIndex)
+      const char = seg?.char ?? ''
+      const existing = stats.find(s => s.poemId === poemId && s.lineIndex === lineIndex && s.charIndex === charIndex)
+      if (existing) {
+        if (status === 'fuzzy') existing.fuzzyCount++
+        else existing.wrongCount++
+      } else {
+        stats.push({
+          poemId, lineIndex, charIndex, char,
+          fuzzyCount: status === 'fuzzy' ? 1 : 0,
+          wrongCount: status === 'wrong' ? 1 : 0,
+        })
+      }
+    }
+    record.charMarkStats = stats
+    persist()
+  }
+```
+
+`recordReciteWithCharMarks` 改为调用 `aggregateCharMarks` 并清除 pending：
+
+```typescript
+  function recordReciteWithCharMarks(poemId: string, correct: boolean, poemText: string[], charMarksSnapshot: CharMarkMap) {
+    const today = new Date().toISOString().split('T')[0]
+    const record = getOrCreateRecord(poemId)
+    const idx = data.value.records.findIndex(r => r.poemId === poemId)
+    data.value.records[idx] = {
+      ...record,
+      reciteCorrectness: [...record.reciteCorrectness, correct ? 1 : 0],
+    }
+
+    data.value.reciteRecords.push({ poemId, date: today, correct, charMarks: charMarksSnapshot })
+
+    if (Object.keys(charMarksSnapshot).length > 0) {
+      aggregateCharMarks(poemId, poemText, charMarksSnapshot)
+    }
+    // 正常提交，清除待聚合字级标记（同批标记只聚合一次）
+    syncPendingCharMarks(poemId, {})
+    persist()
+  }
+```
+
+return 导出：
+
+```typescript
+    pendingCharMarks, syncPendingCharMarks, flushPendingCharMarks, aggregateCharMarks,
+```
+
+**`src/components/RecitationCard.vue`**：`toggleCharMark` 同步快照与待调度：
+
+```typescript
+function toggleCharMark(lineIndex: number, charIdx: number) {
+  if (props.disabled) return
+  learningStore.toggleCharMark(lineIndex, charIdx)
+  // 字级标记即时保存：同步待聚合快照 + 待调度标记
+  learningStore.syncPendingCharMarks(props.poem.id, { ...learningStore.charMarks })
+  syncPending()
+}
+```
+
+**`src/views/WrongBookPage.vue`** onMounted 末尾追加：
+
+```typescript
+  // 聚合未提交的字级标记（提交过的已由 recordReciteWithCharMarks 清除，不会重复）
+  const pendingChars = learningStore.flushPendingCharMarks()
+  for (const [poemId, marks] of Object.entries(pendingChars)) {
+    const poem = poemStore.getPoemById(poemId)
+    if (poem && Object.keys(marks).length > 0) {
+      learningStore.aggregateCharMarks(poemId, poem.text, marks)
+    }
+  }
+```
+
+- [ ] **Step 4: 运行测试确认通过**
+
+Run: `npx vitest run tests/unit/learning-store.test.ts tests/unit/RecitationCard.test.ts tests/component/WrongBookPage.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: 全量单测 + 回归**
+
+Run: `npx vitest run`
+Expected: 全部 PASS
+
+- [ ] **Step 6: e2e 回归**
+
+Run: `npx playwright test`
+Expected: 全部 PASS（重点 `wrongbook-char-marks.spec.ts`、`review-plan.spec.ts`、`recitation-flow.spec.ts`）
+
+- [ ] **Step 7: 提交**
+
+```bash
+git add src/stores/learning.ts src/components/RecitationCard.vue src/views/WrongBookPage.vue tests/unit/learning-store.test.ts tests/unit/RecitationCard.test.ts tests/component/WrongBookPage.test.ts
+git commit -m "feat: persist char marks for aggregation on wrongbook entry"
+```
+
+---
+
 ## 自检
 
 **Spec 覆盖：**
@@ -622,9 +895,9 @@ git commit -m "test(e2e): single poem marking auto-saves and wrongbook repairs s
 - 进入错题本补调度（固定 false）→ Task 4
 - 提交路径移除重复 detail → Task 3
 - 按钮文字「作者不会」「朝代不会」→ Task 2
-- 字级标记不在即时保存范围 → 无任务（符合 spec 限制）
+- 字级标记待聚合（方案 A）→ Task 6
 - 错题本/结果页文案不改 → 无任务（符合 spec 限制）
 
-**类型一致性：** `syncPendingReciteSchedule`、`unmarkPendingReciteSchedule`、`flushPendingReciteSchedules`、`pendingReciteSchedules` 在 Task 1 定义，Task 2/3/4 使用，签名一致。
+**类型一致性：** `syncPendingReciteSchedule`、`unmarkPendingReciteSchedule`、`flushPendingReciteSchedules`、`pendingReciteSchedules` 在 Task 1 定义，Task 2/3/4 使用，签名一致。`pendingCharMarks`/`syncPendingCharMarks`/`flushPendingCharMarks`/`aggregateCharMarks` 在 Task 6 定义，RecitationCard/WrongBookPage 使用。
 
-**关键风险（Task 2 Step 4 已注明）：** `hasAnyIssue` computed 惰性求值，`syncPending` 需用显式计算 `computeHasIssue()`，计划中已给出替代实现。
+**关键风险（Task 2 Step 4 已注明）：** `hasAnyIssue` computed 惰性求值，`syncPending` 需用显式计算 `computeHasIssue()`，计划中已给出替代实现。Task 6 去重由「提交清除 pending + 错题本只处理剩余」保证。
