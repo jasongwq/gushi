@@ -702,6 +702,20 @@ describe('RecitationCard', () => {
       const result = wrapper.emitted('submit')![0][0] as any
       expect(result.overallStatus).toBe('mastered')
     })
+
+    it('step 0 shows dashed border box and hint 点击查看作者', () => {
+      const wrapper = mountReveal(0)
+      const card = wrapper.find('.recitation-card')
+      expect(card.classes().join(' ')).toContain('reveal-dashed')
+      expect(wrapper.text()).toContain('点击查看作者')
+    })
+
+    it('hint text updates per reveal step', () => {
+      expect(mountReveal(0).text()).toContain('点击查看作者')
+      expect(mountReveal(1).text()).toContain('点击查看译文')
+      expect(mountReveal(2).text()).toContain('点击查看正文')
+      expect(mountReveal(3).text()).not.toContain('点击查看')
+    })
   })
 
   describe('disabled prop', () => {

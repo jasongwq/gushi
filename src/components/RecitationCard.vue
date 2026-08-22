@@ -23,6 +23,16 @@ const revealStep = computed(() => {
   return Math.max(0, Math.min(3, props.revealStep ?? 0))
 })
 
+const revealHint = computed(() => {
+  if (!props.revealMode) return ''
+  switch (revealStep.value) {
+    case 0: return '点击查看作者'
+    case 1: return '点击查看译文'
+    case 2: return '点击查看正文'
+    default: return ''
+  }
+})
+
 function handleBackgroundClick() {
   if (!props.revealMode) return
   if (props.disabled) return
@@ -168,7 +178,11 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 </script>
 
 <template>
-  <div class="recitation-card py-2 w-full flex flex-col h-full" @click="handleBackgroundClick">
+  <div
+    class="recitation-card py-2 w-full flex flex-col h-full"
+    :class="{ 'reveal-dashed': revealMode && revealStep < 3 }"
+    @click="handleBackgroundClick"
+  >
     <div class="text-center mb-4 shrink-0">
       <h2 class="text-2xl font-bold mb-1">{{ poem.title }}</h2>
       <div v-if="revealStep >= 1" class="flex items-center justify-center gap-4 text-gray-500 text-sm">
@@ -230,7 +244,7 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
       <div v-if="!revealMode" class="mb-3 text-center">
         <button
           :class="['px-3 py-1.5 text-xs rounded-lg border-2 cursor-pointer transition', showYiwen ? 'border-indigo-500 bg-indigo-500 text-white' : 'border-indigo-200 bg-indigo-50 text-indigo-600']"
-          @click="toggleYiwen"
+          @click.stop="toggleYiwen"
         >
           {{ showYiwen ? '隐藏译文 ▴' : '显示译文 ▾' }}
         </button>
@@ -244,6 +258,11 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
     <!-- 揭示模式：译文在 step 2 直接显示（滚动区外） -->
     <div v-if="revealMode && revealStep >= 2" class="mb-3 p-3 bg-gray-50 rounded-lg text-center">
       <p class="text-sm leading-relaxed text-gray-500">{{ poem.yiwen }}</p>
+    </div>
+
+    <!-- 揭示提示 -->
+    <div v-if="revealMode && revealStep < 3" class="text-center text-indigo-500 text-sm mt-3 shrink-0">
+      {{ revealHint }}
     </div>
 
     <!-- 操作按钮 -->
@@ -283,6 +302,14 @@ function submitResult(overallStatus: 'mastered' | 'not-mastered') {
 </template>
 
 <style scoped>
+.reveal-dashed {
+  border: 2px dashed var(--color-primary, #6366f1);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafbff;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
 .char-fuzzy {
   background: #fef3c7;
   color: #d97706;
