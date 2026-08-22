@@ -35,7 +35,6 @@ showPinyin?: boolean  // 拼音显示开关，默认 true
 ```html
 <p v-for="(line, i) in poem.text" :key="i" class="text-lg text-center leading-relaxed">
   <ruby v-for="(char, j) in line" :key="j">
-    <span v-if="showPinyin && pinyinByLine[i]?.[j]">{{ pinyinByLine[i][j] }}</span>
     <rt v-if="showPinyin && pinyinByLine[i]?.[j]">{{ pinyinByLine[i][j] }}</rt>
     {{ char }}
   </ruby>
