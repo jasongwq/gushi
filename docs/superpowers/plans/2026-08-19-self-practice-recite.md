@@ -92,6 +92,20 @@ describe('revealMode', () => {
     const result = wrapper.emitted('submit')![0][0] as any
     expect(result.overallStatus).toBe('mastered')
   })
+
+  it('step 0 shows dashed border box and hint 点击查看作者', () => {
+    const wrapper = mountReveal(0)
+    const card = wrapper.find('.recitation-card')
+    expect(card.classes().join(' ')).toContain('reveal-dashed')
+    expect(wrapper.text()).toContain('点击查看作者')
+  })
+
+  it('hint text updates per reveal step', () => {
+    expect(mountReveal(0).text()).toContain('点击查看作者')
+    expect(mountReveal(1).text()).toContain('点击查看译文')
+    expect(mountReveal(2).text()).toContain('点击查看正文')
+    expect(mountReveal(3).text()).not.toContain('点击查看')
+  })
 })
 ```
 
@@ -139,7 +153,50 @@ function handleBackgroundClick() {
 
 3. **模板修改**：
 
-- 根节点 `div.recitation-card` 加 `@click="handleBackgroundClick"`（第 116 行）。
+- 根节点 `div.recitation-card` 加 `@click="handleBackgroundClick"`（第 116 行），并在 revealMode 且未揭示完整时加虚线框 class：
+
+```html
+<div
+  class="recitation-card py-2 w-full flex flex-col h-full"
+  :class="{ 'reveal-dashed': revealMode && revealStep < 3 }"
+  @click="handleBackgroundClick"
+>
+```
+
+  样式（`<style scoped>` 内）：
+
+```css
+.reveal-dashed {
+  border: 2px dashed var(--color-primary, #6366f1);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafbff;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+```
+
+- 底部（自评按钮区之后）加按层提示文案，仅 revealMode 且 step < 3 时显示：
+
+```html
+<div v-if="revealMode && revealStep < 3" class="text-center text-indigo-500 text-sm mt-3 shrink-0">
+  {{ revealHint }}
+</div>
+```
+
+  script 中：
+
+```ts
+const revealHint = computed(() => {
+  if (!props.revealMode) return ''
+  switch (revealStep.value) {
+    case 0: return '点击查看作者'
+    case 1: return '点击查看译文'
+    case 2: return '点击查看正文'
+    default: return ''
+  }
+})
+```
 - 标题区（第 117-134 行）：作者行外层包一层，用 `v-if="revealStep >= 1"` 控制；step 0 时显示占位文本：
 
 ```html
