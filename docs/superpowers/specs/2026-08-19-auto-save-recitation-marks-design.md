@@ -101,6 +101,29 @@
 
 **去重保障**：提交路径聚合后删除 pending，错题本只处理未提交的 pending——同批标记不会聚合两次。撤销全清后快照为空，pending 键删除，无残留。`syncPending` 在字级标记变化后同样调用（`computeHasIssue` 已含 `hasCharIssue`）。
 
+### 1d. Bug 修复：字级标记按诗隔离
+
+**问题**：`charMarks` 是 `learningStore` 的**全局单例 ref**（`ref<CharMarkMap>`）。家长抽查（PoemCardPage）中每个 `SwiperSlide` 渲染独立的 `RecitationCard`（`:key="poem.id"`），滑动切诗时组件重建但 store 的 `charMarks` 不清空——A 诗的字级标记残留显示在 B 诗上，滑回 A 又丢失标记。
+
+**修复**：`charMarks` 改为**按诗隔离的映射** `Record<poemId, CharMarkMap>`：
+
+| Store API | 改动 |
+|-----------|------|
+| `charMarks` | `ref<CharMarkMap>` → `ref<Record<string, CharMarkMap>>` |
+| `getCharMarks(poemId)` | 新增，返回该诗的标记（无则空对象） |
+| `toggleCharMark(poemId, lineIndex, charIndex)` | 加 poemId 参数，只改该诗的标记 |
+| `initCharMarks(poemId)` | 加 poemId 参数，只清该诗的标记 |
+
+`RecitationCard` 所有访问点改用 `getCharMarks(props.poem.id)`：
+- `charMarkClass` 渲染高亮
+- `toggleCharMark` 传 poemId
+- `syncPendingCharMarks` 快照
+- `hasCharIssue` 判定
+- submit 结果 `charMarks` 快照
+- `watch(props.poem.id)` 与提交后重置 → `initCharMarks(props.poem.id)`（只清当前诗，不影响其他诗）
+
+**效果**：A 诗标记只属于 A，滑到 B 无残留；滑回 A 标记保留（同轮会话内）；提交 A 后清空 A 不影响 B。
+
 ## 测试计划
 
 ### 单测
@@ -125,6 +148,8 @@
 - `tests/component/poem-card-page.test.ts`：更新 saveResult 断言——recordDetail 不再被调用（由组件即时保存），recordAnswer/recordReciteWithCharMarks 保留
 - `tests/component/WrongBookPage.test.ts`：onMounted 时对待调度列表补 recordAnswer；对 pendingCharMarks 聚合字级统计
 - `tests/unit/RecitationCard.test.ts`：点字后 `syncPendingReciteSchedule(poemId, true)` 且 `pendingCharMarks[poemId]` 快照同步
+- `tests/unit/learning-char-marks.test.ts`：更新——`toggleCharMark(poemId, ...)` / `initCharMarks(poemId)` 按诗隔离；A 诗标记不影响 B 诗（`getCharMarks` 返回各自快照）
+- `tests/component/poem-card-page.test.ts`：滑动切诗后字级标记不残留（若该文件覆盖此场景）
 
 ### e2e
 
@@ -139,8 +164,8 @@
 
 | 文件 | 改动 |
 |------|------|
-| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字；待调度标记同步；点字同步 pendingCharMarks |
-| `src/stores/learning.ts` | `pendingReciteSchedules` + localStorage 持久化 + `syncPendingReciteSchedule`；`pendingCharMarks` 待聚合；`aggregateCharMarks` 辅助；recordReciteWithCharMarks 聚合后清 pending；recordAnswer recite 路径移除待调度 |
+| `src/components/RecitationCard.vue` | 标注即时写入/移除；按钮文字；待调度标记同步；点字同步 pendingCharMarks；**改用 getCharMarks(poemId) / initCharMarks(poemId)（按诗隔离）** |
+| `src/stores/learning.ts` | `pendingReciteSchedules` + localStorage 持久化 + `syncPendingReciteSchedule`；`pendingCharMarks` 待聚合；`aggregateCharMarks` 辅助；recordReciteWithCharMarks 聚合后清 pending；recordAnswer recite 路径移除待调度；**charMarks 按诗隔离 + getCharMarks** |
 | `src/views/WrongBookPage.vue` | onMounted 补未提交的 recordAnswer 调度 + 聚合 pendingCharMarks |
 | `src/stores/quiz.ts` | `submitRecitationResult` 移除重复 recordDetail |
 | `src/views/PoemCardPage.vue` | `saveResult` 移除重复 recordDetail |
